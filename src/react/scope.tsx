@@ -7,7 +7,7 @@ import {
 	createContext,
 	useContext,
 	useEffect,
-	useMemo,
+	useState,
 	type ReactNode,
 } from "react"
 import { RiverContainer } from "../core/container"
@@ -59,22 +59,31 @@ export function RiverScope({
 }: RiverScopeProps) {
 	const parentContainer = useContext(RiverScopeContext)
 
-	const container = useMemo(
+	const [container] = useState(
 		() =>
 			new RiverContainer({
 				parent: parentContainer ?? undefined,
 				overrides,
 				observers,
-			}),
-		// Container identity should remain stable for the scope's lifetime.
-		// Overrides & observers are only read on mount.
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-		[parentContainer],
+			})
 	)
 
-	// Dispose container on unmount
+	// Dispose on actual unmount only, surviving Strict Mode double-invokes
 	useEffect(() => {
-		return () => container.dispose()
+		// Cancel pending disposal from previous unmount (StrictMode remount)
+		const c = container as any
+		if (c._disposeTimeout) {
+			clearTimeout(c._disposeTimeout)
+			c._disposeTimeout = undefined
+		}
+
+		return () => {
+			// Defer disposal. If this is a StrictMode unmount, the subsequent
+			// remount will cancel this timeout.
+			c._disposeTimeout = setTimeout(() => {
+				container.dispose()
+			}, 0)
+		}
 	}, [container])
 
 	return (

@@ -87,17 +87,21 @@ export function useWatch<T, S>(provider: ProviderBase<T>, selector?: (value: T) 
  */
 export function useRiverRef(): RiverRef {
   const container = useRiverContainer();
+  
+  // Track latest container so stable ref methods always use the right one
+  const containerRef = useRef(container);
+  containerRef.current = container;
 
   // Return a stable ref object that delegates to the container
   const riverRefRef = useRef<RiverRef | null>(null);
 
   if (!riverRefRef.current) {
     riverRefRef.current = {
-      read: (provider) => container.read(provider),
-      invalidate: (provider) => container.invalidate(provider),
-      refresh: (provider) => container.refresh(provider),
+      read: (provider) => containerRef.current.read(provider),
+      invalidate: (provider) => containerRef.current.invalidate(provider),
+      refresh: (provider) => containerRef.current.refresh(provider),
       set: <T>(provider: StateProvider<T>, value: T | ((prev: T) => T)) =>
-        container.set(provider, value),
+        containerRef.current.set(provider, value),
     };
   }
 

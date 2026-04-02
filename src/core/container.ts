@@ -167,12 +167,10 @@ export class RiverContainer {
 	/** Set a StateProvider's value directly. */
 	set<T>(provider: StateProvider<T>, value: T | ((prev: T) => T)): void {
 		this.assertNotDisposed()
-		const state = this.getState(provider.id)
-		if (!state?.initialized) {
-			this.ensureInitialized(provider)
-		}
+		this.ensureInitialized(provider)
 
-		const current = state!.value as T
+		const state = this.getState(provider.id)!
+		const current = state.value as T
 		const newValue =
 			typeof value === "function"
 				? (value as (prev: T) => T)(current)
@@ -441,12 +439,12 @@ export class RiverContainer {
 		}
 
 		// Notify value listeners (prev, next)
-		for (const cb of state.valueListeners) {
+		for (const cb of Array.from(state.valueListeners)) {
 			cb(oldValue, newValue)
 		}
 
 		// Notify snapshot listeners (just fire)
-		for (const cb of state.snapshotListeners) {
+		for (const cb of Array.from(state.snapshotListeners)) {
 			cb()
 		}
 
@@ -476,7 +474,7 @@ export class RiverContainer {
 		const state = this.getState(providerId)
 		if (!state) return
 
-		for (const depId of state.dependents) {
+		for (const depId of Array.from(state.dependents)) {
 			const depProvider = this.providerMap.get(depId)
 			if (depProvider) {
 				this.reinitialize(depProvider)
@@ -493,7 +491,7 @@ export class RiverContainer {
 		const oldValue = state.value
 
 		// Run dispose callbacks
-		for (const cb of state.disposeCallbacks) {
+		for (const cb of Array.from(state.disposeCallbacks)) {
 			try {
 				cb()
 			} catch {
@@ -505,7 +503,7 @@ export class RiverContainer {
 		state.abortController?.abort()
 
 		// Clear old dependencies
-		for (const depId of state.dependencies) {
+		for (const depId of Array.from(state.dependencies)) {
 			const depState = this.getState(depId)
 			depState?.dependents.delete(provider.id)
 		}
@@ -548,10 +546,10 @@ export class RiverContainer {
 				oldValue,
 			)
 
-			for (const cb of newState.valueListeners) {
+			for (const cb of Array.from(newState.valueListeners)) {
 				cb(oldValue, newState.value)
 			}
-			for (const cb of newState.snapshotListeners) {
+			for (const cb of Array.from(newState.snapshotListeners)) {
 				cb()
 			}
 
@@ -625,7 +623,7 @@ export class RiverContainer {
 
 		if (!hasListeners) {
 			// Fire cancel callbacks
-			for (const cb of state.cancelCallbacks) cb()
+			for (const cb of Array.from(state.cancelCallbacks)) cb()
 
 			// Auto-dispose if configured
 			if (provider.options.autoDispose) {
@@ -655,7 +653,7 @@ export class RiverContainer {
 
 	private disposeState(id: symbol, state: ProviderState): void {
 		// Run dispose callbacks
-		for (const cb of state.disposeCallbacks) {
+		for (const cb of Array.from(state.disposeCallbacks)) {
 			try {
 				cb()
 			} catch {
@@ -667,7 +665,7 @@ export class RiverContainer {
 		state.abortController?.abort()
 
 		// Remove from dependency graph
-		for (const depId of state.dependencies) {
+		for (const depId of Array.from(state.dependencies)) {
 			const depState = this.getState(depId)
 			depState?.dependents.delete(id)
 		}
