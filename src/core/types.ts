@@ -25,8 +25,17 @@ export type ProviderKind =
 export interface ProviderOptions {
   /** Human-readable name for debugging & DevTools */
   name?: string;
-  /** If true, provider is disposed when all listeners are removed */
+  /** 
+   * If true, provider is disposed when all listeners are removed.
+   * Default is true.
+   */
   autoDispose?: boolean;
+  /** 
+   * Additional time in milliseconds to keep the provider alive after all listeners are removed.
+   * Only has an effect if `autoDispose` is true.
+   * Default is 0ms (dispose immediately).
+   */
+  cacheTime?: number;
 }
 
 // ── Ref (used inside provider create functions) ────────────────

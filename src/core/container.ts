@@ -50,6 +50,9 @@ interface ProviderState {
 	/** Callbacks for when listener added after cancel */
 	resumeCallbacks: (() => void)[]
 
+	/** Timeout for cacheTime before auto-dispose */
+	disposeTimeout?: ReturnType<typeof setTimeout>
+
 	/** The notifier/controller instance (for notifier-based providers) */
 	notifierInstance?: unknown
 	/** AbortController for async operations */
@@ -113,6 +116,10 @@ export class RiverContainer {
 
 		// If transitioning from 0 → 1 listeners, fire resume
 		if (!hadListeners) {
+			if (state.disposeTimeout) {
+				clearTimeout(state.disposeTimeout)
+				state.disposeTimeout = undefined
+			}
 			for (const cb of state.resumeCallbacks) cb()
 		}
 
@@ -140,6 +147,10 @@ export class RiverContainer {
 		state.valueListeners.add(callback as ListenerCallback<unknown>)
 
 		if (!hadListeners) {
+			if (state.disposeTimeout) {
+				clearTimeout(state.disposeTimeout)
+				state.disposeTimeout = undefined
+			}
 			for (const cb of state.resumeCallbacks) cb()
 		}
 
@@ -495,6 +506,11 @@ export class RiverContainer {
 
 		const oldValue = state.value
 
+		if (state.disposeTimeout) {
+			clearTimeout(state.disposeTimeout)
+			state.disposeTimeout = undefined
+		}
+
 		// Run dispose callbacks
 		for (const cb of Array.from(state.disposeCallbacks)) {
 			try {
@@ -632,17 +648,31 @@ export class RiverContainer {
 
 			// Auto-dispose if configured
 			if (provider.options.autoDispose) {
-				// Use microtask to allow re-subscription during the same tick
-				queueMicrotask(() => {
-					const currentState = this.getState(provider.id)
-					if (
-						currentState &&
-						currentState.snapshotListeners.size === 0 &&
-						currentState.valueListeners.size === 0
-					) {
-						this.disposeProvider(provider)
-					}
-				})
+				const cacheTime = provider.options.cacheTime
+				if (cacheTime !== undefined && cacheTime > 0) {
+					state.disposeTimeout = setTimeout(() => {
+						const currentState = this.getState(provider.id)
+						if (
+							currentState &&
+							currentState.snapshotListeners.size === 0 &&
+							currentState.valueListeners.size === 0
+						) {
+							this.disposeProvider(provider)
+						}
+					}, cacheTime)
+				} else {
+					// Use microtask to allow re-subscription during the same tick
+					queueMicrotask(() => {
+						const currentState = this.getState(provider.id)
+						if (
+							currentState &&
+							currentState.snapshotListeners.size === 0 &&
+							currentState.valueListeners.size === 0
+						) {
+							this.disposeProvider(provider)
+						}
+					})
+				}
 			}
 		}
 	}
@@ -657,6 +687,11 @@ export class RiverContainer {
 	}
 
 	private disposeState(id: symbol, state: ProviderState): void {
+		if (state.disposeTimeout) {
+			clearTimeout(state.disposeTimeout)
+			state.disposeTimeout = undefined
+		}
+
 		// Run dispose callbacks
 		for (const cb of Array.from(state.disposeCallbacks)) {
 			try {
@@ -733,6 +768,7 @@ export class RiverContainer {
 			disposeCallbacks: [],
 			cancelCallbacks: [],
 			resumeCallbacks: [],
+			disposeTimeout: undefined,
 			initialized: false,
 		}
 	}

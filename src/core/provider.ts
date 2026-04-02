@@ -24,14 +24,23 @@ function nextId(name?: string): symbol {
   return Symbol(name ?? `provider_${++providerCount}`);
 }
 
+function normalizeOptions(options: ProviderOptions = {}): ProviderOptions {
+  return {
+    ...options,
+    autoDispose: options.autoDispose ?? true,
+    cacheTime: options.cacheTime ?? 0,
+  };
+}
+
 // ── provider() — Read-only computed value ──────────────────────
 
 export function provider<T>(create: (ref: Ref) => T, options: ProviderOptions = {}): Provider<T> {
+  const normOptions = normalizeOptions(options);
   return {
     id: nextId(options.name),
     kind: "provider",
-    name: options.name,
-    options,
+    name: normOptions.name,
+    options: normOptions,
     _create: create,
   };
 }
@@ -42,21 +51,22 @@ export function stateProvider<T>(
   create: (ref: Ref) => T,
   options: ProviderOptions = {},
 ): StateProvider<T> {
-  const id = nextId(options.name);
+  const normOptions = normalizeOptions(options);
+  const id = nextId(normOptions.name);
 
   const notifierAccessor: NotifierAccessor<StateController<T>> = {
-    id: Symbol(`${options.name ?? id.description}.notifier`),
+    id: Symbol(`${normOptions.name ?? id.description}.notifier`),
     kind: "notifierAccessor",
-    name: options.name ? `${options.name}.notifier` : undefined,
-    options,
+    name: normOptions.name ? `${normOptions.name}.notifier` : undefined,
+    options: normOptions,
     _parentId: id,
   };
 
   const provider: StateProvider<T> = {
     id,
     kind: "stateProvider",
-    name: options.name,
-    options,
+    name: normOptions.name,
+    options: normOptions,
     _create: create,
     notifier: notifierAccessor,
   };
@@ -70,11 +80,12 @@ export function promiseProvider<T>(
   create: (ref: Ref) => Promise<T>,
   options: ProviderOptions = {},
 ): PromiseProvider<T> {
+  const normOptions = normalizeOptions(options);
   return {
-    id: nextId(options.name),
+    id: nextId(normOptions.name),
     kind: "promiseProvider",
-    name: options.name,
-    options,
+    name: normOptions.name,
+    options: normOptions,
     _create: create,
   };
 }
@@ -85,11 +96,12 @@ export function streamProvider<T>(
   create: (ref: Ref) => AsyncIterable<T>,
   options: ProviderOptions = {},
 ): StreamProvider<T> {
+  const normOptions = normalizeOptions(options);
   return {
-    id: nextId(options.name),
+    id: nextId(normOptions.name),
     kind: "streamProvider",
-    name: options.name,
-    options,
+    name: normOptions.name,
+    options: normOptions,
     _create: create,
   };
 }
@@ -100,21 +112,22 @@ export function notifierProvider<N extends Notifier<any>>(
   createNotifier: () => N,
   options: ProviderOptions = {},
 ): NotifierProvider<N, N extends Notifier<infer T> ? T : unknown> {
-  const id = nextId(options.name);
+  const normOptions = normalizeOptions(options);
+  const id = nextId(normOptions.name);
 
   const notifierAccessor: NotifierAccessor<N> = {
-    id: Symbol(`${options.name ?? id.description}.notifier`),
+    id: Symbol(`${normOptions.name ?? id.description}.notifier`),
     kind: "notifierAccessor",
-    name: options.name ? `${options.name}.notifier` : undefined,
-    options,
+    name: normOptions.name ? `${normOptions.name}.notifier` : undefined,
+    options: normOptions,
     _parentId: id,
   };
 
   const provider: NotifierProvider<N, any> = {
     id,
     kind: "notifierProvider",
-    name: options.name,
-    options,
+    name: normOptions.name,
+    options: normOptions,
     _createNotifier: createNotifier,
     notifier: notifierAccessor,
   };
@@ -128,21 +141,22 @@ export function asyncNotifierProvider<N extends AsyncNotifier<any>>(
   createNotifier: () => N,
   options: ProviderOptions = {},
 ): AsyncNotifierProvider<N, N extends AsyncNotifier<infer T> ? T : unknown> {
-  const id = nextId(options.name);
+  const normOptions = normalizeOptions(options);
+  const id = nextId(normOptions.name);
 
   const notifierAccessor: NotifierAccessor<N> = {
-    id: Symbol(`${options.name ?? id.description}.notifier`),
+    id: Symbol(`${normOptions.name ?? id.description}.notifier`),
     kind: "notifierAccessor",
-    name: options.name ? `${options.name}.notifier` : undefined,
-    options,
+    name: normOptions.name ? `${normOptions.name}.notifier` : undefined,
+    options: normOptions,
     _parentId: id,
   };
 
   const provider: AsyncNotifierProvider<N, any> = {
     id,
     kind: "asyncNotifierProvider",
-    name: options.name,
-    options,
+    name: normOptions.name,
+    options: normOptions,
     _createNotifier: createNotifier,
     notifier: notifierAccessor,
   };
