@@ -68,7 +68,6 @@ export interface ProviderBase<T = unknown> {
   readonly kind: ProviderKind;
   readonly name: string | undefined;
   readonly options: ProviderOptions;
-  /** @internal — brand for type inference */
   readonly __phantom?: T;
 }
 
@@ -127,6 +126,8 @@ export interface NotifierAccessor<N> extends ProviderBase<N> {
   readonly kind: "notifierAccessor";
   /** @internal */
   readonly _parentId: symbol;
+  /** @internal */
+  readonly _parentProvider?: ProviderBase<any>;
 }
 
 // ── StateController ────────────────────────────────────────────

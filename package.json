@@ -1,26 +1,50 @@
 {
   "name": "react-river",
-  "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "A lightweight, Riverpod-inspired state management library for React.",
+  "keywords": [
+    "hooks",
+    "react",
+    "react-river",
+    "riverpod",
+    "state-management"
+  ],
+  "files": [
+    "dist"
+  ],
   "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "vite build --config vite.config.lib.ts",
+    "build:demo": "vite build",
     "lint": "oxlint .",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "format": "oxfmt .",
+    "prepack": "npm run build"
   },
   "devDependencies": {
-    "@types/node": "^24.12.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
     "oxfmt": "^0.43.0",
     "oxlint": "^1.58.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
     "typescript": "~5.9.3",
-    "vite": "^8.0.1"
+    "vite": "^8.0.1",
+    "vite-plugin-dts": "^4.5.3"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
   }
 }

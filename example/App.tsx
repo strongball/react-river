@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useWatch, useRiverRef, useListen, when } from "./index";
+import { useWatch, useRiverRef, useListen, when } from "react-river";
 import {
   counterProvider,
   doubledProvider,

@@ -15,7 +15,7 @@ import {
   asyncData,
   asyncLoading,
   asyncError,
-} from "./index";
+} from "react-river";
 
 // ── 1. Counter — stateProvider ─────────────────────────────────
 

@@ -12,6 +12,7 @@ import type {
   Provider,
   ProviderOptions,
   Ref,
+  StateController,
   StateProvider,
   StreamProvider,
 } from "./types";
@@ -43,7 +44,7 @@ export function stateProvider<T>(
 ): StateProvider<T> {
   const id = nextId(options.name);
 
-  const notifierAccessor: NotifierAccessor<unknown> = {
+  const notifierAccessor: NotifierAccessor<StateController<T>> = {
     id: Symbol(`${options.name ?? id.description}.notifier`),
     kind: "notifierAccessor",
     name: options.name ? `${options.name}.notifier` : undefined,
@@ -51,14 +52,16 @@ export function stateProvider<T>(
     _parentId: id,
   };
 
-  return {
+  const provider: StateProvider<T> = {
     id,
     kind: "stateProvider",
     name: options.name,
     options,
     _create: create,
     notifier: notifierAccessor,
-  } as StateProvider<T>;
+  };
+  (notifierAccessor as any)._parentProvider = provider;
+  return provider;
 }
 
 // ── futureProvider() — Async data source ───────────────────────
@@ -107,7 +110,7 @@ export function notifierProvider<N extends Notifier<any>>(
     _parentId: id,
   };
 
-  return {
+  const provider: NotifierProvider<N, any> = {
     id,
     kind: "notifierProvider",
     name: options.name,
@@ -115,6 +118,8 @@ export function notifierProvider<N extends Notifier<any>>(
     _createNotifier: createNotifier,
     notifier: notifierAccessor,
   };
+  (notifierAccessor as any)._parentProvider = provider;
+  return provider;
 }
 
 // ── asyncNotifierProvider() — Class-based async state ──────────
@@ -133,7 +138,7 @@ export function asyncNotifierProvider<N extends AsyncNotifier<any>>(
     _parentId: id,
   };
 
-  return {
+  const provider: AsyncNotifierProvider<N, any> = {
     id,
     kind: "asyncNotifierProvider",
     name: options.name,
@@ -141,4 +146,6 @@ export function asyncNotifierProvider<N extends AsyncNotifier<any>>(
     _createNotifier: createNotifier,
     notifier: notifierAccessor,
   };
+  (notifierAccessor as any)._parentProvider = provider;
+  return provider;
 }

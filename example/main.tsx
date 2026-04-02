@@ -1,6 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { RiverScope, loggerObserver } from "./index";
+import { RiverScope, loggerObserver } from "react-river";
 import App from "./App.tsx";
 import "./index.css";
 

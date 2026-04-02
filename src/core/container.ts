@@ -358,15 +358,20 @@ export class RiverContainer {
 				}
 
 				case "notifierAccessor": {
-					const accessor = provider as NotifierAccessor<unknown>
+					const accessor = provider as NotifierAccessor<unknown>;
 					// Ensure parent is initialized
-					const parentProvider = this.providerMap.get(
-						accessor._parentId,
-					)
-					if (parentProvider) {
-						this.ensureInitialized(parentProvider)
+					const parentId = accessor._parentId;
+					let parentProvider = this.providerMap.get(parentId);
+
+					if (!parentProvider && accessor._parentProvider) {
+						parentProvider = accessor._parentProvider;
+						this.providerMap.set(parentId, parentProvider);
 					}
-					const parentState = this.getState(accessor._parentId)
+
+					if (parentProvider) {
+						this.ensureInitialized(parentProvider);
+					}
+					const parentState = this.getState(parentId);
 					if (!parentState) {
 						throw new Error(
 							`Parent provider not found for notifier accessor: ${provider.name ?? provider.id.description}`,
