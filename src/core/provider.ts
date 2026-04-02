@@ -1,0 +1,147 @@
+/* ════════════════════════════════════════════════════════════════
+ *  React River — Provider Factory Functions
+ *  Create provider definitions (descriptions, not state).
+ * ════════════════════════════════════════════════════════════════ */
+
+import type { AsyncNotifier, Notifier } from "./notifier"
+import type {
+	AsyncNotifierProvider,
+	FutureProvider,
+	NotifierAccessor,
+	NotifierProvider,
+	Provider,
+	ProviderOptions,
+	Ref,
+	StateProvider,
+	StreamProvider,
+} from "./types"
+
+// ── Internal ID counter for debugging ──────────────────────────
+
+let providerCount = 0
+function nextId(name?: string): symbol {
+	return Symbol(name ?? `provider_${++providerCount}`)
+}
+
+// ── provider() — Read-only computed value ──────────────────────
+
+export function provider<T>(
+	create: (ref: Ref) => T,
+	options: ProviderOptions = {},
+): Provider<T> {
+	return {
+		id: nextId(options.name),
+		kind: "provider",
+		name: options.name,
+		options,
+		_create: create,
+	}
+}
+
+// ── stateProvider() — Simple mutable state ─────────────────────
+
+export function stateProvider<T>(
+	create: (ref: Ref) => T,
+	options: ProviderOptions = {},
+): StateProvider<T> {
+	const id = nextId(options.name)
+
+	const notifierAccessor: NotifierAccessor<unknown> = {
+		id: Symbol(`${options.name ?? id.description}.notifier`),
+		kind: "notifierAccessor",
+		name: options.name ? `${options.name}.notifier` : undefined,
+		options,
+		_parentId: id,
+	}
+
+	return {
+		id,
+		kind: "stateProvider",
+		name: options.name,
+		options,
+		_create: create,
+		notifier: notifierAccessor,
+	} as StateProvider<T>
+}
+
+// ── futureProvider() — Async data source ───────────────────────
+
+export function futureProvider<T>(
+	create: (ref: Ref) => Promise<T>,
+	options: ProviderOptions = {},
+): FutureProvider<T> {
+	return {
+		id: nextId(options.name),
+		kind: "futureProvider",
+		name: options.name,
+		options,
+		_create: create,
+	}
+}
+
+// ── streamProvider() — Observable / AsyncIterable data source ──
+
+export function streamProvider<T>(
+	create: (ref: Ref) => AsyncIterable<T>,
+	options: ProviderOptions = {},
+): StreamProvider<T> {
+	return {
+		id: nextId(options.name),
+		kind: "streamProvider",
+		name: options.name,
+		options,
+		_create: create,
+	}
+}
+
+// ── notifierProvider() — Class-based synchronous state ─────────
+
+export function notifierProvider<N extends Notifier<T>, T>(
+	createNotifier: () => N,
+	options: ProviderOptions = {},
+): NotifierProvider<N, T> {
+	const id = nextId(options.name)
+
+	const notifierAccessor: NotifierAccessor<N> = {
+		id: Symbol(`${options.name ?? id.description}.notifier`),
+		kind: "notifierAccessor",
+		name: options.name ? `${options.name}.notifier` : undefined,
+		options,
+		_parentId: id,
+	}
+
+	return {
+		id,
+		kind: "notifierProvider",
+		name: options.name,
+		options,
+		_createNotifier: createNotifier,
+		notifier: notifierAccessor,
+	}
+}
+
+// ── asyncNotifierProvider() — Class-based async state ──────────
+
+export function asyncNotifierProvider<N extends AsyncNotifier<T>, T>(
+	createNotifier: () => N,
+	options: ProviderOptions = {},
+): AsyncNotifierProvider<N, T> {
+	const id = nextId(options.name)
+
+	const notifierAccessor: NotifierAccessor<N> = {
+		id: Symbol(`${options.name ?? id.description}.notifier`),
+		kind: "notifierAccessor",
+		name: options.name ? `${options.name}.notifier` : undefined,
+		options,
+		_parentId: id,
+	}
+
+	return {
+		id,
+		kind: "asyncNotifierProvider",
+		name: options.name,
+		options,
+		_createNotifier: createNotifier,
+		notifier: notifierAccessor,
+	}
+}

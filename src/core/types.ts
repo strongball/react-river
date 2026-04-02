@@ -1,0 +1,157 @@
+/* ════════════════════════════════════════════════════════════════
+ *  React River — Core Type Definitions
+ * ════════════════════════════════════════════════════════════════ */
+
+import type { AsyncValue } from "./async_value";
+
+// ── Utility Types ──────────────────────────────────────────────
+
+export type Unsubscribe = () => void;
+export type ListenerCallback<T> = (previous: T | undefined, next: T) => void;
+
+// ── Provider Kind ──────────────────────────────────────────────
+
+export type ProviderKind =
+  | "provider"
+  | "stateProvider"
+  | "futureProvider"
+  | "streamProvider"
+  | "notifierProvider"
+  | "asyncNotifierProvider"
+  | "notifierAccessor";
+
+// ── Provider Options ───────────────────────────────────────────
+
+export interface ProviderOptions {
+  /** Human-readable name for debugging & DevTools */
+  name?: string;
+  /** If true, provider is disposed when all listeners are removed */
+  autoDispose?: boolean;
+}
+
+// ── Ref (used inside provider create functions) ────────────────
+
+export interface Ref {
+  /** Subscribe to another provider. Establishes a dependency. */
+  watch<T>(provider: ProviderBase<T>): T;
+  /** Read another provider's current value once (no subscription). */
+  read<T>(provider: ProviderBase<T>): T;
+  /** Listen to another provider's changes with a callback. */
+  listen<T>(provider: ProviderBase<T>, callback: ListenerCallback<T>): Unsubscribe;
+  /** Register a callback invoked when this provider is disposed. */
+  onDispose(callback: () => void): void;
+  /** Register a callback invoked when the last listener is removed. */
+  onCancel(callback: () => void): void;
+  /** Register a callback invoked when a new listener is added after cancel. */
+  onResume(callback: () => void): void;
+  /** Force this provider to re-initialize. */
+  invalidateSelf(): void;
+}
+
+// ── RiverRef (used in React components via useRiverRef) ────────
+
+export interface RiverRef {
+  /** Read a provider's current value once. */
+  read<T>(provider: ProviderBase<T>): T;
+  /** Force a provider to re-initialize. */
+  invalidate(provider: ProviderBase): void;
+  /** Invalidate and immediately return the new value. */
+  refresh<T>(provider: ProviderBase<T>): T;
+  /** Set a StateProvider's value directly. */
+  set<T>(provider: StateProvider<T>, value: T | ((prev: T) => T)): void;
+}
+
+// ── Provider Base ──────────────────────────────────────────────
+
+export interface ProviderBase<T = unknown> {
+  readonly id: symbol;
+  readonly kind: ProviderKind;
+  readonly name: string | undefined;
+  readonly options: ProviderOptions;
+  /** @internal — brand for type inference */
+  readonly __phantom?: T;
+}
+
+// ── Concrete Provider Types ────────────────────────────────────
+
+/** Read-only computed provider */
+export interface Provider<T> extends ProviderBase<T> {
+  readonly kind: "provider";
+  /** @internal */
+  readonly _create: (ref: Ref) => T;
+}
+
+/** Simple mutable state provider */
+export interface StateProvider<T> extends ProviderBase<T> {
+  readonly kind: "stateProvider";
+  /** @internal */
+  readonly _create: (ref: Ref) => T;
+  /** Sub-provider exposing the StateController instance */
+  readonly notifier: NotifierAccessor<StateController<T>>;
+}
+
+/** Async data source provider (Promise-based) */
+export interface FutureProvider<T> extends ProviderBase<AsyncValue<T>> {
+  readonly kind: "futureProvider";
+  /** @internal */
+  readonly _create: (ref: Ref) => Promise<T>;
+}
+
+/** Stream data source provider (AsyncIterable-based) */
+export interface StreamProvider<T> extends ProviderBase<AsyncValue<T>> {
+  readonly kind: "streamProvider";
+  /** @internal */
+  readonly _create: (ref: Ref) => AsyncIterable<T>;
+}
+
+/** Class-based synchronous state provider */
+export interface NotifierProvider<N, T> extends ProviderBase<T> {
+  readonly kind: "notifierProvider";
+  /** @internal */
+  readonly _createNotifier: () => N;
+  /** Sub-provider exposing the Notifier instance */
+  readonly notifier: NotifierAccessor<N>;
+}
+
+/** Class-based asynchronous state provider */
+export interface AsyncNotifierProvider<N, T> extends ProviderBase<AsyncValue<T>> {
+  readonly kind: "asyncNotifierProvider";
+  /** @internal */
+  readonly _createNotifier: () => N;
+  /** Sub-provider exposing the AsyncNotifier instance */
+  readonly notifier: NotifierAccessor<N>;
+}
+
+/** Sub-provider that yields the notifier/controller of its parent */
+export interface NotifierAccessor<N> extends ProviderBase<N> {
+  readonly kind: "notifierAccessor";
+  /** @internal */
+  readonly _parentId: symbol;
+}
+
+// ── StateController ────────────────────────────────────────────
+
+export interface StateController<T> {
+  get state(): T;
+  set state(value: T);
+  update(updater: (current: T) => T): void;
+}
+
+// ── Provider Override (for testing / scoping) ──────────────────
+
+export interface ProviderOverride<T = unknown> {
+  readonly original: ProviderBase<T>;
+  readonly create: (ref: Ref) => T;
+}
+
+// ── Union type for any provider ────────────────────────────────
+
+// biome-ignore lint: we need `any` for the union type
+export type AnyProvider<T = any> =
+  | Provider<T>
+  | StateProvider<T>
+  | FutureProvider<T>
+  | StreamProvider<T>
+  | NotifierProvider<unknown, T>
+  | AsyncNotifierProvider<unknown, T>
+  | NotifierAccessor<T>;
