@@ -380,3 +380,75 @@ button.active {
   color: var(--river-danger);
   font-size: 0.85rem;
 }
+
+/* ── Timer card ─────────────────────────────────────────────── */
+
+.timer-box {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
+}
+
+.timer-display {
+  font-size: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--river-text);
+  font-variant-numeric: tabular-nums;
+  padding: 12px 24px;
+  background: var(--river-surface-alt);
+  border-radius: 999px;
+  border: 2px dashed var(--river-border);
+}
+
+.timer-display .icon {
+  font-size: 1.8rem;
+}
+
+.timer-display strong {
+  color: var(--river-primary);
+  font-weight: 800;
+}
+
+.full-width {
+  width: 100%;
+}
+
+/* ── Stream card ────────────────────────────────────────────── */
+
+.stream-display {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  background: var(--river-surface-alt);
+  border-radius: 8px;
+  border-left: 4px solid var(--river-primary);
+}
+
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  background-color: var(--river-success);
+  border-radius: 50%;
+  position: relative;
+}
+
+.pulse-dot::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--river-success);
+  border-radius: 50%;
+  animation: pulse-animation 1.5s infinite;
+}
+
+@keyframes pulse-animation {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(3); opacity: 0; }
+}

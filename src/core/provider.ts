@@ -3,145 +3,142 @@
  *  Create provider definitions (descriptions, not state).
  * ════════════════════════════════════════════════════════════════ */
 
-import type { AsyncNotifier, Notifier } from "./notifier"
+import type { AsyncNotifier, Notifier } from "./notifier";
 import type {
-	AsyncNotifierProvider,
-	FutureProvider,
-	NotifierAccessor,
-	NotifierProvider,
-	Provider,
-	ProviderOptions,
-	Ref,
-	StateProvider,
-	StreamProvider,
-} from "./types"
+  AsyncNotifierProvider,
+  FutureProvider,
+  NotifierAccessor,
+  NotifierProvider,
+  Provider,
+  ProviderOptions,
+  Ref,
+  StateProvider,
+  StreamProvider,
+} from "./types";
 
 // ── Internal ID counter for debugging ──────────────────────────
 
-let providerCount = 0
+let providerCount = 0;
 function nextId(name?: string): symbol {
-	return Symbol(name ?? `provider_${++providerCount}`)
+  return Symbol(name ?? `provider_${++providerCount}`);
 }
 
 // ── provider() — Read-only computed value ──────────────────────
 
-export function provider<T>(
-	create: (ref: Ref) => T,
-	options: ProviderOptions = {},
-): Provider<T> {
-	return {
-		id: nextId(options.name),
-		kind: "provider",
-		name: options.name,
-		options,
-		_create: create,
-	}
+export function provider<T>(create: (ref: Ref) => T, options: ProviderOptions = {}): Provider<T> {
+  return {
+    id: nextId(options.name),
+    kind: "provider",
+    name: options.name,
+    options,
+    _create: create,
+  };
 }
 
 // ── stateProvider() — Simple mutable state ─────────────────────
 
 export function stateProvider<T>(
-	create: (ref: Ref) => T,
-	options: ProviderOptions = {},
+  create: (ref: Ref) => T,
+  options: ProviderOptions = {},
 ): StateProvider<T> {
-	const id = nextId(options.name)
+  const id = nextId(options.name);
 
-	const notifierAccessor: NotifierAccessor<unknown> = {
-		id: Symbol(`${options.name ?? id.description}.notifier`),
-		kind: "notifierAccessor",
-		name: options.name ? `${options.name}.notifier` : undefined,
-		options,
-		_parentId: id,
-	}
+  const notifierAccessor: NotifierAccessor<unknown> = {
+    id: Symbol(`${options.name ?? id.description}.notifier`),
+    kind: "notifierAccessor",
+    name: options.name ? `${options.name}.notifier` : undefined,
+    options,
+    _parentId: id,
+  };
 
-	return {
-		id,
-		kind: "stateProvider",
-		name: options.name,
-		options,
-		_create: create,
-		notifier: notifierAccessor,
-	} as StateProvider<T>
+  return {
+    id,
+    kind: "stateProvider",
+    name: options.name,
+    options,
+    _create: create,
+    notifier: notifierAccessor,
+  } as StateProvider<T>;
 }
 
 // ── futureProvider() — Async data source ───────────────────────
 
 export function futureProvider<T>(
-	create: (ref: Ref) => Promise<T>,
-	options: ProviderOptions = {},
+  create: (ref: Ref) => Promise<T>,
+  options: ProviderOptions = {},
 ): FutureProvider<T> {
-	return {
-		id: nextId(options.name),
-		kind: "futureProvider",
-		name: options.name,
-		options,
-		_create: create,
-	}
+  return {
+    id: nextId(options.name),
+    kind: "futureProvider",
+    name: options.name,
+    options,
+    _create: create,
+  };
 }
 
 // ── streamProvider() — Observable / AsyncIterable data source ──
 
 export function streamProvider<T>(
-	create: (ref: Ref) => AsyncIterable<T>,
-	options: ProviderOptions = {},
+  create: (ref: Ref) => AsyncIterable<T>,
+  options: ProviderOptions = {},
 ): StreamProvider<T> {
-	return {
-		id: nextId(options.name),
-		kind: "streamProvider",
-		name: options.name,
-		options,
-		_create: create,
-	}
+  return {
+    id: nextId(options.name),
+    kind: "streamProvider",
+    name: options.name,
+    options,
+    _create: create,
+  };
 }
 
 // ── notifierProvider() — Class-based synchronous state ─────────
 
-export function notifierProvider<N extends Notifier<T>, T>(
-	createNotifier: () => N,
-	options: ProviderOptions = {},
-): NotifierProvider<N, T> {
-	const id = nextId(options.name)
+export function notifierProvider<N extends Notifier<any>>(
+  createNotifier: () => N,
+  options: ProviderOptions = {},
+): NotifierProvider<N, N extends Notifier<infer T> ? T : unknown> {
+  const id = nextId(options.name);
 
-	const notifierAccessor: NotifierAccessor<N> = {
-		id: Symbol(`${options.name ?? id.description}.notifier`),
-		kind: "notifierAccessor",
-		name: options.name ? `${options.name}.notifier` : undefined,
-		options,
-		_parentId: id,
-	}
+  const notifierAccessor: NotifierAccessor<N> = {
+    id: Symbol(`${options.name ?? id.description}.notifier`),
+    kind: "notifierAccessor",
+    name: options.name ? `${options.name}.notifier` : undefined,
+    options,
+    _parentId: id,
+  };
 
-	return {
-		id,
-		kind: "notifierProvider",
-		name: options.name,
-		options,
-		_createNotifier: createNotifier,
-		notifier: notifierAccessor,
-	}
+  return {
+    id,
+    kind: "notifierProvider",
+    name: options.name,
+    options,
+    _createNotifier: createNotifier,
+    notifier: notifierAccessor,
+  };
 }
 
 // ── asyncNotifierProvider() — Class-based async state ──────────
 
-export function asyncNotifierProvider<N extends AsyncNotifier<T>, T>(
-	createNotifier: () => N,
-	options: ProviderOptions = {},
-): AsyncNotifierProvider<N, T> {
-	const id = nextId(options.name)
+export function asyncNotifierProvider<N extends AsyncNotifier<any>>(
+  createNotifier: () => N,
+  options: ProviderOptions = {},
+): AsyncNotifierProvider<N, N extends AsyncNotifier<infer T> ? T : unknown> {
+  const id = nextId(options.name);
 
-	const notifierAccessor: NotifierAccessor<N> = {
-		id: Symbol(`${options.name ?? id.description}.notifier`),
-		kind: "notifierAccessor",
-		name: options.name ? `${options.name}.notifier` : undefined,
-		options,
-		_parentId: id,
-	}
+  const notifierAccessor: NotifierAccessor<N> = {
+    id: Symbol(`${options.name ?? id.description}.notifier`),
+    kind: "notifierAccessor",
+    name: options.name ? `${options.name}.notifier` : undefined,
+    options,
+    _parentId: id,
+  };
 
-	return {
-		id,
-		kind: "asyncNotifierProvider",
-		name: options.name,
-		options,
-		_createNotifier: createNotifier,
-		notifier: notifierAccessor,
-	}
+  return {
+    id,
+    kind: "asyncNotifierProvider",
+    name: options.name,
+    options,
+    _createNotifier: createNotifier,
+    notifier: notifierAccessor,
+  };
 }

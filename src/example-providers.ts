@@ -10,6 +10,7 @@ import {
   notifierProvider,
   asyncNotifierProvider,
   provider,
+  streamProvider,
   futureProviderFamily,
   asyncData,
   asyncLoading,
@@ -58,7 +59,7 @@ class TodoNotifier extends Notifier<Todo[]> {
   }
 }
 
-export const todosProvider = notifierProvider<TodoNotifier, Todo[]>(() => new TodoNotifier(), {
+export const todosProvider = notifierProvider(() => new TodoNotifier(), {
   name: "todos",
 });
 
@@ -96,7 +97,7 @@ class UserNotifier extends AsyncNotifier<User> {
   }
 }
 
-export const userProvider = asyncNotifierProvider<UserNotifier, User>(() => new UserNotifier(), {
+export const userProvider = asyncNotifierProvider(() => new UserNotifier(), {
   name: "user",
 });
 
@@ -122,11 +123,21 @@ export const postProvider = futureProviderFamily<Post, number>(
 
 // ── 6. Infinite — notifierProvider ─────────────────────────────
 
-class InfiniteNotifier extends Notifier<number> {
+class TimerNotifier extends Notifier<number> {
+  private timer: any;
+
   build() {
-    setInterval(() => {
+    console.log("🌊 [CREATE] TimerNotifier initialized");
+
+    this.timer = setInterval(() => {
       this.state += 1;
     }, 1000);
+
+    this.onDispose(() => {
+      console.log("🌊 [DISPOSE] TimerNotifier cleaned up");
+      clearInterval(this.timer);
+    });
+
     return 0;
   }
 
@@ -135,8 +146,21 @@ class InfiniteNotifier extends Notifier<number> {
   }
 }
 
-export const infiniteProvider = notifierProvider<InfiniteNotifier, number>(
-  () => new InfiniteNotifier(),
+export const timerProvider = notifierProvider(() => new TimerNotifier(), {
+  name: "timer",
+  autoDispose: true,
+});
+
+// ── 7. Stream — streamProvider ────────────────────────────────
+
+export const clockProvider = streamProvider(
+  async function* (_ref) {
+    while (true) {
+      await sleep(1000);
+      yield `Stream tick: ${new Date().toLocaleTimeString()}`;
+    }
+  },
+  { name: "clock" },
 );
 
 // ── Helpers ────────────────────────────────────────────────────

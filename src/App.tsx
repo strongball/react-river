@@ -6,6 +6,8 @@ import {
   todosProvider,
   userProvider,
   postProvider,
+  timerProvider,
+  clockProvider,
 } from "./example-providers";
 import "./App.css";
 
@@ -26,6 +28,8 @@ export default function App() {
         <TodoCard />
         <UserCard />
         <PostCard />
+        <TimerCard />
+        <StreamCard />
       </div>
 
       <footer className="app-footer">
@@ -206,4 +210,70 @@ function PostContent({ postId }: { postId: number }) {
       </div>
     ),
   });
+}
+
+// ── 5. Timer — Auto-Dispose Demo ───────────────────────────────
+
+function TimerCard() {
+  const [show, setShow] = useState(false);
+
+  return (
+    <section className="card">
+      <div className="card-badge">autoDispose: true</div>
+      <h2>Auto-Dispose</h2>
+      <p className="muted">
+        When the timer is hidden, the provider is automatically disposed (check logs).
+      </p>
+
+      {show ? (
+        <div className="timer-box">
+          <TimerDisplay />
+          <button onClick={() => setShow(false)} className="secondary full-width">
+            Stop & Unmount Timer
+          </button>
+        </div>
+      ) : (
+        <button onClick={() => setShow(true)} className="full-width">
+          Start Timer (Mount)
+        </button>
+      )}
+    </section>
+  );
+}
+
+function TimerDisplay() {
+  const count = useWatch(timerProvider);
+  return (
+    <div className="timer-display">
+      <span className="icon">⏱️</span>
+      <strong>{count}</strong> seconds
+    </div>
+  );
+}
+
+// ── 6. Stream — streamProvider Demo ────────────────────────────
+
+function StreamCard() {
+  const clockAsync = useWatch(clockProvider);
+
+  return (
+    <section className="card">
+      <div className="card-badge">streamProvider</div>
+      <h2>Live Clock</h2>
+      <p className="muted">
+        This provider yields a new value every 2 seconds via an async generator.
+      </p>
+
+      {when(clockAsync, {
+        loading: () => <div className="skeleton">Starting stream…</div>,
+        error: (e) => <div className="error-box">Stream Error: {String(e)}</div>,
+        data: (value) => (
+          <div className="stream-display">
+            <span className="pulse-dot"></span>
+            <code>{value}</code>
+          </div>
+        ),
+      })}
+    </section>
+  );
 }
