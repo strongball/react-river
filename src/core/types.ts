@@ -14,7 +14,7 @@ export type ListenerCallback<T> = (previous: T | undefined, next: T) => void;
 export type ProviderKind =
   | "provider"
   | "stateProvider"
-  | "futureProvider"
+  | "promiseProvider"
   | "streamProvider"
   | "notifierProvider"
   | "asyncNotifierProvider"
@@ -90,8 +90,8 @@ export interface StateProvider<T> extends ProviderBase<T> {
 }
 
 /** Async data source provider (Promise-based) */
-export interface FutureProvider<T> extends ProviderBase<AsyncValue<T>> {
-  readonly kind: "futureProvider";
+export interface PromiseProvider<T> extends ProviderBase<AsyncValue<T>> {
+  readonly kind: "promiseProvider";
   /** @internal */
   readonly _create: (ref: Ref) => Promise<T>;
 }
@@ -151,7 +151,7 @@ export interface ProviderOverride<T = unknown> {
 export type AnyProvider<T = any> =
   | Provider<T>
   | StateProvider<T>
-  | FutureProvider<T>
+  | PromiseProvider<T>
   | StreamProvider<T>
   | NotifierProvider<unknown, T>
   | AsyncNotifierProvider<unknown, T>

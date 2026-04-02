@@ -6,7 +6,7 @@
 import type { AsyncNotifier, Notifier } from "./notifier";
 import {
   asyncNotifierProvider,
-  futureProvider,
+  promiseProvider,
   notifierProvider,
   provider,
   stateProvider,
@@ -14,7 +14,7 @@ import {
 } from "./provider";
 import type {
   AsyncNotifierProvider,
-  FutureProvider,
+  PromiseProvider,
   NotifierProvider,
   Provider,
   ProviderOptions,
@@ -103,18 +103,18 @@ export function stateProviderFamily<T, Arg>(
  * Create a parameterized async data source provider.
  *
  * ```ts
- * const userProvider = futureProviderFamily<User, string>((ref, userId) => {
+ * const userProvider = promiseProviderFamily<User, string>((ref, userId) => {
  *   return fetchUser(userId)
  * })
  * // Usage: useWatch(userProvider('user-123'))
  * ```
  */
-export function futureProviderFamily<T, Arg>(
+export function promiseProviderFamily<T, Arg>(
   create: (ref: Ref, arg: Arg) => Promise<T>,
   options: ProviderOptions = {},
-): ProviderFamily<FutureProvider<T>, Arg> {
+): ProviderFamily<PromiseProvider<T>, Arg> {
   return createFamily((arg, key) =>
-    futureProvider((ref) => create(ref, arg), {
+    promiseProvider((ref) => create(ref, arg), {
       ...options,
       name: options.name ? `${options.name}(${key})` : undefined,
     }),

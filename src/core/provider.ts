@@ -6,7 +6,7 @@
 import type { AsyncNotifier, Notifier } from "./notifier";
 import type {
   AsyncNotifierProvider,
-  FutureProvider,
+  PromiseProvider,
   NotifierAccessor,
   NotifierProvider,
   Provider,
@@ -64,15 +64,15 @@ export function stateProvider<T>(
   return provider;
 }
 
-// ── futureProvider() — Async data source ───────────────────────
+// ── promiseProvider() — Async data source ───────────────────────
 
-export function futureProvider<T>(
+export function promiseProvider<T>(
   create: (ref: Ref) => Promise<T>,
   options: ProviderOptions = {},
-): FutureProvider<T> {
+): PromiseProvider<T> {
   return {
     id: nextId(options.name),
-    kind: "futureProvider",
+    kind: "promiseProvider",
     name: options.name,
     options,
     _create: create,

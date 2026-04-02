@@ -14,7 +14,7 @@ import type { AsyncValue } from "./async_value"
 import type { Notifier, AsyncNotifier } from "./notifier"
 import type { RiverObserver } from "./observer"
 import type {
-	FutureProvider,
+	PromiseProvider,
 	ListenerCallback,
 	NotifierAccessor,
 	ProviderBase,
@@ -259,8 +259,8 @@ export class RiverContainer {
 					break
 				}
 
-				case "futureProvider": {
-					const p = provider as FutureProvider<unknown>
+				case "promiseProvider": {
+					const p = provider as PromiseProvider<unknown>
 					const createFn = override
 						? override.create
 						: (r: Ref) => p._create(r)

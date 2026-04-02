@@ -1,4 +1,4 @@
-import { futureProviderFamily } from "react-river";
+import { promiseProviderFamily } from "react-river";
 import { sleep } from "./utils";
 
 export interface Post {
@@ -7,7 +7,7 @@ export interface Post {
   body: string;
 }
 
-export const postProvider = futureProviderFamily<Post, number>(
+export const postProvider = promiseProviderFamily<Post, number>(
   async (_ref, postId) => {
     await sleep(800 + Math.random() * 700);
     return {

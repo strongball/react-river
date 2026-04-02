@@ -7,7 +7,7 @@ export function PostCard() {
 
   return (
     <section className="card">
-      <div className="card-badge">futureProviderFamily</div>
+      <div className="card-badge">promiseProviderFamily</div>
       <h2>Post Viewer</h2>
 
       <div className="button-row">

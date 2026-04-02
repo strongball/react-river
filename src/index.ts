@@ -19,7 +19,7 @@ export {
 export {
 	provider,
 	stateProvider,
-	futureProvider,
+	promiseProvider,
 	streamProvider,
 	notifierProvider,
 	asyncNotifierProvider,
@@ -37,7 +37,7 @@ export type { ProviderFamily } from "./core/family"
 export {
 	providerFamily,
 	stateProviderFamily,
-	futureProviderFamily,
+	promiseProviderFamily,
 	streamProviderFamily,
 	notifierProviderFamily,
 	asyncNotifierProviderFamily,
@@ -53,7 +53,7 @@ export type {
 	ProviderBase,
 	Provider,
 	StateProvider,
-	FutureProvider,
+	PromiseProvider,
 	StreamProvider,
 	NotifierProvider,
 	AsyncNotifierProvider,
