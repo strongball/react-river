@@ -1,0 +1,35 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "singleQuote": true,
+  "tabWidth": 2,
+  "printWidth": 120,
+  "ignorePatterns": [
+
+  ],
+  "sortImports": {
+    "customGroups": [
+      {
+        "groupName": "react",
+        "elementNamePattern": [
+          "react",
+          "react-**"
+        ]
+      },
+    ],
+    "groups": [
+      "react",
+      "zerologix",
+      [
+        "value-builtin",
+        "value-external"
+      ],
+      "value-internal",
+      [
+        "value-parent",
+        "value-sibling",
+        "value-index"
+      ],
+      "unknown"
+    ]
+  }
+}

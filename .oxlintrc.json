@@ -1,0 +1,25 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": [
+    "typescript",
+    "react",
+    "import"
+  ],
+  "categories": {
+    "correctness": "error"
+  },
+  "rules": {
+    "no-empty-function": "off",
+    "no-empty-interface": "off",
+    "no-empty-object-type": "off",
+    "no-unused-expressions": "off",
+    "no-unused-vars": "off",
+    "prefer-const": "warn"
+  },
+  "overrides": [
+  ],
+  "ignorePatterns": [
+    "**/dist",
+    "**/node_modules",
+  ]
+}
