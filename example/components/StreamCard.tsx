@@ -1,5 +1,6 @@
-import { useWatch, when } from "react-river";
-import { clockProvider } from "../providers";
+import { useWatch, when } from 'react-river';
+
+import { clockProvider } from '../providers';
 
 export function StreamCard() {
   const clockAsync = useWatch(clockProvider);
@@ -8,9 +9,7 @@ export function StreamCard() {
     <section className="card">
       <div className="card-badge">streamProvider</div>
       <h2>Live Clock</h2>
-      <p className="muted">
-        This provider yields a new value every 2 seconds via an async generator.
-      </p>
+      <p className="muted">This provider yields a new value every 2 seconds via an async generator.</p>
 
       {when(clockAsync, {
         loading: () => <div className="skeleton">Starting stream…</div>,

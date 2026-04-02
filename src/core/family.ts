@@ -3,7 +3,6 @@
  *  Parameterized providers, analogous to Riverpod's .family.
  * ════════════════════════════════════════════════════════════════ */
 
-import type { AsyncNotifier, Notifier } from "./notifier";
 import {
   asyncNotifierProvider,
   promiseProvider,
@@ -11,7 +10,9 @@ import {
   provider,
   stateProvider,
   streamProvider,
-} from "./provider";
+} from './provider';
+
+import type { AsyncNotifier, Notifier } from './notifier';
 import type {
   AsyncNotifierProvider,
   PromiseProvider,
@@ -21,7 +22,7 @@ import type {
   Ref,
   StateProvider,
   StreamProvider,
-} from "./types";
+} from './types';
 
 // ── Family types ───────────────────────────────────────────────
 
@@ -34,8 +35,8 @@ export interface ProviderFamily<P, Arg> {
 // ── Key serialization ──────────────────────────────────────────
 
 function serializeArg(arg: unknown): string {
-  if (typeof arg === "string") return arg;
-  if (typeof arg === "number" || typeof arg === "boolean") return String(arg);
+  if (typeof arg === 'string') return arg;
+  if (typeof arg === 'number' || typeof arg === 'boolean') return String(arg);
   return JSON.stringify(arg);
 }
 

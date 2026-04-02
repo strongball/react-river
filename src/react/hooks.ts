@@ -3,9 +3,11 @@
  *  useWatch / useRiverRef / useListen
  * ════════════════════════════════════════════════════════════════ */
 
-import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
-import type { ListenerCallback, ProviderBase, RiverRef, StateProvider } from "../core/types";
-import { useRiverContainer } from "./scope";
+import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
+
+import { useRiverContainer } from './scope';
+
+import type { ListenerCallback, ProviderBase, RiverRef, StateProvider } from '../core/types';
 
 // ── useWatch — subscribe to a provider (triggers re-render) ────
 
@@ -87,7 +89,7 @@ export function useWatch<T, S>(provider: ProviderBase<T>, selector?: (value: T) 
  */
 export function useRiverRef(): RiverRef {
   const container = useRiverContainer();
-  
+
   // Track latest container so stable ref methods always use the right one
   const containerRef = useRef(container);
   containerRef.current = container;
@@ -100,8 +102,7 @@ export function useRiverRef(): RiverRef {
       read: (provider) => containerRef.current.read(provider),
       invalidate: (provider) => containerRef.current.invalidate(provider),
       refresh: (provider) => containerRef.current.refresh(provider),
-      set: <T>(provider: StateProvider<T>, value: T | ((prev: T) => T)) =>
-        containerRef.current.set(provider, value),
+      set: <T>(provider: StateProvider<T>, value: T | ((prev: T) => T)) => containerRef.current.set(provider, value),
     };
   }
 

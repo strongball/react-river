@@ -1,12 +1,5 @@
-import {
-  CounterCard,
-  TodoCard,
-  UserCard,
-  PostCard,
-  TimerCard,
-  StreamCard,
-} from "./components";
-import "./App.css";
+import { CounterCard, TodoCard, UserCard, PostCard, TimerCard, StreamCard } from './components';
+import './App.css';
 
 // ════════════════════════════════════════════════════════════════
 //  App — React River Demo

@@ -1,5 +1,6 @@
-import { promiseProviderFamily } from "react-river";
-import { sleep } from "./utils";
+import { promiseProviderFamily } from 'react-river';
+
+import { sleep } from './utils';
 
 export interface Post {
   id: number;
@@ -16,5 +17,5 @@ export const postProvider = promiseProviderFamily<Post, number>(
       body: `This is the content of post ${postId}. Loaded at ${new Date().toLocaleTimeString()}.`,
     };
   },
-  { name: "post" },
+  { name: 'post' },
 );

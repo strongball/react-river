@@ -1,5 +1,6 @@
-import { useWatch, useRiverRef, when } from "react-river";
-import { userProvider } from "../providers";
+import { useWatch, useRiverRef, when } from 'react-river';
+
+import { userProvider } from '../providers';
 
 export function UserCard() {
   const userAsync = useWatch(userProvider);
@@ -32,7 +33,7 @@ export function UserCard() {
           }}
           disabled={userAsync.isLoading}
         >
-          {userAsync.isLoading ? "Refreshing…" : "Refresh User"}
+          {userAsync.isLoading ? 'Refreshing…' : 'Refresh User'}
         </button>
       </div>
     </section>

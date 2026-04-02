@@ -1,17 +1,17 @@
-import { Notifier, notifierProvider } from "react-river";
+import { Notifier, notifierProvider } from 'react-river';
 
 class TimerNotifier extends Notifier<number> {
   private timer: any;
 
   build() {
-    console.log("🌊 [CREATE] TimerNotifier initialized");
+    console.log('🌊 [CREATE] TimerNotifier initialized');
 
     this.timer = setInterval(() => {
       this.state += 1;
     }, 1000);
 
     this.onDispose(() => {
-      console.log("🌊 [DISPOSE] TimerNotifier cleaned up");
+      console.log('🌊 [DISPOSE] TimerNotifier cleaned up');
       clearInterval(this.timer);
     });
 
@@ -24,6 +24,6 @@ class TimerNotifier extends Notifier<number> {
 }
 
 export const timerProvider = notifierProvider(() => new TimerNotifier(), {
-  name: "timer",
+  name: 'timer',
   autoDispose: true,
 });

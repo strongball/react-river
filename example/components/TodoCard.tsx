@@ -1,11 +1,12 @@
-import { useState } from "react";
-import { useWatch, useRiverRef } from "react-river";
-import { todosProvider } from "../providers";
+import { useState } from 'react';
+import { useWatch, useRiverRef } from 'react-river';
+
+import { todosProvider } from '../providers';
 
 export function TodoCard() {
   const todos = useWatch(todosProvider);
   const ref = useRiverRef();
-  const [input, setInput] = useState("");
+  const [input, setInput] = useState('');
 
   const notifier = ref.read(todosProvider.notifier);
 
@@ -13,7 +14,7 @@ export function TodoCard() {
     const trimmed = input.trim();
     if (!trimmed) return;
     notifier.add(trimmed);
-    setInput("");
+    setInput('');
   };
 
   return (
@@ -27,7 +28,7 @@ export function TodoCard() {
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+          onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
           placeholder="Add a todo…"
         />
         <button onClick={handleAdd}>Add</button>
@@ -38,13 +39,9 @@ export function TodoCard() {
       ) : (
         <ul className="todo-list">
           {todos.map((todo) => (
-            <li key={todo.id} className={todo.done ? "done" : ""}>
+            <li key={todo.id} className={todo.done ? 'done' : ''}>
               <label>
-                <input
-                  type="checkbox"
-                  checked={todo.done}
-                  onChange={() => notifier.toggle(todo.id)}
-                />
+                <input type="checkbox" checked={todo.done} onChange={() => notifier.toggle(todo.id)} />
                 <span>{todo.text}</span>
               </label>
               <button className="delete-btn" onClick={() => notifier.remove(todo.id)}>

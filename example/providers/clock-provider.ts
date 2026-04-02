@@ -1,5 +1,6 @@
-import { streamProvider } from "react-river";
-import { sleep } from "./utils";
+import { streamProvider } from 'react-river';
+
+import { sleep } from './utils';
 
 export const clockProvider = streamProvider(
   async function* (_ref) {
@@ -8,5 +9,5 @@ export const clockProvider = streamProvider(
       yield `Stream tick: ${new Date().toLocaleTimeString()}`;
     }
   },
-  { name: "clock" },
+  { name: 'clock' },
 );

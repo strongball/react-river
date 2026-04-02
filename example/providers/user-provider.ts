@@ -1,11 +1,6 @@
-import {
-  AsyncNotifier,
-  asyncNotifierProvider,
-  asyncData,
-  asyncLoading,
-  asyncError,
-} from "react-river";
-import { sleep } from "./utils";
+import { AsyncNotifier, asyncNotifierProvider, asyncData, asyncLoading, asyncError } from 'react-river';
+
+import { sleep } from './utils';
 
 export interface User {
   id: number;
@@ -19,8 +14,8 @@ class UserNotifier extends AsyncNotifier<User> {
     await sleep(1500);
     return {
       id: 1,
-      name: "Howie",
-      email: "howie@example.com",
+      name: 'Howie',
+      email: 'howie@example.com',
     };
   }
 
@@ -30,7 +25,7 @@ class UserNotifier extends AsyncNotifier<User> {
       await sleep(1000);
       this.state = asyncData({
         id: 1,
-        name: "Howie (refreshed)",
+        name: 'Howie (refreshed)',
         email: `howie+${Date.now()}@example.com`,
       });
     } catch (e) {
@@ -40,5 +35,5 @@ class UserNotifier extends AsyncNotifier<User> {
 }
 
 export const userProvider = asyncNotifierProvider(() => new UserNotifier(), {
-  name: "user",
+  name: 'user',
 });

@@ -1,6 +1,7 @@
-import { useState } from "react";
-import { useWatch, when } from "react-river";
-import { postProvider } from "../providers";
+import { useState } from 'react';
+import { useWatch, when } from 'react-river';
+
+import { postProvider } from '../providers';
 
 export function PostCard() {
   const [postId, setPostId] = useState(1);
@@ -12,11 +13,7 @@ export function PostCard() {
 
       <div className="button-row">
         {[1, 2, 3, 4, 5].map((id) => (
-          <button
-            key={id}
-            className={id === postId ? "active" : "secondary"}
-            onClick={() => setPostId(id)}
-          >
+          <button key={id} className={id === postId ? 'active' : 'secondary'} onClick={() => setPostId(id)}>
             #{id}
           </button>
         ))}

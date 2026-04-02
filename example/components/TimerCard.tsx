@@ -1,6 +1,7 @@
-import { useState } from "react";
-import { useWatch } from "react-river";
-import { timerProvider } from "../providers";
+import { useState } from 'react';
+import { useWatch } from 'react-river';
+
+import { timerProvider } from '../providers';
 
 export function TimerCard() {
   const [show, setShow] = useState(false);
@@ -9,9 +10,7 @@ export function TimerCard() {
     <section className="card">
       <div className="card-badge">autoDispose: true</div>
       <h2>Auto-Dispose</h2>
-      <p className="muted">
-        When the timer is hidden, the provider is automatically disposed (check logs).
-      </p>
+      <p className="muted">When the timer is hidden, the provider is automatically disposed (check logs).</p>
 
       {show ? (
         <div className="timer-box">

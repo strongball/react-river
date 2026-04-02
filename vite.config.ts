@@ -1,13 +1,13 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
-import { resolve } from "path";
+import react from '@vitejs/plugin-react';
+import { resolve } from 'path';
+import { defineConfig } from 'vite';
 
 export default defineConfig({
-  root: resolve(__dirname, "example"),
+  root: resolve(__dirname, 'example'),
   plugins: [react()],
   resolve: {
     alias: {
-      "react-river": resolve(__dirname, "src/index.ts"),
+      'react-river': resolve(__dirname, 'src/index.ts'),
     },
   },
   server: {
@@ -15,7 +15,7 @@ export default defineConfig({
     open: true,
   },
   build: {
-    outDir: "../dist-demo",
+    outDir: '../dist-demo',
     emptyOutDir: true,
   },
 });

@@ -2,7 +2,7 @@
  *  React River — Core Type Definitions
  * ════════════════════════════════════════════════════════════════ */
 
-import type { AsyncValue } from "./async_value";
+import type { AsyncValue } from './async_value';
 
 // ── Utility Types ──────────────────────────────────────────────
 
@@ -12,25 +12,25 @@ export type ListenerCallback<T> = (previous: T | undefined, next: T) => void;
 // ── Provider Kind ──────────────────────────────────────────────
 
 export type ProviderKind =
-  | "provider"
-  | "stateProvider"
-  | "promiseProvider"
-  | "streamProvider"
-  | "notifierProvider"
-  | "asyncNotifierProvider"
-  | "notifierAccessor";
+  | 'provider'
+  | 'stateProvider'
+  | 'promiseProvider'
+  | 'streamProvider'
+  | 'notifierProvider'
+  | 'asyncNotifierProvider'
+  | 'notifierAccessor';
 
 // ── Provider Options ───────────────────────────────────────────
 
 export interface ProviderOptions {
   /** Human-readable name for debugging & DevTools */
   name?: string;
-  /** 
+  /**
    * If true, provider is disposed when all listeners are removed.
    * Default is true.
    */
   autoDispose?: boolean;
-  /** 
+  /**
    * Additional time in milliseconds to keep the provider alive after all listeners are removed.
    * Only has an effect if `autoDispose` is true.
    * Default is 0ms (dispose immediately).
@@ -84,14 +84,14 @@ export interface ProviderBase<T = unknown> {
 
 /** Read-only computed provider */
 export interface Provider<T> extends ProviderBase<T> {
-  readonly kind: "provider";
+  readonly kind: 'provider';
   /** @internal */
   readonly _create: (ref: Ref) => T;
 }
 
 /** Simple mutable state provider */
 export interface StateProvider<T> extends ProviderBase<T> {
-  readonly kind: "stateProvider";
+  readonly kind: 'stateProvider';
   /** @internal */
   readonly _create: (ref: Ref) => T;
   /** Sub-provider exposing the StateController instance */
@@ -100,21 +100,21 @@ export interface StateProvider<T> extends ProviderBase<T> {
 
 /** Async data source provider (Promise-based) */
 export interface PromiseProvider<T> extends ProviderBase<AsyncValue<T>> {
-  readonly kind: "promiseProvider";
+  readonly kind: 'promiseProvider';
   /** @internal */
   readonly _create: (ref: Ref) => Promise<T>;
 }
 
 /** Stream data source provider (AsyncIterable-based) */
 export interface StreamProvider<T> extends ProviderBase<AsyncValue<T>> {
-  readonly kind: "streamProvider";
+  readonly kind: 'streamProvider';
   /** @internal */
   readonly _create: (ref: Ref) => AsyncIterable<T>;
 }
 
 /** Class-based synchronous state provider */
 export interface NotifierProvider<N, T> extends ProviderBase<T> {
-  readonly kind: "notifierProvider";
+  readonly kind: 'notifierProvider';
   /** @internal */
   readonly _createNotifier: () => N;
   /** Sub-provider exposing the Notifier instance */
@@ -123,7 +123,7 @@ export interface NotifierProvider<N, T> extends ProviderBase<T> {
 
 /** Class-based asynchronous state provider */
 export interface AsyncNotifierProvider<N, T> extends ProviderBase<AsyncValue<T>> {
-  readonly kind: "asyncNotifierProvider";
+  readonly kind: 'asyncNotifierProvider';
   /** @internal */
   readonly _createNotifier: () => N;
   /** Sub-provider exposing the AsyncNotifier instance */
@@ -132,7 +132,7 @@ export interface AsyncNotifierProvider<N, T> extends ProviderBase<AsyncValue<T>>
 
 /** Sub-provider that yields the notifier/controller of its parent */
 export interface NotifierAccessor<N> extends ProviderBase<N> {
-  readonly kind: "notifierAccessor";
+  readonly kind: 'notifierAccessor';
   /** @internal */
   readonly _parentId: symbol;
   /** @internal */

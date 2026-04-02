@@ -1,4 +1,4 @@
-import { Notifier, notifierProvider } from "react-river";
+import { Notifier, notifierProvider } from 'react-river';
 
 export interface Todo {
   id: number;
@@ -27,5 +27,5 @@ class TodoNotifier extends Notifier<Todo[]> {
 }
 
 export const todosProvider = notifierProvider(() => new TodoNotifier(), {
-  name: "todos",
+  name: 'todos',
 });
