@@ -35,7 +35,7 @@ interface ProviderState {
   valueListeners: Set<ListenerCallback<unknown>>;
 
   /** Providers this one depends on (via ref.watch) */
-  dependencies: Set<symbol>;
+  dependencies: Set<ProviderBase>;
   /** Providers that depend on this one */
   dependents: Set<symbol>;
 
@@ -106,7 +106,7 @@ export class RiverContainer {
     this.ensureInitialized(provider);
 
     const state = this.getState(provider.id)!;
-    const hadListeners = state.snapshotListeners.size > 0 || state.valueListeners.size > 0;
+    const hadListeners = this.hasListeners(state);
 
     state.snapshotListeners.add(callback);
 
@@ -135,7 +135,7 @@ export class RiverContainer {
     this.ensureInitialized(provider);
 
     const state = this.getState(provider.id)!;
-    const hadListeners = state.snapshotListeners.size > 0 || state.valueListeners.size > 0;
+    const hadListeners = this.hasListeners(state);
 
     state.valueListeners.add(callback as ListenerCallback<unknown>);
 
@@ -488,8 +488,8 @@ export class RiverContainer {
     state.abortController?.abort();
 
     // Clear old dependencies
-    for (const depId of Array.from(state.dependencies)) {
-      const depState = this.getState(depId);
+    for (const depProvider of Array.from(state.dependencies)) {
+      const depState = this.getState(depProvider.id);
       depState?.dependents.delete(provider.id);
     }
     state.dependencies.clear();
@@ -497,13 +497,6 @@ export class RiverContainer {
     state.cancelCallbacks = [];
     state.resumeCallbacks = [];
     state.abortController = undefined;
-
-    // Keep listeners and dependents — they're still valid
-    const savedListeners = {
-      snapshot: new Set(state.snapshotListeners),
-      value: new Set(state.valueListeners),
-      dependents: new Set(state.dependents),
-    };
 
     // Remove from states so initializeProvider creates fresh
     state.initialized = false;
@@ -515,9 +508,9 @@ export class RiverContainer {
 
     // Restore listeners
     const newState = this.getState(provider.id)!;
-    newState.snapshotListeners = savedListeners.snapshot;
-    newState.valueListeners = savedListeners.value;
-    newState.dependents = savedListeners.dependents;
+    newState.snapshotListeners = state.snapshotListeners;
+    newState.valueListeners = state.valueListeners;
+    newState.dependents = state.dependents;
 
     // Check if value actually changed
     if (!this.valuesEqual(oldValue, newState.value)) {
@@ -548,7 +541,7 @@ export class RiverContainer {
         // Track dependency
         const ownerState = this.getState(ownerId);
         if (ownerState) {
-          ownerState.dependencies.add(provider.id);
+          ownerState.dependencies.add(provider);
         }
         const targetState = this.getState(provider.id);
         if (targetState) {
@@ -594,8 +587,7 @@ export class RiverContainer {
   private checkAutoDispose(provider: ProviderBase): void {
     const state = this.getState(provider.id);
     if (!state) return;
-
-    const hasListeners = state.snapshotListeners.size > 0 || state.valueListeners.size > 0;
+    const hasListeners = this.hasListeners(state);
 
     if (!hasListeners) {
       // Fire cancel callbacks
@@ -607,7 +599,7 @@ export class RiverContainer {
         if (cacheTime !== undefined && cacheTime > 0) {
           state.disposeTimeout = setTimeout(() => {
             const currentState = this.getState(provider.id);
-            if (currentState && currentState.snapshotListeners.size === 0 && currentState.valueListeners.size === 0) {
+            if (currentState && !this.hasListeners(currentState)) {
               this.disposeProvider(provider);
             }
           }, cacheTime);
@@ -615,7 +607,7 @@ export class RiverContainer {
           // Use microtask to allow re-subscription during the same tick
           queueMicrotask(() => {
             const currentState = this.getState(provider.id);
-            if (currentState && currentState.snapshotListeners.size === 0 && currentState.valueListeners.size === 0) {
+            if (currentState && !this.hasListeners(currentState)) {
               this.disposeProvider(provider);
             }
           });
@@ -652,9 +644,10 @@ export class RiverContainer {
     state.abortController?.abort();
 
     // Remove from dependency graph
-    for (const depId of Array.from(state.dependencies)) {
-      const depState = this.getState(depId);
+    for (const depProvider of Array.from(state.dependencies)) {
+      const depState = this.getState(depProvider.id);
       depState?.dependents.delete(id);
+      this.checkAutoDispose(depProvider);
     }
 
     state.snapshotListeners.clear();
@@ -694,6 +687,10 @@ export class RiverContainer {
   }
 
   // ── Helpers ──────────────────────────────────────────────────
+
+  private hasListeners(state: ProviderState): boolean {
+    return state.snapshotListeners.size > 0 || state.valueListeners.size > 0 || state.dependents.size > 0;
+  }
 
   private getState(id: symbol): ProviderState | undefined {
     return this.states.get(id) ?? this.parent?.getState(id);
