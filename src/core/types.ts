@@ -18,7 +18,8 @@ export type ProviderKind =
   | 'streamProvider'
   | 'notifierProvider'
   | 'asyncNotifierProvider'
-  | 'notifierAccessor';
+  | 'notifierAccessor'
+  | 'promiseAccessor';
 
 // ── Provider Options ───────────────────────────────────────────
 
@@ -103,6 +104,8 @@ export interface PromiseProvider<T> extends ProviderBase<AsyncValue<T>> {
   readonly kind: 'promiseProvider';
   /** @internal */
   readonly _create: (ref: Ref) => Promise<T>;
+  /** Sub-provider exposing a Promise that resolves when the provider has data */
+  readonly promise: PromiseAccessor<T>;
 }
 
 /** Stream data source provider (AsyncIterable-based) */
@@ -110,6 +113,8 @@ export interface StreamProvider<T> extends ProviderBase<AsyncValue<T>> {
   readonly kind: 'streamProvider';
   /** @internal */
   readonly _create: (ref: Ref) => AsyncIterable<T>;
+  /** Sub-provider exposing a Promise that resolves when the provider has data */
+  readonly promise: PromiseAccessor<T>;
 }
 
 /** Class-based synchronous state provider */
@@ -128,6 +133,8 @@ export interface AsyncNotifierProvider<N, T> extends ProviderBase<AsyncValue<T>>
   readonly _createNotifier: () => N;
   /** Sub-provider exposing the AsyncNotifier instance */
   readonly notifier: NotifierAccessor<N>;
+  /** Sub-provider exposing a Promise that resolves when the provider has data */
+  readonly promise: PromiseAccessor<T>;
 }
 
 /** Sub-provider that yields the notifier/controller of its parent */
@@ -137,6 +144,15 @@ export interface NotifierAccessor<N> extends ProviderBase<N> {
   readonly _parentId: symbol;
   /** @internal */
   readonly _parentProvider?: ProviderBase<any>;
+}
+
+/** Sub-provider that yields a Promise resolving to the current/next data value */
+export interface PromiseAccessor<T> extends ProviderBase<Promise<T>> {
+  readonly kind: 'promiseAccessor';
+  /** @internal */
+  readonly _parentId: symbol;
+  /** @internal */
+  readonly _parentProvider: ProviderBase<AsyncValue<T>>;
 }
 
 // ── StateController ────────────────────────────────────────────
@@ -164,4 +180,5 @@ export type AnyProvider<T = any> =
   | StreamProvider<T>
   | NotifierProvider<unknown, T>
   | AsyncNotifierProvider<unknown, T>
-  | NotifierAccessor<T>;
+  | NotifierAccessor<T>
+  | PromiseAccessor<T>;

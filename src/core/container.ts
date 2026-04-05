@@ -13,6 +13,7 @@ import type {
   PromiseProvider,
   ListenerCallback,
   NotifierAccessor,
+  PromiseAccessor,
   ProviderBase,
   ProviderOverride,
   Ref,
@@ -368,6 +369,43 @@ export class RiverContainer {
             );
           }
           state.value = parentState.notifierInstance;
+          break;
+        }
+
+        case 'promiseAccessor': {
+          const accessor = provider as PromiseAccessor<unknown>;
+          const parentProvider = accessor._parentProvider;
+
+          // Read current parent state
+          const parentValue = this.read(parentProvider) as AsyncValue<unknown>;
+
+          // Track dependency so when parent is invalidated, the promise is also "refreshed"
+          const parentState = this.getState(parentProvider.id);
+          if (parentState) {
+            parentState.dependents.add(provider.id);
+            const state = this.getState(provider.id);
+            if (state) state.dependencies.add(parentProvider);
+          }
+
+          if (parentValue.status === 'data') {
+            state.value = Promise.resolve(parentValue.data);
+          } else if (parentValue.status === 'error') {
+            state.value = Promise.reject(parentValue.error);
+          } else {
+            // Currently loading, resolve/reject when status changes
+            state.value = new Promise((resolve, reject) => {
+              const unsubscribe = this.listen(parentProvider, (_prev, next) => {
+                const asyncNext = next as AsyncValue<unknown>;
+                if (asyncNext.status === 'data') {
+                  unsubscribe();
+                  resolve(asyncNext.data);
+                } else if (asyncNext.status === 'error') {
+                  unsubscribe();
+                  reject(asyncNext.error);
+                }
+              });
+            });
+          }
           break;
         }
 

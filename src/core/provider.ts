@@ -78,13 +78,24 @@ export function promiseProvider<T>(
   options: ProviderOptions = {},
 ): PromiseProvider<T> {
   const normOptions = normalizeOptions(options);
-  return {
+  const provider: PromiseProvider<T> = {
     id: nextId(normOptions.name),
     kind: 'promiseProvider',
     name: normOptions.name,
     options: normOptions,
     _create: create,
+    promise: {
+      id: Symbol(`${normOptions.name ?? 'promiseProvider'}.promise`),
+      kind: 'promiseAccessor',
+      name: normOptions.name ? `${normOptions.name}.promise` : undefined,
+      options: normOptions,
+      _parentId: null as any, // Will be set below
+      _parentProvider: null as any, // Will be set below
+    },
   };
+  (provider.promise as any)._parentId = provider.id;
+  (provider.promise as any)._parentProvider = provider;
+  return provider;
 }
 
 // ── streamProvider() — Observable / AsyncIterable data source ──
@@ -94,13 +105,24 @@ export function streamProvider<T>(
   options: ProviderOptions = {},
 ): StreamProvider<T> {
   const normOptions = normalizeOptions(options);
-  return {
+  const provider: StreamProvider<T> = {
     id: nextId(normOptions.name),
     kind: 'streamProvider',
     name: normOptions.name,
     options: normOptions,
     _create: create,
+    promise: {
+      id: Symbol(`${normOptions.name ?? 'streamProvider'}.promise`),
+      kind: 'promiseAccessor',
+      name: normOptions.name ? `${normOptions.name}.promise` : undefined,
+      options: normOptions,
+      _parentId: null as any,
+      _parentProvider: null as any,
+    },
   };
+  (provider.promise as any)._parentId = provider.id;
+  (provider.promise as any)._parentProvider = provider;
+  return provider;
 }
 
 // ── notifierProvider() — Class-based synchronous state ─────────
@@ -156,7 +178,16 @@ export function asyncNotifierProvider<N extends AsyncNotifier<any>>(
     options: normOptions,
     _createNotifier: createNotifier,
     notifier: notifierAccessor,
+    promise: {
+      id: Symbol(`${normOptions.name ?? id.description}.promise`),
+      kind: 'promiseAccessor',
+      name: normOptions.name ? `${normOptions.name}.promise` : undefined,
+      options: normOptions,
+      _parentId: id,
+      _parentProvider: null as any, // Set below
+    },
   };
   (notifierAccessor as any)._parentProvider = provider;
+  (provider.promise as any)._parentProvider = provider;
   return provider;
 }
