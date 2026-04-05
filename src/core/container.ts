@@ -19,7 +19,8 @@ import type {
   Ref,
   StateController,
   StateProvider,
-  StreamProvider,
+  ObservableProvider,
+  ObservableLike,
   Unsubscribe,
 } from './types';
 
@@ -282,15 +283,46 @@ export class RiverContainer {
           break;
         }
 
-        case 'streamProvider': {
-          const p = provider as StreamProvider<unknown>;
+        case 'observableProvider': {
+          const p = provider as ObservableProvider<unknown>;
           state.value = asyncLoading();
 
           const abortController = new AbortController();
           state.abortController = abortController;
 
-          const iterable = p._create(ref);
-          this.consumeStream(provider, iterable, abortController.signal);
+          const result = p._create(ref);
+
+          const subscribe = (obs: ObservableLike<unknown>) => {
+            if (abortController.signal.aborted) return;
+            const subscription = obs.subscribe({
+              next: (data) => {
+                if (abortController.signal.aborted) return;
+                this.updateValue(provider.id, asyncData(data));
+              },
+              error: (error) => {
+                if (abortController.signal.aborted) return;
+                this.notifyObservers('error', provider, error);
+                this.updateValue(provider.id, asyncError(error));
+              },
+              complete: () => {
+                // Observables completing just stops updates
+              },
+            });
+            state.disposeCallbacks.push(() => subscription.unsubscribe());
+          };
+
+          if (result instanceof Promise) {
+            result.then(
+              (obs) => subscribe(obs),
+              (error) => {
+                if (abortController.signal.aborted) return;
+                this.notifyObservers('error', provider, error);
+                this.updateValue(provider.id, asyncError(error));
+              },
+            );
+          } else {
+            subscribe(result);
+          }
           break;
         }
 
@@ -425,25 +457,6 @@ export class RiverContainer {
     return state.value;
   }
 
-  // ── Stream consumption ───────────────────────────────────────
-
-  private async consumeStream(
-    provider: ProviderBase,
-    iterable: AsyncIterable<unknown>,
-    signal: AbortSignal,
-  ): Promise<void> {
-    try {
-      for await (const value of iterable) {
-        if (signal.aborted) return;
-        this.updateValue(provider.id, asyncData(value));
-      }
-    } catch (error) {
-      if (signal.aborted) return;
-      this.notifyObservers('error', provider, error);
-      const current = this.getState(provider.id)?.value as AsyncValue<unknown> | undefined;
-      this.updateValue(provider.id, asyncError(error, current?.data));
-    }
-  }
 
   // ── Value updates & notification ─────────────────────────────
 

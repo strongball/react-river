@@ -15,7 +15,7 @@ export type ProviderKind =
   | 'provider'
   | 'stateProvider'
   | 'promiseProvider'
-  | 'streamProvider'
+  | 'observableProvider'
   | 'notifierProvider'
   | 'asyncNotifierProvider'
   | 'notifierAccessor'
@@ -81,6 +81,16 @@ export interface ProviderBase<T = unknown> {
   readonly __phantom?: T;
 }
 
+// ── Observable Support ──────────────────────────────────────────
+
+export interface ObservableLike<T> {
+  subscribe(callbacks: {
+    next: (value: T) => void;
+    error: (error: unknown) => void;
+    complete: () => void;
+  }): { unsubscribe: () => void };
+}
+
 // ── Concrete Provider Types ────────────────────────────────────
 
 /** Read-only computed provider */
@@ -108,11 +118,11 @@ export interface PromiseProvider<T> extends ProviderBase<AsyncValue<T>> {
   readonly promise: PromiseAccessor<T>;
 }
 
-/** Stream data source provider (AsyncIterable-based) */
-export interface StreamProvider<T> extends ProviderBase<AsyncValue<T>> {
-  readonly kind: 'streamProvider';
+/** Observable data source provider (Observable-based) */
+export interface ObservableProvider<T> extends ProviderBase<AsyncValue<T>> {
+  readonly kind: 'observableProvider';
   /** @internal */
-  readonly _create: (ref: Ref) => AsyncIterable<T>;
+  readonly _create: (ref: Ref) => ObservableLike<T> | Promise<ObservableLike<T>>;
   /** Sub-provider exposing a Promise that resolves when the provider has data */
   readonly promise: PromiseAccessor<T>;
 }
@@ -177,8 +187,9 @@ export type AnyProvider<T = any> =
   | Provider<T>
   | StateProvider<T>
   | PromiseProvider<T>
-  | StreamProvider<T>
+  | ObservableProvider<T>
   | NotifierProvider<unknown, T>
   | AsyncNotifierProvider<unknown, T>
   | NotifierAccessor<T>
   | PromiseAccessor<T>;
+

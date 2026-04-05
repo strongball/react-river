@@ -4,3 +4,4 @@ export * from './user-provider';
 export * from './post-provider';
 export * from './timer-provider';
 export * from './clock-provider';
+export * from './async-observable-provider';

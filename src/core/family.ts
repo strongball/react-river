@@ -9,7 +9,7 @@ import {
   notifierProvider,
   provider,
   stateProvider,
-  streamProvider,
+  observableProvider,
 } from './provider';
 
 import type { AsyncNotifier, Notifier } from './notifier';
@@ -21,8 +21,10 @@ import type {
   ProviderOptions,
   Ref,
   StateProvider,
-  StreamProvider,
+  ObservableProvider,
+  ObservableLike,
 } from './types';
+
 
 // ── Family types ───────────────────────────────────────────────
 
@@ -123,19 +125,20 @@ export function promiseProviderFamily<T, Arg>(
 }
 
 /**
- * Create a parameterized stream provider.
+ * Create a parameterized observable provider.
  */
-export function streamProviderFamily<T, Arg>(
-  create: (ref: Ref, arg: Arg) => AsyncIterable<T>,
+export function observableProviderFamily<T, Arg>(
+  create: (ref: Ref, arg: Arg) => ObservableLike<T> | Promise<ObservableLike<T>>,
   options: ProviderOptions = {},
-): ProviderFamily<StreamProvider<T>, Arg> {
+): ProviderFamily<ObservableProvider<T>, Arg> {
   return createFamily((arg, key) =>
-    streamProvider((ref) => create(ref, arg), {
+    observableProvider((ref) => create(ref, arg), {
       ...options,
       name: options.name ? `${options.name}(${key})` : undefined,
     }),
   );
 }
+
 
 /**
  * Create a parameterized class-based notifier provider.

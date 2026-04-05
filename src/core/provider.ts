@@ -14,7 +14,8 @@ import type {
   Ref,
   StateController,
   StateProvider,
-  StreamProvider,
+  ObservableProvider,
+  ObservableLike,
 } from './types';
 
 // ── Internal ID counter for debugging ──────────────────────────
@@ -98,21 +99,21 @@ export function promiseProvider<T>(
   return provider;
 }
 
-// ── streamProvider() — Observable / AsyncIterable data source ──
+// ── observableProvider() — Observable / Data source ──────────
 
-export function streamProvider<T>(
-  create: (ref: Ref) => AsyncIterable<T>,
+export function observableProvider<T>(
+  create: (ref: Ref) => ObservableLike<T> | Promise<ObservableLike<T>>,
   options: ProviderOptions = {},
-): StreamProvider<T> {
+): ObservableProvider<T> {
   const normOptions = normalizeOptions(options);
-  const provider: StreamProvider<T> = {
+  const provider: ObservableProvider<T> = {
     id: nextId(normOptions.name),
-    kind: 'streamProvider',
+    kind: 'observableProvider',
     name: normOptions.name,
     options: normOptions,
     _create: create,
     promise: {
-      id: Symbol(`${normOptions.name ?? 'streamProvider'}.promise`),
+      id: Symbol(`${normOptions.name ?? 'observableProvider'}.promise`),
       kind: 'promiseAccessor',
       name: normOptions.name ? `${normOptions.name}.promise` : undefined,
       options: normOptions,
