@@ -128,7 +128,7 @@ export class RiverContainer {
   }
 
   /**
-   * Listen to value changes with prev/next callback.
+   * Listen to value changes with next/prev callback.
    * Does NOT trigger component re-renders.
    */
   listen<T>(provider: ProviderBase<T>, callback: ListenerCallback<T>): Unsubscribe {
@@ -426,7 +426,7 @@ export class RiverContainer {
           } else {
             // Currently loading, resolve/reject when status changes
             state.value = new Promise((resolve, reject) => {
-              const unsubscribe = this.listen(parentProvider, (_prev, next) => {
+              const unsubscribe = this.listen(parentProvider, (next, _prev) => {
                 const asyncNext = next as AsyncValue<unknown>;
                 if (asyncNext.status === 'data') {
                   unsubscribe();
@@ -478,9 +478,9 @@ export class RiverContainer {
       this.notifyObservers('update', provider, newValue, oldValue);
     }
 
-    // Notify value listeners (prev, next)
+    // Notify value listeners (next, prev)
     for (const cb of Array.from(state.valueListeners)) {
-      cb(oldValue, newValue);
+      cb(newValue, oldValue);
     }
 
     // Notify snapshot listeners (just fire)
@@ -570,7 +570,7 @@ export class RiverContainer {
       this.notifyObservers('update', provider, newState.value, oldValue);
 
       for (const cb of Array.from(newState.valueListeners)) {
-        cb(oldValue, newState.value);
+        cb(newState.value, oldValue);
       }
       for (const cb of Array.from(newState.snapshotListeners)) {
         cb();

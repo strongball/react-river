@@ -116,7 +116,7 @@ export function useRiverRef(): RiverRef {
  * Does NOT trigger re-renders. Analogous to `ref.listen()` in Riverpod.
  *
  * ```ts
- * useRiverListen(authProvider, (prev, next) => {
+ * useRiverListen(authProvider, (next, prev) => {
  *   if (next === null) navigate('/login')
  * })
  * ```
@@ -127,8 +127,8 @@ export function useRiverListen<T>(provider: ProviderBase<T>, callback: ListenerC
   callbackRef.current = callback;
 
   useEffect(() => {
-    return container.listen(provider, (prev, next) => {
-      callbackRef.current(prev as T | undefined, next as T);
+    return container.listen(provider, (next, prev) => {
+      callbackRef.current(next as T, prev as T | undefined);
     });
     // oxlint-disable-next-line eslint-plugin-react-hooks/exhaustive-deps
   }, [container, provider.id]);

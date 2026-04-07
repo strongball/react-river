@@ -8,7 +8,7 @@ export function CounterCard() {
   const ref = useRiverRef();
 
   // Side-effect listener demo: log when count changes
-  useRiverListen(counterProvider, (_prev, next) => {
+  useRiverListen(counterProvider, (next, _prev) => {
     if (next === 10) {
       console.log('🎉 Counter reached 10!');
     }

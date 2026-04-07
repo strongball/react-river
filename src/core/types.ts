@@ -7,7 +7,7 @@ import type { AsyncValue } from './async_value';
 // ── Utility Types ──────────────────────────────────────────────
 
 export type Unsubscribe = () => void;
-export type ListenerCallback<T> = (previous: T | undefined, next: T) => void;
+export type ListenerCallback<T> = (next: T, previous: T | undefined) => void;
 
 // ── Provider Kind ──────────────────────────────────────────────
 
