@@ -77,6 +77,8 @@ export function RiverDevTools({
   const [open, setOpen] = useState(defaultOpen);
   const [tab, setTab] = useState<Tab>('providers');
   const [search, setSearch] = useState('');
+  const [eventSearch, setEventSearch] = useState('');
+  const [sortRecent, setSortRecent] = useState(false);
   const [expandedId, setExpandedId] = useState<symbol | null>(null);
   const [position, setPosition] = useState(defaultPosition ?? { x: 16, y: 16 });
   const [maxEvents, setMaxEvents] = useState(10);
@@ -86,8 +88,26 @@ export function RiverDevTools({
   const { onMouseDown } = useDraggable(position, setPosition);
 
   // ── Read data from pinned devtools & container ──────────────
-  const snapshots = container.getProviderStates();
+  const rawSnapshots = container.getProviderStates();
   const events = pinnedDevtools.current.getEvents();
+
+  // ── Sort snapshots by recent updates ───────────────────────
+  const snapshots = useMemo(() => {
+    if (!sortRecent) return rawSnapshots;
+    
+    const latestMap = new Map<symbol, number>();
+    for (const e of events) {
+      // events are most-recent-first, so the first time we see an ID, it's the latest
+      if (!latestMap.has(e.providerId)) {
+        latestMap.set(e.providerId, e.timestamp);
+      }
+    }
+    return [...rawSnapshots].sort((a, b) => {
+      const aTime = latestMap.get(a.id) ?? 0;
+      const bTime = latestMap.get(b.id) ?? 0;
+      return bTime - aTime; // descending
+    });
+  }, [rawSnapshots, events, sortRecent]);
 
   // ── Filtered providers ─────────────────────────────────────
   const filtered = useMemo(() => {
@@ -97,6 +117,15 @@ export function RiverDevTools({
       (s) => s.name.toLowerCase().includes(lower) || s.kind.toLowerCase().includes(lower),
     );
   }, [snapshots, search]);
+
+  // ── Filtered events ────────────────────────────────────────
+  const filteredEvents = useMemo(() => {
+    if (!eventSearch) return events;
+    const lower = eventSearch.toLowerCase();
+    return events.filter(
+      (e) => e.providerName.toLowerCase().includes(lower) || e.type.toLowerCase().includes(lower),
+    );
+  }, [events, eventSearch]);
 
   // ── Keyboard shortcut (Ctrl+Shift+D) ──────────────────────
   useEffect(() => {
@@ -167,13 +196,22 @@ export function RiverDevTools({
         {/* Provider Tab */}
         {tab === 'providers' && (
           <>
-            <div className="rd-search-wrap">
+            <div className="rd-search-wrap" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <input
                 className="rd-search-input"
                 placeholder="Search providers…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                style={{ flex: 1 }}
               />
+              <label style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                <input 
+                  type="checkbox" 
+                  checked={sortRecent} 
+                  onChange={(e) => setSortRecent(e.target.checked)} 
+                />
+                Recent First
+              </label>
             </div>
             <div className="rd-content">
               {filtered.length === 0 ? (
@@ -204,34 +242,43 @@ export function RiverDevTools({
         {/* Events Tab */}
         {tab === 'events' && (
           <>
-            <div className="rd-settings">
-              <label>
-                Max:
-                <input
-                  type="number"
-                  value={maxEvents}
-                  min={1}
-                  max={500}
-                  onChange={(e) => setMaxEvents(Number(e.target.value) || 10)}
-                />
-              </label>
-              <button
-                className="rd-icon-btn"
-                onClick={() => pinnedDevtools.current.clearEvents()}
-                title="Clear"
-              >
-                <IconTrash />
-              </button>
+            <div className="rd-search-wrap" style={{ display: 'flex', gap: 8 }}>
+              <input
+                className="rd-search-input"
+                placeholder="Search events…"
+                value={eventSearch}
+                onChange={(e) => setEventSearch(e.target.value)}
+                style={{ flex: 1 }}
+              />
+              <div className="rd-settings" style={{ padding: 0, border: 'none' }}>
+                <label>
+                  Max:
+                  <input
+                    type="number"
+                    value={maxEvents}
+                    min={1}
+                    max={500}
+                    onChange={(e) => setMaxEvents(Number(e.target.value) || 10)}
+                  />
+                </label>
+                <button
+                  className="rd-icon-btn"
+                  onClick={() => pinnedDevtools.current.clearEvents()}
+                  title="Clear"
+                >
+                  <IconTrash />
+                </button>
+              </div>
             </div>
             <div className="rd-content">
-              {events.length === 0 ? (
+              {filteredEvents.length === 0 ? (
                 <div className="rd-empty">
                   <div className="rd-empty-icon">📋</div>
-                  <div className="rd-empty-text">No events recorded yet</div>
+                  <div className="rd-empty-text">No events match</div>
                 </div>
               ) : (
                 <div className="rd-event-list">
-                  {events.map((event, i) => (
+                  {filteredEvents.map((event, i) => (
                     <EventItem key={`${event.timestamp}-${i}`} event={event} />
                   ))}
                 </div>
