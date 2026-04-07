@@ -55,21 +55,23 @@
 
 .rd-toggle-btn {
   position: fixed;
-  bottom: 16px;
-  right: 16px;
+  bottom: 20px;
+  right: 20px;
   z-index: 2147483647;
-  width: 44px;
-  height: 44px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   border: 1px solid var(--rd-border-active);
-  background: var(--rd-bg);
+  background: var(--rd-bg-solid);
   color: var(--rd-accent);
-  font-size: 22px;
+  font-size: 26px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: var(--rd-shadow);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.5),
+    0 0 0 2px rgba(124, 108, 240, 0.2);
   transition:
     transform var(--rd-transition),
     box-shadow var(--rd-transition);
@@ -79,8 +81,8 @@
 .rd-toggle-btn:hover {
   transform: scale(1.1);
   box-shadow:
-    0 20px 60px rgba(0, 0, 0, 0.6),
-    0 0 20px var(--rd-accent-glow);
+    0 12px 32px rgba(0, 0, 0, 0.6),
+    0 0 0 4px rgba(124, 108, 240, 0.3);
 }
 
 /* ── Floating Panel ─────────────────────────────────────────── */

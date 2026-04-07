@@ -55,7 +55,7 @@ function getProviderLabel(provider: ProviderBase): string {
  *
  * @param maxEvents Maximum number of events to retain (default: 10)
  */
-export function createDevToolsObserver(maxEvents = 10): DevToolsObserverHandle {
+export function createDevToolsObserver(maxEvents = 100): DevToolsObserverHandle {
   let events: DevToolsEvent[] = [];
   let version = 0;
   let max = maxEvents;
@@ -63,10 +63,21 @@ export function createDevToolsObserver(maxEvents = 10): DevToolsObserverHandle {
   // DevTools' own subscriber set — completely separate from provider listeners
   const subscribers = new Set<() => void>();
 
+  let notifyQueued = false;
+  function notifySubscribers() {
+    if (!notifyQueued) {
+      notifyQueued = true;
+      queueMicrotask(() => {
+        notifyQueued = false;
+        for (const cb of subscribers) cb();
+      });
+    }
+  }
+
   function pushEvent(event: DevToolsEvent) {
     events = [event, ...events].slice(0, max);
     version++;
-    for (const cb of subscribers) cb();
+    notifySubscribers();
   }
 
   const observer: RiverObserver = {
@@ -123,14 +134,14 @@ export function createDevToolsObserver(maxEvents = 10): DevToolsObserverHandle {
     clearEvents: () => {
       events = [];
       version++;
-      for (const cb of subscribers) cb();
+      notifySubscribers();
     },
     setMaxEvents: (newMax: number) => {
       max = newMax;
       if (events.length > max) {
         events = events.slice(0, max);
         version++;
-        for (const cb of subscribers) cb();
+        notifySubscribers();
       }
     },
   };
