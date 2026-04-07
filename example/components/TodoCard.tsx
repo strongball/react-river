@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { useWatch, useRiverRef } from 'react-river';
+import { useRiverWatch, useRiverRef } from 'react-river';
 
 import { todosProvider } from '../providers';
 
 export function TodoCard() {
-  const todos = useWatch(todosProvider);
+  const todos = useRiverWatch(todosProvider);
   const ref = useRiverRef();
   const [input, setInput] = useState('');
 

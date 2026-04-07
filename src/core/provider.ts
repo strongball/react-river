@@ -28,7 +28,7 @@ function nextId(name?: string): symbol {
 function normalizeOptions(options: ProviderOptions = {}): ProviderOptions {
   return {
     autoDispose: true,
-    cacheTime: 0,
+    cacheTime: 1000,
     ...options,
   };
 }

@@ -1,6 +1,6 @@
 /* ════════════════════════════════════════════════════════════════
  *  React River — React Hooks
- *  useWatch / useRiverRef / useListen
+ *  useRiverWatch / useRiverRef / useRiverListen
  * ════════════════════════════════════════════════════════════════ */
 
 import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
@@ -9,7 +9,7 @@ import { useRiverContainer } from './scope';
 
 import type { ListenerCallback, ProviderBase, RiverRef, StateProvider } from '../core/types';
 
-// ── useWatch — subscribe to a provider (triggers re-render) ────
+// ── useRiverWatch — subscribe to a provider (triggers re-render) ────
 
 /**
  * Subscribe to a provider's value. Re-renders the component when
@@ -17,12 +17,12 @@ import type { ListenerCallback, ProviderBase, RiverRef, StateProvider } from '..
  *
  * With optional selector for fine-grained subscriptions:
  * ```ts
- * const name = useWatch(userProvider, (user) => user.name)
+ * const name = useRiverWatch(userProvider, (user) => user.name)
  * ```
  */
-export function useWatch<T>(provider: ProviderBase<T>): T;
-export function useWatch<T, S>(provider: ProviderBase<T>, selector: (value: T) => S): S;
-export function useWatch<T, S>(provider: ProviderBase<T>, selector?: (value: T) => S): T | S {
+export function useRiverWatch<T>(provider: ProviderBase<T>): T;
+export function useRiverWatch<T, S>(provider: ProviderBase<T>, selector: (value: T) => S): S;
+export function useRiverWatch<T, S>(provider: ProviderBase<T>, selector?: (value: T) => S): T | S {
   const container = useRiverContainer();
 
   // Keep selector ref stable for getSnapshot closure
@@ -109,19 +109,19 @@ export function useRiverRef(): RiverRef {
   return riverRefRef.current;
 }
 
-// ── useListen — side-effect listener (no re-render) ────────────
+// ── useRiverListen — side-effect listener (no re-render) ────────────
 
 /**
  * Listen to a provider's value changes and execute a callback.
  * Does NOT trigger re-renders. Analogous to `ref.listen()` in Riverpod.
  *
  * ```ts
- * useListen(authProvider, (prev, next) => {
+ * useRiverListen(authProvider, (prev, next) => {
  *   if (next === null) navigate('/login')
  * })
  * ```
  */
-export function useListen<T>(provider: ProviderBase<T>, callback: ListenerCallback<T>): void {
+export function useRiverListen<T>(provider: ProviderBase<T>, callback: ListenerCallback<T>): void {
   const container = useRiverContainer();
   const callbackRef = useRef(callback);
   callbackRef.current = callback;

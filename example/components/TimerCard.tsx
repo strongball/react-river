@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useWatch } from 'react-river';
+import { useRiverWatch } from 'react-river';
 
 import { timerProvider } from '../providers';
 
@@ -29,7 +29,7 @@ export function TimerCard() {
 }
 
 function TimerDisplay() {
-  const count = useWatch(timerProvider);
+  const count = useRiverWatch(timerProvider);
   return (
     <div className="timer-display">
       <span className="icon">⏱️</span>

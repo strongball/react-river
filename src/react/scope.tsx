@@ -19,7 +19,7 @@ export function useRiverContainer(): RiverContainer {
   const container = useContext(RiverScopeContext);
   if (!container) {
     throw new Error(
-      'useWatch / useRiverRef / useListen must be used within a <RiverScope>. ' +
+      'useRiverWatch / useRiverRef / useRiverListen must be used within a <RiverScope>. ' +
         'Wrap your app root with <RiverScope> to provide a state container.',
     );
   }

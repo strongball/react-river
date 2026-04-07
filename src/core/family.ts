@@ -25,7 +25,6 @@ import type {
   ObservableLike,
 } from './types';
 
-
 // ── Family types ───────────────────────────────────────────────
 
 export interface ProviderFamily<P, Arg> {
@@ -72,7 +71,7 @@ function createFamily<P, Arg>(factory: (arg: Arg, argKey: string) => P): Provide
  *   const user = ref.watch(usersProvider)
  *   return user[userId]?.name ?? 'Unknown'
  * })
- * // Usage: useWatch(userNameProvider('user-1'))
+ * // Usage: useRiverWatch(userNameProvider('user-1'))
  * ```
  */
 export function providerFamily<T, Arg>(
@@ -109,7 +108,7 @@ export function stateProviderFamily<T, Arg>(
  * const userProvider = promiseProviderFamily<User, string>((ref, userId) => {
  *   return fetchUser(userId)
  * })
- * // Usage: useWatch(userProvider('user-123'))
+ * // Usage: useRiverWatch(userProvider('user-123'))
  * ```
  */
 export function promiseProviderFamily<T, Arg>(
@@ -138,7 +137,6 @@ export function observableProviderFamily<T, Arg>(
     }),
   );
 }
-
 
 /**
  * Create a parameterized class-based notifier provider.

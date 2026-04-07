@@ -1,9 +1,9 @@
-import { useWatch, useRiverRef, when } from 'react-river';
+import { useRiverWatch, useRiverRef, when } from 'react-river';
 
 import { userProvider } from '../providers';
 
 export function UserCard() {
-  const userAsync = useWatch(userProvider);
+  const userAsync = useRiverWatch(userProvider);
   const ref = useRiverRef();
 
   return (

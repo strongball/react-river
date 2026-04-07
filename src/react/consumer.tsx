@@ -49,15 +49,15 @@ export function Consumer({ children }: ConsumerProps) {
 function ConsumerInner({ children }: { children: (ref: ConsumerRef) => ReactNode }) {
   const riverRef = useRiverRef();
 
-  // Build a ConsumerRef that delegates watch to useWatch
+  // Build a ConsumerRef that delegates watch to useRiverWatch
   // Note: This is a simplified implementation. For production use,
   // the watch calls must follow Rules of Hooks (stable order).
-  // Users should prefer the useWatch hook directly.
+  // Users should prefer the useRiverWatch hook directly.
   const consumerRef: ConsumerRef = {
     ...riverRef,
     watch<T>(provider: ProviderBase<T>): T {
       // Delegate to the container's read (not reactive in this simple impl)
-      // For full reactivity, users should use useWatch hook
+      // For full reactivity, users should use useRiverWatch hook
       return riverRef.read(provider);
     },
   };

@@ -1,9 +1,9 @@
-import { useWatch, when } from 'react-river';
+import { useRiverWatch, when } from 'react-river';
 
 import { clockProvider } from '../providers';
 
 export function StreamCard() {
-  const clockAsync = useWatch(clockProvider);
+  const clockAsync = useRiverWatch(clockProvider);
 
   return (
     <section className="card">

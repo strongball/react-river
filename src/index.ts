@@ -70,7 +70,7 @@ export { RiverScope } from './react/scope';
 export type { RiverScopeProps } from './react/scope';
 
 // ── React: Hooks ───────────────────────────────────────────────
-export { useWatch, useRiverRef, useListen } from './react/hooks';
+export { useRiverWatch, useRiverRef, useRiverListen } from './react/hooks';
 
 // ── React: Consumer ────────────────────────────────────────────
 export { Consumer } from './react/consumer';

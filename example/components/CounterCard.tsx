@@ -1,14 +1,14 @@
-import { useWatch, useRiverRef, useListen } from 'react-river';
+import { useRiverWatch, useRiverRef, useRiverListen } from 'react-river';
 
 import { counterProvider, doubledProvider } from '../providers';
 
 export function CounterCard() {
-  const count = useWatch(counterProvider);
-  const doubled = useWatch(doubledProvider);
+  const count = useRiverWatch(counterProvider);
+  const doubled = useRiverWatch(doubledProvider);
   const ref = useRiverRef();
 
   // Side-effect listener demo: log when count changes
-  useListen(counterProvider, (_prev, next) => {
+  useRiverListen(counterProvider, (_prev, next) => {
     if (next === 10) {
       console.log('🎉 Counter reached 10!');
     }

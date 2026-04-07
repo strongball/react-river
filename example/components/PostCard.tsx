@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useWatch, when } from 'react-river';
+import { useRiverWatch, when } from 'react-river';
 
 import { postProvider } from '../providers';
 
@@ -25,7 +25,7 @@ export function PostCard() {
 }
 
 function PostContent({ postId }: { postId: number }) {
-  const postAsync = useWatch(postProvider(postId));
+  const postAsync = useRiverWatch(postProvider(postId));
 
   return when(postAsync, {
     loading: () => <div className="skeleton">Loading post #{postId}…</div>,
