@@ -78,3 +78,8 @@ export type { ConsumerRef, ConsumerProps } from './react/consumer';
 
 // ── DevTools ───────────────────────────────────────────────────
 export { loggerObserver } from './devtools/devtools';
+export { createDevToolsObserver } from './devtools/devtools-observer';
+export type { DevToolsEvent, DevToolsObserverHandle } from './devtools/devtools-observer';
+export { RiverDevTools } from './devtools/RiverDevTools';
+export type { RiverDevToolsProps } from './devtools/RiverDevTools';
+export type { DevToolsProviderSnapshot } from './core/container';

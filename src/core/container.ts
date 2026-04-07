@@ -59,6 +59,25 @@ interface ProviderState {
   initialized: boolean;
 }
 
+// ── DevTools Snapshot (read-only inspection) ───────────────────
+
+export interface DevToolsProviderSnapshot {
+  id: symbol;
+  name: string;
+  kind: string;
+  value: unknown;
+  previousValue: unknown | undefined;
+  version: number;
+  initialized: boolean;
+  listenerCount: number;
+  dependencyCount: number;
+  dependentCount: number;
+  dependencies: string[];
+  dependents: string[];
+  autoDispose: boolean;
+  cacheTime: number | undefined;
+}
+
 // ── Container Options ──────────────────────────────────────────
 
 export interface RiverContainerOptions {
@@ -191,6 +210,45 @@ export class RiverContainer {
     this.overrideMap.clear();
     this.providerMap.clear();
     this.disposed = true;
+  }
+
+  /**
+   * DevTools inspection — returns a read-only snapshot of all provider states.
+   * This is a passive read: it does NOT subscribe, listen, or affect auto-dispose.
+   */
+  getProviderStates(): DevToolsProviderSnapshot[] {
+    const snapshots: DevToolsProviderSnapshot[] = [];
+
+    for (const [id, state] of this.states) {
+      if (!state.initialized) continue;
+
+      const provider = this.providerMap.get(id);
+      if (!provider) continue;
+
+      const getLabel = (sym: symbol) => {
+        const p = this.providerMap.get(sym);
+        return p?.name ?? sym.description ?? 'unknown';
+      };
+
+      snapshots.push({
+        id,
+        name: provider.name ?? provider.id.description ?? 'unknown',
+        kind: provider.kind,
+        value: state.value,
+        previousValue: state.previousValue,
+        version: state.version,
+        initialized: state.initialized,
+        listenerCount: state.snapshotListeners.size + state.valueListeners.size,
+        dependencyCount: state.dependencies.size,
+        dependentCount: state.dependents.size,
+        dependencies: Array.from(state.dependencies).map((d) => d.name ?? d.id.description ?? 'unknown'),
+        dependents: Array.from(state.dependents).map(getLabel),
+        autoDispose: provider.options.autoDispose ?? true,
+        cacheTime: provider.options.cacheTime,
+      });
+    }
+
+    return snapshots;
   }
 
   // ── Initialization ───────────────────────────────────────────
