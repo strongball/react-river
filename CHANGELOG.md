@@ -1,3 +1,10 @@
+## [1.0.4](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.3...v1.0.4) (2026-04-08)
+
+
+### Bug Fixes
+
+* token ([d100fcb](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/commit/d100fcb2f15e183e4df726306791156b2ed29a98))
+
 ## [1.0.3](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.2...v1.0.3) (2026-04-08)
 
 ## [1.0.2](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.1...v1.0.2) (2026-04-08)
