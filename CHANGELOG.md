@@ -1,3 +1,10 @@
+## [1.0.12](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.11...v1.0.12) (2026-04-08)
+
+
+### Features
+
+* **DevTool:** hide UI on prod ([0b96156](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/commit/0b96156f41f5516d8bc8e5e962a0e7906a6303bb))
+
 ## [1.0.11](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.10...v1.0.11) (2026-04-08)
 
 ## [1.0.10](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.9...v1.0.10) (2026-04-08)
