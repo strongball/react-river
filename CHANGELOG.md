@@ -1,3 +1,10 @@
+## [1.0.2](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.1...v1.0.2) (2026-04-08)
+
+
+### Bug Fixes
+
+* retry npm publish ([ca1ab3e](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/commit/ca1ab3e3ff730d84193fbd3f0a81f66ce07de260))
+
 ## [1.0.1](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.0...v1.0.1) (2026-04-08)
 
 # 1.0.0 (2026-04-08)
