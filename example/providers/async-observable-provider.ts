@@ -8,7 +8,8 @@ export const asyncObservableProvider = observableProvider<string>(
     await sleep(2000);
 
     return {
-      subscribe: ({ next }) => {
+      subscribe: (callbacks) => {
+        const next = typeof callbacks === 'function' ? callbacks : callbacks.next;
         let count = 0;
         const timer = setInterval(() => {
           next(`Async Observable tick: ${++count}`);

@@ -86,11 +86,15 @@ export interface ProviderBase<T = unknown> {
 // ── Observable Support ──────────────────────────────────────────
 
 export interface ObservableLike<T> {
-  subscribe(callbacks: {
-    next: (value: T) => void;
-    error: (error: unknown) => void;
-    complete: () => void;
-  }): { unsubscribe: () => void };
+  subscribe(
+    callbacks:
+      | {
+          next: (value: T) => void;
+          error: (error: unknown) => void;
+          complete: () => void;
+        }
+      | ((value: T) => void),
+  ): { unsubscribe: () => void };
 }
 
 // ── Concrete Provider Types ────────────────────────────────────
@@ -194,4 +198,3 @@ export type AnyProvider<T = any> =
   | AsyncNotifierProvider<unknown, T>
   | NotifierAccessor<T>
   | PromiseAccessor<T>;
-
