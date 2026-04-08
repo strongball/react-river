@@ -33,8 +33,8 @@ lint:
 publish:
   stage: release
   before_script:
-    - echo "@zerologix:registry=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/npm/" > .npmrc
-    - echo "${CI_API_V4_URL#http*:}/projects/${CI_PROJECT_ID}/packages/npm/:_authToken=${NPM_TOKEN}" >> .npmrc
+    - echo "@zerologix:registry=https://gitlab.com/api/v4/projects/35990217/packages/npm/" > .npmrc
+    - echo "//gitlab.com/api/v4/projects/35990217/packages/npm/:_authToken=${NPM_TOKEN}" >> .npmrc
     - git config --global user.email "${GITLAB_USER_EMAIL}"
     - git config --global user.name "${GITLAB_USER_NAME}"
     - git remote add gitlab_origin "${CI_REPOSITORY_URL}"
@@ -45,7 +45,7 @@ publish:
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
   variables:
-    NPM_TOKEN: $CI_JOB_TOKEN
+    NPM_TOKEN: $NPM_TOKEN
 
 # -----------------
 # Deploy Stage (GitLab Pages)

@@ -24,7 +24,7 @@
     }
   },
   "publishConfig": {
-    "@zerologix:registry": "https://gitlab.com/api/v4/projects/81109233/packages/npm/",
+    "@zerologix:registry": "https://gitlab.com/api/v4/projects/35990217/packages/npm/",
     "access": "public"
   },
   "scripts": {
