@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "publishConfig": {
     "access": "public",
-    "@zerologix:registry": "https://gitlab.com/api/v4/projects/${CI_PROJECT_ID}/packages/npm/"
+    "@zerologix:registry": "https://gitlab.com/api/v4/projects/81109233/packages/npm/"
   },
   "description": "A lightweight, Riverpod-inspired state management library for React.",
   "keywords": [
