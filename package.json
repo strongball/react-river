@@ -24,7 +24,7 @@
     }
   },
   "publishConfig": {
-    "registry": "https://gitlab.com/api/v4/projects/35990217/packages/npm/"
+    "@zerologix:registry": "https://gitlab.com/api/v4/projects/35990217/packages/npm/"
   },
   "scripts": {
     "dev": "vite",
