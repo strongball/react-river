@@ -23,9 +23,6 @@
       "types": "./dist/index.d.ts"
     }
   },
-  "publishConfig": {
-    "registry": "https://gitlab.com/api/v4/projects/35990217/packages/npm/"
-  },
   "scripts": {
     "dev": "vite",
     "build": "vite build --config vite.config.lib.ts",
