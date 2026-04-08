@@ -1,3 +1,10 @@
+## [1.0.8](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.7...v1.0.8) (2026-04-08)
+
+
+### Reverts
+
+* Revert "test" ([9f96988](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/commit/9f9698892acaf9df77d0dac0a0e77550b58beb01))
+
 ## [1.0.7](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.6...v1.0.7) (2026-04-08)
 
 
