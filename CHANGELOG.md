@@ -1,3 +1,10 @@
+## [1.0.7](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.6...v1.0.7) (2026-04-08)
+
+
+### Features
+
+* update observable subscribe signature to support both function and object callbacks ([ad5e88f](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/commit/ad5e88f739c6c9b10dc1875055b46efae6896043))
+
 ## [1.0.6](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.5...v1.0.6) (2026-04-08)
 
 ## [1.0.5](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.4...v1.0.5) (2026-04-08)
