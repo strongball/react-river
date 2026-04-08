@@ -1,4 +1,4 @@
-import { stateProvider, provider } from 'react-river';
+import { stateProvider, provider } from '@zerologix/react-river';
 
 export const counterProvider = stateProvider(() => 0, { name: 'counter' });
 

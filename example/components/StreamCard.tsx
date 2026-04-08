@@ -1,4 +1,4 @@
-import { useRiverWatch, when } from 'react-river';
+import { useRiverWatch, when } from '@zerologix/react-river';
 
 import { clockProvider } from '../providers';
 

@@ -1,4 +1,4 @@
-import { promiseProviderFamily } from 'react-river';
+import { promiseProviderFamily } from '@zerologix/react-river';
 
 import { sleep } from './utils';
 

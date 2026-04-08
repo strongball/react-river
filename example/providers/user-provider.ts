@@ -1,4 +1,4 @@
-import { AsyncNotifier, asyncNotifierProvider, asyncData, asyncLoading, asyncError } from 'react-river';
+import { AsyncNotifier, asyncNotifierProvider, asyncData, asyncLoading, asyncError } from '@zerologix/react-river';
 
 import { sleep } from './utils';
 

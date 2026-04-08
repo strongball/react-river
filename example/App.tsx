@@ -1,4 +1,4 @@
-import { createDevToolsObserver, RiverDevTools, RiverScope } from 'react-river';
+import { createDevToolsObserver, RiverDevTools, RiverScope } from '@zerologix/react-river';
 
 import './App.css';
 import { CounterCard, TodoCard, UserCard, PostCard, TimerCard, StreamCard } from './components';
