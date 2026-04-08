@@ -39,6 +39,7 @@ publish:
     - git config --global user.email "${GITLAB_USER_EMAIL}"
     - git config --global user.name "${GITLAB_USER_NAME}"
     - git remote add gitlab_origin "${CI_REPOSITORY_URL}"
+    - npm config list
   script:
     - npm ci
     - npm run build
