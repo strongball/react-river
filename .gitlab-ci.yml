@@ -1,0 +1,62 @@
+# GitLab CI CD Configuration
+
+stages:
+  - lint
+  - release
+  - deploy
+
+default:
+  image: node:20
+  cache:
+    key:
+      files:
+        - package-lock.json
+    paths:
+      - node_modules/
+
+# -----------------
+# Lint Stage
+# -----------------
+lint:
+  stage: lint
+  script:
+    - npm ci
+    - npm run lint
+    - npm run build # Includes build only in CI/CD as per user request
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+# -----------------
+# Release Stage
+# -----------------
+publish:
+  stage: release
+  before_script:
+    - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
+    - git config --global user.email "${GITLAB_USER_EMAIL}"
+    - git config --global user.name "${GITLAB_USER_NAME}"
+    - git remote add gitlab_origin "${CI_REPOSITORY_URL}"
+  script:
+    - npm ci
+    - npm run build
+    - npx semantic-release
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  variables:
+    NPM_TOKEN: $NPM_TOKEN
+
+# -----------------
+# Deploy Stage (GitLab Pages)
+# -----------------
+pages:
+  stage: deploy
+  script:
+    - npm ci
+    - npm run build:demo
+    - mv dist-demo public
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
