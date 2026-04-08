@@ -45,7 +45,7 @@ publish:
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
   variables:
-    NPM_TOKEN: $NPM_TOKEN
+    NPM_TOKEN: $CI_JOB_TOKEN
 
 # -----------------
 # Deploy Stage (GitLab Pages)
