@@ -85,6 +85,32 @@
     0 0 0 4px rgba(124, 108, 240, 0.3);
 }
 
+/* ── Sort Buttons ───────────────────────────────────────────── */
+
+.rd-sort-btn {
+  padding: 3px 8px;
+  font-size: 11px;
+  font-family: var(--rd-font-mono);
+  font-weight: 500;
+  border: 1px solid var(--rd-border);
+  border-radius: var(--rd-radius-sm);
+  background: transparent;
+  color: var(--rd-text-muted);
+  cursor: pointer;
+  transition: background var(--rd-transition), color var(--rd-transition), border-color var(--rd-transition);
+}
+
+.rd-sort-btn:hover {
+  background: var(--rd-surface-hover);
+  color: var(--rd-text);
+}
+
+.rd-sort-btn[data-active='true'] {
+  background: var(--rd-accent-glow);
+  color: var(--rd-accent);
+  border-color: var(--rd-accent);
+}
+
 /* ── Floating Panel ─────────────────────────────────────────── */
 
 .rd-panel {

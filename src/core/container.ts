@@ -40,6 +40,8 @@ interface ProviderState {
   dependencies: Set<ProviderBase>;
   /** Providers that depend on this one */
   dependents: Set<symbol>;
+  /** Selectors used by dependents. A value of null means unconditional dependency. */
+  watchSelectors?: Map<symbol, Array<{ selector: (val: unknown) => unknown; lastValue: unknown }> | null>;
 
   /** Cleanup callbacks registered via ref.onDispose */
   disposeCallbacks: (() => void)[];
@@ -565,7 +567,33 @@ export class RiverContainer {
     for (const depId of Array.from(state.dependents)) {
       const depProvider = this.providerMap.get(depId);
       if (depProvider) {
-        this.reinitialize(depProvider);
+        let shouldReinitialize = true;
+
+        if (state.watchSelectors) {
+          const selectors = state.watchSelectors.get(depId);
+          if (selectors) {
+            // Need to evaluate if any selector's result changed
+            let anyChanged = false;
+            for (const item of selectors) {
+              try {
+                const newSelected = item.selector(state.value);
+                if (!this.valuesEqual(item.lastValue, newSelected)) {
+                  anyChanged = true;
+                  break;
+                }
+              } catch {
+                // If selector throws, assume value changed
+                anyChanged = true;
+                break;
+              }
+            }
+            shouldReinitialize = anyChanged;
+          }
+        }
+
+        if (shouldReinitialize) {
+          this.reinitialize(depProvider);
+        }
       }
     }
   }
@@ -599,6 +627,7 @@ export class RiverContainer {
     for (const depProvider of Array.from(state.dependencies)) {
       const depState = this.getState(depProvider.id);
       depState?.dependents.delete(provider.id);
+      depState?.watchSelectors?.delete(provider.id);
     }
     state.dependencies.clear();
     state.disposeCallbacks = [];
@@ -642,9 +671,10 @@ export class RiverContainer {
 
   private createRef(ownerId: symbol): Ref {
     return {
-      watch: <T>(provider: ProviderBase<T>): T => {
+      watch: <T, R = T>(provider: ProviderBase<T>, select?: (value: T) => R): R => {
         this.providerMap.set(provider.id, provider);
-        const value = this.ensureInitialized(provider) as T;
+        const rawValue = this.ensureInitialized(provider) as T;
+        const selectedValue = select ? select(rawValue) : (rawValue as unknown as R);
 
         // Track dependency
         const ownerState = this.getState(ownerId);
@@ -654,9 +684,28 @@ export class RiverContainer {
         const targetState = this.getState(provider.id);
         if (targetState) {
           targetState.dependents.add(ownerId);
+
+          if (select) {
+            if (!targetState.watchSelectors) targetState.watchSelectors = new Map();
+            let selectors = targetState.watchSelectors.get(ownerId);
+            
+            // If it's already null, it means there's an unconditional watch somewhere,
+            // so we don't need to track selective watches anymore.
+            if (selectors !== null) {
+              if (!selectors) {
+                selectors = [];
+                targetState.watchSelectors.set(ownerId, selectors);
+              }
+              selectors.push({ selector: select as (val: unknown) => unknown, lastValue: selectedValue });
+            }
+          } else {
+            // Unconditional watch
+            if (!targetState.watchSelectors) targetState.watchSelectors = new Map();
+            targetState.watchSelectors.set(ownerId, null);
+          }
         }
 
-        return value;
+        return selectedValue;
       },
 
       read: <T>(provider: ProviderBase<T>): T => {
@@ -755,6 +804,7 @@ export class RiverContainer {
     for (const depProvider of Array.from(state.dependencies)) {
       const depState = this.getState(depProvider.id);
       depState?.dependents.delete(id);
+      depState?.watchSelectors?.delete(id);
       this.checkAutoDispose(depProvider);
     }
 

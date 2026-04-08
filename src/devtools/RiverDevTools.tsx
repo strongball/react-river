@@ -78,7 +78,7 @@ export function RiverDevTools({
   const [tab, setTab] = useState<Tab>('providers');
   const [search, setSearch] = useState('');
   const [eventSearch, setEventSearch] = useState('');
-  const [sortRecent, setSortRecent] = useState(false);
+  const [sortMode, setSortMode] = useState<'name' | 'recent'>('name');
   const [expandedId, setExpandedId] = useState<symbol | null>(null);
   const [position, setPosition] = useState(defaultPosition ?? { x: 16, y: 16 });
   const [maxEvents, setMaxEvents] = useState(10);
@@ -91,23 +91,22 @@ export function RiverDevTools({
   const rawSnapshots = container.getProviderStates();
   const events = pinnedDevtools.current.getEvents();
 
-  // ── Sort snapshots by recent updates ───────────────────────
+  // ── Sort snapshots ──────────────────────────────────────────
   const snapshots = useMemo(() => {
-    if (!sortRecent) return rawSnapshots;
-    
+    if (sortMode === 'name') {
+      return [...rawSnapshots].sort((a, b) => a.name.localeCompare(b.name));
+    }
+    // sortMode === 'recent'
     const latestMap = new Map<symbol, number>();
     for (const e of events) {
-      // events are most-recent-first, so the first time we see an ID, it's the latest
-      if (!latestMap.has(e.providerId)) {
-        latestMap.set(e.providerId, e.timestamp);
-      }
+      if (!latestMap.has(e.providerId)) latestMap.set(e.providerId, e.timestamp);
     }
     return [...rawSnapshots].sort((a, b) => {
       const aTime = latestMap.get(a.id) ?? 0;
       const bTime = latestMap.get(b.id) ?? 0;
-      return bTime - aTime; // descending
+      return bTime - aTime;
     });
-  }, [rawSnapshots, events, sortRecent]);
+  }, [rawSnapshots, events, sortMode]);
 
   // ── Filtered providers ─────────────────────────────────────
   const filtered = useMemo(() => {
@@ -204,14 +203,24 @@ export function RiverDevTools({
                 onChange={(e) => setSearch(e.target.value)}
                 style={{ flex: 1 }}
               />
-              <label style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                <input 
-                  type="checkbox" 
-                  checked={sortRecent} 
-                  onChange={(e) => setSortRecent(e.target.checked)} 
-                />
-                Recent First
-              </label>
+              <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+                <button
+                  className="rd-sort-btn"
+                  data-active={sortMode === 'name'}
+                  onClick={() => setSortMode('name')}
+                  title="Sort by name"
+                >
+                  A-Z
+                </button>
+                <button
+                  className="rd-sort-btn"
+                  data-active={sortMode === 'recent'}
+                  onClick={() => setSortMode('recent')}
+                  title="Sort by recent updates"
+                >
+                  Recent
+                </button>
+              </div>
             </div>
             <div className="rd-content">
               {filtered.length === 0 ? (
