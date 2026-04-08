@@ -6,26 +6,17 @@
  *  or listen to providers, so auto-dispose is never affected.
  * ════════════════════════════════════════════════════════════════ */
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  useSyncExternalStore,
-} from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
 import { useRiverContainer } from '../react/scope';
-import { injectDevToolsStyles } from './inject-styles';
-
 // Components
 import { DependencyGraph } from './components/DependencyGraph';
 import { EventItem } from './components/EventItem';
 import { IconTrash } from './components/Icons';
 import { ProviderItem } from './components/ProviderItem';
-
 // Hooks
 import { useDraggable } from './hooks/useDraggable';
+import { injectDevToolsStyles } from './inject-styles';
 
 // Types
 import type { DevToolsObserverHandle } from './devtools-observer';
@@ -47,11 +38,7 @@ type Tab = 'providers' | 'events' | 'graph';
  * Main DevTools Component
  * Orchestrates the floating panel, tabs, and data synchronization.
  */
-export function RiverDevTools({
-  devtools,
-  defaultPosition,
-  defaultOpen = false,
-}: RiverDevToolsProps) {
+export function RiverDevTools({ devtools, defaultPosition, defaultOpen = false }: RiverDevToolsProps) {
   const container = useRiverContainer();
 
   // ── Pin devtools on first render ───────────────────────────
@@ -66,10 +53,7 @@ export function RiverDevTools({
     (onStoreChange: () => void) => pinnedDevtools.current.subscribe(onStoreChange),
     [],
   );
-  const stableGetSnapshot = useCallback(
-    () => pinnedDevtools.current.getSnapshot(),
-    [],
-  );
+  const stableGetSnapshot = useCallback(() => pinnedDevtools.current.getSnapshot(), []);
 
   // This re-renders whenever the pinned observer fires (any provider event)
   useSyncExternalStore(stableSubscribe, stableGetSnapshot);
@@ -112,18 +96,14 @@ export function RiverDevTools({
   const filtered = useMemo(() => {
     if (!search) return snapshots;
     const lower = search.toLowerCase();
-    return snapshots.filter(
-      (s) => s.name.toLowerCase().includes(lower) || s.kind.toLowerCase().includes(lower),
-    );
+    return snapshots.filter((s) => s.name.toLowerCase().includes(lower) || s.kind.toLowerCase().includes(lower));
   }, [snapshots, search]);
 
   // ── Filtered events ────────────────────────────────────────
   const filteredEvents = useMemo(() => {
     if (!eventSearch) return events;
     const lower = eventSearch.toLowerCase();
-    return events.filter(
-      (e) => e.providerName.toLowerCase().includes(lower) || e.type.toLowerCase().includes(lower),
-    );
+    return events.filter((e) => e.providerName.toLowerCase().includes(lower) || e.type.toLowerCase().includes(lower));
   }, [events, eventSearch]);
 
   // ── Keyboard shortcut (Ctrl+Shift+D) ──────────────────────
@@ -144,12 +124,10 @@ export function RiverDevTools({
   }, [maxEvents]);
 
   if (!open) {
+    const isProd = process.env.NODE_ENV === 'production';
+    if (isProd) return null;
     return (
-      <button
-        className="rd-toggle-btn"
-        onClick={() => setOpen(true)}
-        title="Open River DevTools (Ctrl+Shift+D)"
-      >
+      <button className="rd-toggle-btn" onClick={() => setOpen(true)} title="Open River DevTools (Ctrl+Shift+D)">
         🌊
       </button>
     );
@@ -157,10 +135,7 @@ export function RiverDevTools({
 
   return (
     <div className="river-devtools">
-      <div
-        className="rd-panel"
-        style={{ position: 'fixed', left: position.x, top: position.y }}
-      >
+      <div className="rd-panel" style={{ position: 'fixed', left: position.x, top: position.y }}>
         {/* Header */}
         <div className="rd-header" onMouseDown={onMouseDown}>
           <div className="rd-header-title">
@@ -169,11 +144,7 @@ export function RiverDevTools({
             <span className="rd-header-badge">{snapshots.length}</span>
           </div>
           <div className="rd-header-actions">
-            <button
-              className="rd-icon-btn"
-              onClick={() => setOpen(false)}
-              title="Close (Ctrl+Shift+D)"
-            >
+            <button className="rd-icon-btn" onClick={() => setOpen(false)} title="Close (Ctrl+Shift+D)">
               ✕
             </button>
           </div>
@@ -237,9 +208,7 @@ export function RiverDevTools({
                       key={snap.name}
                       snapshot={snap}
                       expanded={expandedId === snap.id}
-                      onToggle={() =>
-                        setExpandedId((prev) => (prev === snap.id ? null : snap.id))
-                      }
+                      onToggle={() => setExpandedId((prev) => (prev === snap.id ? null : snap.id))}
                     />
                   ))}
                 </div>
@@ -270,11 +239,7 @@ export function RiverDevTools({
                     onChange={(e) => setMaxEvents(Number(e.target.value) || 10)}
                   />
                 </label>
-                <button
-                  className="rd-icon-btn"
-                  onClick={() => pinnedDevtools.current.clearEvents()}
-                  title="Clear"
-                >
+                <button className="rd-icon-btn" onClick={() => pinnedDevtools.current.clearEvents()} title="Clear">
                   <IconTrash />
                 </button>
               </div>
