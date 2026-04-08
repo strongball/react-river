@@ -23,7 +23,13 @@
         "changelogFile": "CHANGELOG.md"
       }
     ],
-    "@semantic-release/npm",
+    [
+      "@semantic-release/npm",
+      {
+        "npmPublish": true,
+        "registry": "https://gitlab.com/api/v4/projects/35990217/packages/npm/"
+      }
+    ],
     [
       "@semantic-release/git",
       {
