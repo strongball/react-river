@@ -1,3 +1,10 @@
+## [1.0.16](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.15...v1.0.16) (2026-04-09)
+
+
+### Features
+
+* initialize maxEvents from pinned devtools and update default limit to 100 ([1da9560](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/commit/1da9560fae744ae3364be77ea42a733b29b9ce64))
+
 ## [1.0.15](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.14...v1.0.15) (2026-04-09)
 
 ## [1.0.14](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.13...v1.0.14) (2026-04-09)
