@@ -97,7 +97,10 @@
   background: transparent;
   color: var(--rd-text-muted);
   cursor: pointer;
-  transition: background var(--rd-transition), color var(--rd-transition), border-color var(--rd-transition);
+  transition:
+    background var(--rd-transition),
+    color var(--rd-transition),
+    border-color var(--rd-transition);
 }
 
 .rd-sort-btn:hover {
@@ -322,6 +325,8 @@
   border-radius: 4px;
   font-family: var(--rd-font-mono);
   flex-shrink: 0;
+  min-width: 48px;
+  text-align: center;
 }
 
 .rd-kind-provider {

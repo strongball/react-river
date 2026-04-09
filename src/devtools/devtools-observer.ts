@@ -33,6 +33,8 @@ export interface DevToolsObserverHandle {
   clearEvents: () => void;
   /** Set the maximum number of events to keep */
   setMaxEvents: (max: number) => void;
+  /** Get the current maximum number of events */
+  getMaxEvents: () => number;
 }
 
 // ── Factory ────────────────────────────────────────────────────
@@ -53,7 +55,7 @@ function getProviderLabel(provider: ProviderBase): string {
  * </RiverScope>
  * ```
  *
- * @param maxEvents Maximum number of events to retain (default: 10)
+ * @param maxEvents Maximum number of events to retain (default: 100)
  */
 export function createDevToolsObserver(maxEvents = 100): DevToolsObserverHandle {
   let events: DevToolsEvent[] = [];
@@ -144,5 +146,6 @@ export function createDevToolsObserver(maxEvents = 100): DevToolsObserverHandle 
         notifySubscribers();
       }
     },
+    getMaxEvents: () => max,
   };
 }

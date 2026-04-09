@@ -65,7 +65,7 @@ export function RiverDevTools({ devtools, defaultPosition, defaultOpen = false }
   const [sortMode, setSortMode] = useState<'name' | 'recent'>('name');
   const [expandedId, setExpandedId] = useState<symbol | null>(null);
   const [position, setPosition] = useState(defaultPosition ?? { x: 16, y: 16 });
-  const [maxEvents, setMaxEvents] = useState(10);
+  const [maxEvents, setMaxEvents] = useState(() => pinnedDevtools.current.getMaxEvents?.() ?? 100);
   const [graphRoot, setGraphRoot] = useState<string | null>(null);
 
   // ── Drag handling ──────────────────────────────────────────
@@ -236,7 +236,7 @@ export function RiverDevTools({ devtools, defaultPosition, defaultOpen = false }
                     value={maxEvents}
                     min={1}
                     max={500}
-                    onChange={(e) => setMaxEvents(Number(e.target.value) || 10)}
+                    onChange={(e) => setMaxEvents(Number(e.target.value) || 100)}
                   />
                 </label>
                 <button className="rd-icon-btn" onClick={() => pinnedDevtools.current.clearEvents()} title="Clear">
