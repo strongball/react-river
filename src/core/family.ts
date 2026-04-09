@@ -141,10 +141,10 @@ export function observableProviderFamily<T, Arg>(
 /**
  * Create a parameterized class-based notifier provider.
  */
-export function notifierProviderFamily<N extends Notifier<T>, T, Arg>(
+export function notifierProviderFamily<N extends Notifier<any>, Arg>(
   createNotifier: (arg: Arg) => N,
   options: ProviderOptions = {},
-): ProviderFamily<NotifierProvider<N, T>, Arg> {
+): ProviderFamily<NotifierProvider<N, N extends Notifier<infer T> ? T : unknown>, Arg> {
   return createFamily((arg, key) =>
     notifierProvider(() => createNotifier(arg), {
       ...options,
@@ -156,10 +156,10 @@ export function notifierProviderFamily<N extends Notifier<T>, T, Arg>(
 /**
  * Create a parameterized class-based async notifier provider.
  */
-export function asyncNotifierProviderFamily<N extends AsyncNotifier<T>, T, Arg>(
+export function asyncNotifierProviderFamily<N extends AsyncNotifier<any>, Arg>(
   createNotifier: (arg: Arg) => N,
   options: ProviderOptions = {},
-): ProviderFamily<AsyncNotifierProvider<N, T>, Arg> {
+): ProviderFamily<AsyncNotifierProvider<N, N extends AsyncNotifier<infer T> ? T : unknown>, Arg> {
   return createFamily((arg, key) =>
     asyncNotifierProvider(() => createNotifier(arg), {
       ...options,
