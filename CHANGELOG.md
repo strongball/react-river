@@ -1,3 +1,10 @@
+## [1.0.13](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.12...v1.0.13) (2026-04-09)
+
+
+### Features
+
+* implement global provider support and add ScopedCounterCard example for testing provider isolation ([02bb078](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/commit/02bb078bad1961f4826da03f35076681999fc706))
+
 ## [1.0.12](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.11...v1.0.12) (2026-04-08)
 
 
