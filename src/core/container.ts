@@ -261,6 +261,12 @@ export class RiverContainer {
       return this.getRootContainer().ensureInitialized(provider);
     }
 
+    // promiseAccessor is stateless — computed on the fly from the parent's AsyncValue.
+    // It never stores state, so it won't leak in the states Map.
+    if (provider.kind === 'promiseAccessor') {
+      return this.resolvePromiseAccessor(provider as PromiseAccessor<unknown>);
+    }
+
     // Check for override
     const override = this.overrideMap.get(provider.id);
 
@@ -270,6 +276,37 @@ export class RiverContainer {
 
     // Non-global (default): always create a new instance in the current container
     return this.initializeProvider(provider, override);
+  }
+
+  /**
+   * Resolve a promiseAccessor to a Promise without storing any state.
+   * The promiseAccessor is a transparent helper that derives a Promise
+   * from the parent provider's AsyncValue.
+   */
+  private resolvePromiseAccessor(accessor: PromiseAccessor<unknown>): Promise<unknown> {
+    const parentProvider = accessor._parentProvider;
+    const parentValue = this.read(parentProvider) as AsyncValue<unknown>;
+
+    if (parentValue.status === 'data') {
+      return Promise.resolve(parentValue.data);
+    }
+    if (parentValue.status === 'error') {
+      return Promise.reject(parentValue.error);
+    }
+
+    // Currently loading — resolve/reject when parent's status changes
+    return new Promise((resolve, reject) => {
+      const unsubscribe = this.listen(parentProvider, (next) => {
+        const asyncNext = next as AsyncValue<unknown>;
+        if (asyncNext.status === 'data') {
+          unsubscribe();
+          resolve(asyncNext.data);
+        } else if (asyncNext.status === 'error') {
+          unsubscribe();
+          reject(asyncNext.error);
+        }
+      });
+    });
   }
 
   /** Walk up the parent chain to find the root (topmost) container. */
@@ -475,41 +512,8 @@ export class RiverContainer {
           break;
         }
 
-        case 'promiseAccessor': {
-          const accessor = provider as PromiseAccessor<unknown>;
-          const parentProvider = accessor._parentProvider;
-
-          // Read current parent state
-          const parentValue = this.read(parentProvider) as AsyncValue<unknown>;
-
-          // Track dependency so when parent is invalidated, the promise is also "refreshed"
-          const parentState = this.getState(parentProvider.id);
-          if (parentState) {
-            parentState.dependents.add(provider.id);
-            state.dependencies.add(parentProvider);
-          }
-
-          if (parentValue.status === 'data') {
-            state.value = Promise.resolve(parentValue.data);
-          } else if (parentValue.status === 'error') {
-            state.value = Promise.reject(parentValue.error);
-          } else {
-            // Currently loading, resolve/reject when status changes
-            state.value = new Promise((resolve, reject) => {
-              const unsubscribe = this.listen(parentProvider, (next, _prev) => {
-                const asyncNext = next as AsyncValue<unknown>;
-                if (asyncNext.status === 'data') {
-                  unsubscribe();
-                  resolve(asyncNext.data);
-                } else if (asyncNext.status === 'error') {
-                  unsubscribe();
-                  reject(asyncNext.error);
-                }
-              });
-            });
-          }
-          break;
-        }
+        // promiseAccessor is handled in ensureInitialized/resolvePromiseAccessor
+        // and never reaches initializeProvider.
 
         default:
           throw new Error(`Unknown provider kind: ${kind}`);
@@ -683,22 +687,77 @@ export class RiverContainer {
     return {
       watch: <T, R = T>(provider: ProviderBase<T>, select?: (value: T) => R): R => {
         this.providerMap.set(provider.id, provider);
-        const rawValue = this.ensureInitialized(provider) as T;
-        const selectedValue = select ? select(rawValue) : (rawValue as unknown as R);
+        this.ensureInitialized(provider);
 
-        // Track dependency
+        let trackTarget: ProviderBase;
+        let effectiveSelector: ((val: unknown) => unknown) | undefined;
+        let selectedValue: unknown;
+        let returnValue: unknown;
+
+        if (provider.kind === 'promiseAccessor') {
+          // ── promiseAccessor ──
+          // The promiseAccessor is transparent in the dependency graph.
+          // Dependency is always tracked on the parent provider (which holds AsyncValue<T>).
+          // If a selector is provided, it receives the resolved data `T`, not `Promise<T>`.
+          const accessor = provider as unknown as PromiseAccessor<unknown>;
+          const parentProvider = accessor._parentProvider;
+          this.providerMap.set(parentProvider.id, parentProvider);
+          this.ensureInitialized(parentProvider);
+
+          const parentValue = this.read(parentProvider) as AsyncValue<unknown>;
+          trackTarget = parentProvider;
+
+          if (select) {
+            const data = parentValue.status === 'data' ? parentValue.data : undefined;
+            selectedValue = (select as (v: unknown) => unknown)(data);
+            // Wrap selector to extract data from AsyncValue for comparison
+            effectiveSelector = (val: unknown) => {
+              const av = val as AsyncValue<unknown>;
+              return av.status === 'data' ? (select as (v: unknown) => unknown)(av.data) : undefined;
+            };
+            returnValue = parentValue.status === 'data'
+              ? Promise.resolve(selectedValue)
+              : parentValue.status === 'error'
+                ? Promise.reject(parentValue.error)
+                : new Promise<unknown>((resolve, reject) => {
+                    const unsubscribe = this.listen(parentProvider, (next) => {
+                      const asyncNext = next as AsyncValue<unknown>;
+                      if (asyncNext.status === 'data') {
+                        unsubscribe();
+                        resolve((select as (v: unknown) => unknown)(asyncNext.data));
+                      } else if (asyncNext.status === 'error') {
+                        unsubscribe();
+                        reject(asyncNext.error);
+                      }
+                    });
+                  });
+          } else {
+            // No selector — return the raw Promise from the promiseAccessor
+            returnValue = this.read(provider);
+            selectedValue = undefined;
+            effectiveSelector = undefined;
+          }
+        } else {
+          // ── Normal watch ──
+          const rawValue = this.ensureInitialized(provider) as T;
+          selectedValue = select ? select(rawValue) : rawValue;
+          returnValue = selectedValue;
+          trackTarget = provider;
+          effectiveSelector = select ? (select as (val: unknown) => unknown) : undefined;
+        }
+
+        // ── Dependency tracking (shared) ──
         const ownerState = this.getState(ownerId);
         if (ownerState) {
-          ownerState.dependencies.add(provider);
+          ownerState.dependencies.add(trackTarget);
         }
-        const targetState = this.getState(provider.id);
+        const targetState = this.getState(trackTarget.id);
         if (targetState) {
           targetState.dependents.add(ownerId);
 
-          if (select) {
+          if (effectiveSelector) {
             if (!targetState.watchSelectors) targetState.watchSelectors = new Map();
             let selectors = targetState.watchSelectors.get(ownerId);
-            
             // If it's already null, it means there's an unconditional watch somewhere,
             // so we don't need to track selective watches anymore.
             if (selectors !== null) {
@@ -706,7 +765,7 @@ export class RiverContainer {
                 selectors = [];
                 targetState.watchSelectors.set(ownerId, selectors);
               }
-              selectors.push({ selector: select as (val: unknown) => unknown, lastValue: selectedValue });
+              selectors.push({ selector: effectiveSelector, lastValue: selectedValue });
             }
           } else {
             // Unconditional watch
@@ -715,7 +774,7 @@ export class RiverContainer {
           }
         }
 
-        return selectedValue;
+        return returnValue as R;
       },
 
       read: <T>(provider: ProviderBase<T>): T => {

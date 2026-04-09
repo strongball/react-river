@@ -50,6 +50,8 @@ export interface ProviderOptions {
 export interface Ref {
   /** Subscribe to another provider. Establishes a dependency. */
   watch<T>(provider: ProviderBase<T>): T;
+  /** Subscribe to a PromiseAccessor and select from the resolved data. Selector receives `T`, returns `Promise<R>`. */
+  watch<T, R>(provider: PromiseAccessor<T>, select: (value: T | undefined) => R): Promise<R>;
   /** Subscribe to a provider and select a specific value to trigger updates only when the selection changes. */
   watch<T, R>(provider: ProviderBase<T>, select: (value: T) => R): R;
   /** Read another provider's current value once (no subscription). */
