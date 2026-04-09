@@ -1,3 +1,10 @@
+## [1.0.18](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.17...v1.0.18) (2026-04-09)
+
+
+### Bug Fixes
+
+* remove .npmrc ([810662f](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/commit/810662f6acd875a5a52a0de94213acef135aa5ea))
+
 ## [1.0.17](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.16...v1.0.17) (2026-04-09)
 
 ## [1.0.16](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.15...v1.0.16) (2026-04-09)
