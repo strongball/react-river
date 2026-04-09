@@ -468,3 +468,41 @@ button.active {
     opacity: 0;
   }
 }
+/* ── Scoping Demo ───────────────────────────────────────────── */
+
+.scoped-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 10px;
+  background: var(--river-surface-alt);
+  border: 1px dashed var(--river-border);
+  position: relative;
+}
+
+.scoped-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--river-text-muted);
+  letter-spacing: 0.05em;
+  margin-bottom: -4px;
+}
+
+.scoping-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.card.scoping-card {
+  grid-column: span 2;
+}
+
+@media (max-width: 680px) {
+  .card.scoping-card {
+    grid-column: span 1;
+  }
+}

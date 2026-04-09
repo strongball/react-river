@@ -37,6 +37,12 @@ export interface ProviderOptions {
    * Default is 0ms (dispose immediately).
    */
   cacheTime?: number;
+  /**
+   * If true, the provider will use the topmost (root) container's state,
+   * sharing a single instance across all scopes.
+   * If false (default), each scope creates its own isolated instance.
+   */
+  global?: boolean;
 }
 
 // ── Ref (used inside provider create functions) ────────────────

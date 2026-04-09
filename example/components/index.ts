@@ -1,4 +1,5 @@
 export * from './CounterCard';
+export * from './ScopedCounterCard';
 export * from './TodoCard';
 export * from './UserCard';
 export * from './PostCard';

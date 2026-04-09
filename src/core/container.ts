@@ -256,19 +256,30 @@ export class RiverContainer {
   // ── Initialization ───────────────────────────────────────────
 
   private ensureInitialized(provider: ProviderBase): unknown {
+    // If the provider is marked as global, delegate to the root container
+    if (provider.options.global && this.parent) {
+      return this.getRootContainer().ensureInitialized(provider);
+    }
+
     // Check for override
     const override = this.overrideMap.get(provider.id);
 
-    const state = this.getState(provider.id);
-    if (state?.initialized) return state.value;
+    // Check if already initialized in this container
+    const localState = this.states.get(provider.id);
+    if (localState?.initialized) return localState.value;
 
-    // Check parent container (if no override for this provider)
-    if (this.parent && !override && !this.states.has(provider.id)) {
-      const parentState = this.parent.getState(provider.id);
-      if (parentState?.initialized) return parentState.value;
-    }
-
+    // Non-global (default): always create a new instance in the current container
     return this.initializeProvider(provider, override);
+  }
+
+  /** Walk up the parent chain to find the root (topmost) container. */
+  private getRootContainer(): RiverContainer {
+    let current = this.parent;
+    if (!current) return this;
+    while (current.parent) {
+      current = current.parent;
+    }
+    return current;
   }
 
   private initializeProvider(provider: ProviderBase, override?: ProviderOverride): unknown {

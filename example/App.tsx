@@ -1,7 +1,15 @@
 import { createDevToolsObserver, RiverDevTools, RiverScope } from '@zerologix/react-river';
 
 import './App.css';
-import { CounterCard, TodoCard, UserCard, PostCard, TimerCard, StreamCard } from './components';
+import {
+  CounterCard,
+  ScopedCounterCard,
+  TodoCard,
+  UserCard,
+  PostCard,
+  TimerCard,
+  StreamCard,
+} from './components';
 
 // ════════════════════════════════════════════════════════════════
 //  App — React River Demo
@@ -19,6 +27,7 @@ export default function App() {
         </header>
 
         <div className="grid">
+          <ScopedCounterCard />
           <CounterCard />
           <TodoCard />
           <UserCard />
