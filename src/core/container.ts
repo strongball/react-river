@@ -483,12 +483,11 @@ export class RiverContainer {
           const parentValue = this.read(parentProvider) as AsyncValue<unknown>;
 
           // Track dependency so when parent is invalidated, the promise is also "refreshed"
-          // const parentState = this.getState(parentProvider.id);
-          // if (parentState) {
-          //   parentState.dependents.add(provider.id);
-          //   const state = this.getState(provider.id);
-          //   if (state) state.dependencies.add(parentProvider);
-          // }
+          const parentState = this.getState(parentProvider.id);
+          if (parentState) {
+            parentState.dependents.add(provider.id);
+            state.dependencies.add(parentProvider);
+          }
 
           if (parentValue.status === 'data') {
             state.value = Promise.resolve(parentValue.data);
