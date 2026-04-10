@@ -1,0 +1,112 @@
+/* ════════════════════════════════════════════════════════════════
+ *  React River — Container Internal Types
+ *  Shared type definitions used by the container implementation.
+ * ════════════════════════════════════════════════════════════════ */
+
+import type { ListenerCallback, ProviderBase, ProviderOverride, Unsubscribe } from './types';
+import type { RiverObserver } from './observer';
+
+// ── Internal Provider State ────────────────────────────────────
+
+export interface ProviderState {
+  value: unknown;
+  previousValue: unknown | undefined;
+  version: number;
+
+  /** useSyncExternalStore subscriptions — just () => void */
+  snapshotListeners: Set<() => void>;
+  /** Explicit value listeners — receives (prev, next) */
+  valueListeners: Set<ListenerCallback<unknown>>;
+
+  /** Providers this one depends on (via ref.watch) */
+  dependencies: Set<ProviderBase>;
+  /** Providers that depend on this one */
+  dependents: Set<symbol>;
+  /** Selectors used by dependents. A value of null means unconditional dependency. */
+  watchSelectors?: Map<symbol, Array<{ selector: (val: unknown) => unknown; lastValue: unknown }> | null>;
+
+  /** Cleanup callbacks registered via ref.onDispose */
+  disposeCallbacks: (() => void)[];
+  /** Callbacks for when last listener removed */
+  cancelCallbacks: (() => void)[];
+  /** Callbacks for when listener added after cancel */
+  resumeCallbacks: (() => void)[];
+
+  /** Timeout for cacheTime before auto-dispose */
+  disposeTimeout?: ReturnType<typeof setTimeout>;
+
+  /** The notifier/controller instance (for notifier-based providers) */
+  notifierInstance?: unknown;
+  /** AbortController for async operations */
+  abortController?: AbortController;
+
+  initialized: boolean;
+}
+
+// ── DevTools Snapshot (read-only inspection) ───────────────────
+
+export interface DevToolsProviderSnapshot {
+  id: symbol;
+  name: string;
+  kind: string;
+  value: unknown;
+  previousValue: unknown | undefined;
+  version: number;
+  initialized: boolean;
+  listenerCount: number;
+  dependencyCount: number;
+  dependentCount: number;
+  dependencies: string[];
+  dependents: string[];
+  autoDispose: boolean;
+  cacheTime: number | undefined;
+}
+
+// ── Container Options ──────────────────────────────────────────
+
+export interface RiverContainerOptions {
+  parent?: import('./container').RiverContainer;
+  overrides?: ProviderOverride[];
+  observers?: RiverObserver[];
+}
+
+// ── Container Callbacks (for extracted modules) ────────────────
+
+/**
+ * Lightweight interface exposing the container methods needed
+ * by extracted initializer and ref-factory functions.
+ * Avoids coupling those modules directly to the RiverContainer class.
+ */
+export interface ContainerCallbacks {
+  updateValue(providerId: symbol, newValue: unknown): void;
+  notifyObservers(
+    event: 'create' | 'update' | 'dispose' | 'error',
+    provider: ProviderBase,
+    ...args: unknown[]
+  ): void;
+  getState(id: symbol): ProviderState | undefined;
+  ensureInitialized(provider: ProviderBase): unknown;
+  listen<T>(provider: ProviderBase<T>, callback: ListenerCallback<T>): Unsubscribe;
+  read<T>(provider: ProviderBase<T>): T;
+  invalidate(provider: ProviderBase): void;
+  providerMap: Map<symbol, ProviderBase>;
+}
+
+// ── Factory ────────────────────────────────────────────────────
+
+export function createProviderState(): ProviderState {
+  return {
+    value: undefined,
+    previousValue: undefined,
+    version: 0,
+    snapshotListeners: new Set(),
+    valueListeners: new Set(),
+    dependencies: new Set(),
+    dependents: new Set(),
+    disposeCallbacks: [],
+    cancelCallbacks: [],
+    resumeCallbacks: [],
+    disposeTimeout: undefined,
+    initialized: false,
+  };
+}

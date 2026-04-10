@@ -1,0 +1,237 @@
+/* ════════════════════════════════════════════════════════════════
+ *  React River — Provider Initializers
+ *  Standalone initialization functions for each provider kind.
+ *  Kept separate from the container class for readability.
+ * ════════════════════════════════════════════════════════════════ */
+
+import { asyncData, asyncError, asyncLoading } from './async_value';
+
+import type { AsyncValue } from './async_value';
+import type { Notifier, AsyncNotifier } from './notifier';
+import type { ProviderState, ContainerCallbacks } from './container_types';
+import type {
+  PromiseProvider,
+  NotifierAccessor,
+  ProviderBase,
+  ProviderOverride,
+  Ref,
+  StateController,
+  StateProvider,
+  ObservableProvider,
+  ObservableLike,
+} from './types';
+
+// ── Simple Provider ────────────────────────────────────────────
+
+export function initSimpleProvider(
+  _cb: ContainerCallbacks,
+  provider: ProviderBase,
+  ref: Ref,
+  state: ProviderState,
+  override?: ProviderOverride,
+): void {
+  const p = provider as unknown as { _create: (ref: Ref) => unknown };
+  const createFn = override ? override.create : p._create;
+  state.value = createFn(ref);
+}
+
+// ── State Provider ─────────────────────────────────────────────
+
+export function initStateProvider(
+  cb: ContainerCallbacks,
+  provider: StateProvider<unknown>,
+  ref: Ref,
+  state: ProviderState,
+  override?: ProviderOverride,
+): void {
+  const createFn = override ? override.create : provider._create;
+  state.value = createFn(ref);
+
+  // Create StateController
+  const controller: StateController<unknown> = {
+    get state() {
+      return state.value;
+    },
+    set state(v: unknown) {
+      this.update(() => v);
+    },
+    update: (updater: (current: unknown) => unknown) => {
+      const newValue = updater(state.value);
+      cb.updateValue(provider.id, newValue);
+    },
+  };
+  state.notifierInstance = controller;
+}
+
+// ── Promise Provider ───────────────────────────────────────────
+
+export function initPromiseProvider(
+  cb: ContainerCallbacks,
+  provider: PromiseProvider<unknown>,
+  ref: Ref,
+  state: ProviderState,
+  override?: ProviderOverride,
+): void {
+  state.value = asyncLoading();
+
+  const abortController = new AbortController();
+  state.abortController = abortController;
+
+  const promise = (override ? override.create(ref) : provider._create(ref)) as Promise<unknown>;
+
+  promise.then(
+    (data) => {
+      if (abortController.signal.aborted) return;
+      cb.updateValue(provider.id, asyncData(data));
+    },
+    (error) => {
+      if (abortController.signal.aborted) return;
+      cb.notifyObservers('error', provider, error);
+      cb.updateValue(provider.id, asyncError(error));
+    },
+  );
+}
+
+// ── Observable Provider ────────────────────────────────────────
+
+export function initObservableProvider(
+  cb: ContainerCallbacks,
+  provider: ObservableProvider<unknown>,
+  ref: Ref,
+  state: ProviderState,
+  override?: ProviderOverride,
+): void {
+  state.value = asyncLoading();
+
+  const abortController = new AbortController();
+  state.abortController = abortController;
+
+  const result = override
+    ? (override.create(ref) as ObservableLike<unknown> | Promise<ObservableLike<unknown>>)
+    : provider._create(ref);
+
+  const subscribe = (obs: ObservableLike<unknown>) => {
+    if (abortController.signal.aborted) return;
+    const subscription = obs.subscribe({
+      next: (data) => {
+        if (abortController.signal.aborted) return;
+        cb.updateValue(provider.id, asyncData(data));
+      },
+      error: (error) => {
+        if (abortController.signal.aborted) return;
+        cb.notifyObservers('error', provider, error);
+        cb.updateValue(provider.id, asyncError(error));
+      },
+      complete: () => {
+        // Observables completing just stops updates
+      },
+    });
+    state.disposeCallbacks.push(() => subscription.unsubscribe());
+  };
+
+  if (result instanceof Promise) {
+    result.then(
+      (obs) => subscribe(obs),
+      (error) => {
+        if (abortController.signal.aborted) return;
+        cb.notifyObservers('error', provider, error);
+        cb.updateValue(provider.id, asyncError(error));
+      },
+    );
+  } else {
+    subscribe(result);
+  }
+}
+
+// ── Notifier Provider ──────────────────────────────────────────
+
+export function initNotifierProvider(
+  cb: ContainerCallbacks,
+  provider: ProviderBase,
+  ref: Ref,
+  state: ProviderState,
+): void {
+  const p = provider as unknown as {
+    _createNotifier: () => Notifier<unknown>;
+  };
+  const notifier = p._createNotifier();
+  notifier._ref = ref;
+  notifier._setState = (value: unknown) => {
+    notifier._state = value;
+    cb.updateValue(provider.id, value);
+  };
+
+  const initialValue = notifier.build();
+  notifier._state = initialValue;
+  state.value = initialValue;
+  state.notifierInstance = notifier;
+}
+
+// ── Async Notifier Provider ────────────────────────────────────
+
+export function initAsyncNotifierProvider(
+  cb: ContainerCallbacks,
+  provider: ProviderBase,
+  ref: Ref,
+  state: ProviderState,
+): void {
+  const p = provider as unknown as {
+    _createNotifier: () => AsyncNotifier<unknown>;
+  };
+  const notifier = p._createNotifier();
+  notifier._ref = ref;
+  notifier._setState = (value: AsyncValue<unknown>) => {
+    notifier._state = value;
+    cb.updateValue(provider.id, value);
+  };
+
+  state.value = asyncLoading();
+  notifier._state = state.value as AsyncValue<unknown>;
+  state.notifierInstance = notifier;
+
+  const abortController = new AbortController();
+  state.abortController = abortController;
+
+  notifier.build().then(
+    (data) => {
+      if (abortController.signal.aborted) return;
+      const asyncVal = asyncData(data);
+      notifier._state = asyncVal;
+      cb.updateValue(provider.id, asyncVal);
+    },
+    (error) => {
+      if (abortController.signal.aborted) return;
+      cb.notifyObservers('error', provider, error);
+      const asyncVal = asyncError(error);
+      notifier._state = asyncVal;
+      cb.updateValue(provider.id, asyncVal);
+    },
+  );
+}
+
+// ── Notifier Accessor ──────────────────────────────────────────
+
+export function initNotifierAccessor(
+  cb: ContainerCallbacks,
+  accessor: NotifierAccessor<unknown>,
+  state: ProviderState,
+): void {
+  const parentId = accessor._parentId;
+  let parentProvider = cb.providerMap.get(parentId);
+
+  if (!parentProvider && accessor._parentProvider) {
+    parentProvider = accessor._parentProvider;
+    cb.providerMap.set(parentId, parentProvider);
+  }
+
+  if (parentProvider) {
+    cb.ensureInitialized(parentProvider);
+  }
+  const parentState = cb.getState(parentId);
+  if (!parentState) {
+    throw new Error(
+      `Parent provider not found for notifier accessor: ${accessor.name ?? accessor.id.description}`,
+    );
+  }
+  state.value = parentState.notifierInstance;
+}

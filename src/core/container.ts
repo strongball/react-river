@@ -4,102 +4,59 @@
  *  provider states. Framework-agnostic (no React dependency).
  * ════════════════════════════════════════════════════════════════ */
 
-import { asyncData, asyncError, asyncLoading, asyncValueEquals } from './async_value';
+import { asyncValueEquals } from './async_value';
+
+import {
+  initSimpleProvider,
+  initStateProvider,
+  initPromiseProvider,
+  initObservableProvider,
+  initNotifierProvider,
+  initAsyncNotifierProvider,
+  initNotifierAccessor,
+} from './initializers';
+import { createRef } from './ref_factory';
 
 import type { AsyncValue } from './async_value';
-import type { Notifier, AsyncNotifier } from './notifier';
 import type { RiverObserver } from './observer';
 import type {
-  PromiseProvider,
   ListenerCallback,
   NotifierAccessor,
   PromiseAccessor,
   ProviderBase,
   ProviderOverride,
-  Ref,
-  StateController,
   StateProvider,
+  PromiseProvider,
   ObservableProvider,
-  ObservableLike,
   Unsubscribe,
 } from './types';
+import type { ProviderState, ContainerCallbacks } from './container_types';
+import { createProviderState } from './container_types';
 
-// ── Internal Provider State ────────────────────────────────────
-
-interface ProviderState {
-  value: unknown;
-  previousValue: unknown | undefined;
-  version: number;
-
-  /** useSyncExternalStore subscriptions — just () => void */
-  snapshotListeners: Set<() => void>;
-  /** Explicit value listeners — receives (prev, next) */
-  valueListeners: Set<ListenerCallback<unknown>>;
-
-  /** Providers this one depends on (via ref.watch) */
-  dependencies: Set<ProviderBase>;
-  /** Providers that depend on this one */
-  dependents: Set<symbol>;
-  /** Selectors used by dependents. A value of null means unconditional dependency. */
-  watchSelectors?: Map<symbol, Array<{ selector: (val: unknown) => unknown; lastValue: unknown }> | null>;
-
-  /** Cleanup callbacks registered via ref.onDispose */
-  disposeCallbacks: (() => void)[];
-  /** Callbacks for when last listener removed */
-  cancelCallbacks: (() => void)[];
-  /** Callbacks for when listener added after cancel */
-  resumeCallbacks: (() => void)[];
-
-  /** Timeout for cacheTime before auto-dispose */
-  disposeTimeout?: ReturnType<typeof setTimeout>;
-
-  /** The notifier/controller instance (for notifier-based providers) */
-  notifierInstance?: unknown;
-  /** AbortController for async operations */
-  abortController?: AbortController;
-
-  initialized: boolean;
-}
-
-// ── DevTools Snapshot (read-only inspection) ───────────────────
-
-export interface DevToolsProviderSnapshot {
-  id: symbol;
-  name: string;
-  kind: string;
-  value: unknown;
-  previousValue: unknown | undefined;
-  version: number;
-  initialized: boolean;
-  listenerCount: number;
-  dependencyCount: number;
-  dependentCount: number;
-  dependencies: string[];
-  dependents: string[];
-  autoDispose: boolean;
-  cacheTime: number | undefined;
-}
-
-// ── Container Options ──────────────────────────────────────────
-
-export interface RiverContainerOptions {
-  parent?: RiverContainer;
-  overrides?: ProviderOverride[];
-  observers?: RiverObserver[];
-}
+// Re-export public types so existing imports keep working
+export type { DevToolsProviderSnapshot, RiverContainerOptions } from './container_types';
 
 // ── RiverContainer ─────────────────────────────────────────────
 
 export class RiverContainer {
   private states = new Map<symbol, ProviderState>();
   private overrideMap = new Map<symbol, ProviderOverride>();
-  private providerMap = new Map<symbol, ProviderBase>();
+  providerMap = new Map<symbol, ProviderBase>();
   private initializingStack = new Set<symbol>();
   private parent: RiverContainer | undefined;
   private observers: RiverObserver[];
   private disposed = false;
 
-  constructor(options: RiverContainerOptions = {}) {
+  /** Bound callbacks passed to extracted initializer / ref-factory modules. */
+  private readonly cb: ContainerCallbacks;
+
+  constructor(
+    options: {
+      parent?: RiverContainer;
+      overrides?: ProviderOverride[];
+      observers?: RiverObserver[];
+    } = {},
+  ) {
     this.parent = options.parent;
     this.observers = options.observers ?? [];
 
@@ -108,6 +65,18 @@ export class RiverContainer {
         this.overrideMap.set(override.original.id, override);
       }
     }
+
+    // Create bound callbacks once — avoids allocating closures per-call
+    this.cb = {
+      updateValue: this.updateValue.bind(this),
+      notifyObservers: this.notifyObservers.bind(this),
+      getState: this.getState.bind(this),
+      ensureInitialized: this.ensureInitialized.bind(this),
+      listen: this.listen.bind(this),
+      read: this.read.bind(this),
+      invalidate: this.invalidate.bind(this),
+      providerMap: this.providerMap,
+    };
   }
 
   // ── Public API ───────────────────────────────────────────────
@@ -115,7 +84,6 @@ export class RiverContainer {
   /** Read a provider's current value (initializes lazily). */
   read<T>(provider: ProviderBase<T>): T {
     this.assertNotDisposed();
-    this.providerMap.set(provider.id, provider);
     return this.ensureInitialized(provider) as T;
   }
 
@@ -124,28 +92,7 @@ export class RiverContainer {
    * Callback receives no arguments — just a notification.
    */
   subscribe(provider: ProviderBase, callback: () => void): Unsubscribe {
-    this.assertNotDisposed();
-    this.providerMap.set(provider.id, provider);
-    this.ensureInitialized(provider);
-
-    const state = this.getState(provider.id)!;
-    const hadListeners = this.hasListeners(state);
-
-    state.snapshotListeners.add(callback);
-
-    // If transitioning from 0 → 1 listeners, fire resume
-    if (!hadListeners) {
-      if (state.disposeTimeout) {
-        clearTimeout(state.disposeTimeout);
-        state.disposeTimeout = undefined;
-      }
-      for (const cb of state.resumeCallbacks) cb();
-    }
-
-    return () => {
-      state.snapshotListeners.delete(callback);
-      this.checkAutoDispose(provider);
-    };
+    return this.addListener(provider, callback, (s) => s.snapshotListeners);
   }
 
   /**
@@ -153,27 +100,7 @@ export class RiverContainer {
    * Does NOT trigger component re-renders.
    */
   listen<T>(provider: ProviderBase<T>, callback: ListenerCallback<T>): Unsubscribe {
-    this.assertNotDisposed();
-    this.providerMap.set(provider.id, provider);
-    this.ensureInitialized(provider);
-
-    const state = this.getState(provider.id)!;
-    const hadListeners = this.hasListeners(state);
-
-    state.valueListeners.add(callback as ListenerCallback<unknown>);
-
-    if (!hadListeners) {
-      if (state.disposeTimeout) {
-        clearTimeout(state.disposeTimeout);
-        state.disposeTimeout = undefined;
-      }
-      for (const cb of state.resumeCallbacks) cb();
-    }
-
-    return () => {
-      state.valueListeners.delete(callback as ListenerCallback<unknown>);
-      this.checkAutoDispose(provider);
-    };
+    return this.addListener(provider, callback as ListenerCallback<unknown>, (s) => s.valueListeners);
   }
 
   /** Force a provider to re-initialize. */
@@ -196,7 +123,7 @@ export class RiverContainer {
     this.assertNotDisposed();
     this.ensureInitialized(provider);
 
-    const state = this.getState(provider.id)!;
+    const state = this.getOwnState(provider.id)!;
     const current = state.value as T;
     const newValue = typeof value === 'function' ? (value as (prev: T) => T)(current) : value;
 
@@ -218,19 +145,19 @@ export class RiverContainer {
    * DevTools inspection — returns a read-only snapshot of all provider states.
    * This is a passive read: it does NOT subscribe, listen, or affect auto-dispose.
    */
-  getProviderStates(): DevToolsProviderSnapshot[] {
-    const snapshots: DevToolsProviderSnapshot[] = [];
+  getProviderStates(): import('./container_types').DevToolsProviderSnapshot[] {
+    const snapshots: import('./container_types').DevToolsProviderSnapshot[] = [];
+
+    const getLabel = (sym: symbol) => {
+      const p = this.providerMap.get(sym);
+      return p?.name ?? sym.description ?? 'unknown';
+    };
 
     for (const [id, state] of this.states) {
       if (!state.initialized) continue;
 
       const provider = this.providerMap.get(id);
       if (!provider) continue;
-
-      const getLabel = (sym: symbol) => {
-        const p = this.providerMap.get(sym);
-        return p?.name ?? sym.description ?? 'unknown';
-      };
 
       snapshots.push({
         id,
@@ -253,16 +180,48 @@ export class RiverContainer {
     return snapshots;
   }
 
+  // ── Listener management ──────────────────────────────────────
+
+  private addListener<TCallback>(
+    provider: ProviderBase,
+    callback: TCallback,
+    getSet: (state: ProviderState) => Set<TCallback>,
+  ): Unsubscribe {
+    this.assertNotDisposed();
+    this.ensureInitialized(provider);
+
+    const state = this.getState(provider.id)!;
+    const hadListeners = this.hasListeners(state);
+
+    getSet(state).add(callback);
+
+    // If transitioning from 0 → 1 listeners, fire resume
+    if (!hadListeners) {
+      if (state.disposeTimeout) {
+        clearTimeout(state.disposeTimeout);
+        state.disposeTimeout = undefined;
+      }
+      for (const cb of state.resumeCallbacks) cb();
+    }
+
+    return () => {
+      getSet(state).delete(callback);
+      this.checkAutoDispose(provider);
+    };
+  }
+
   // ── Initialization ───────────────────────────────────────────
 
   private ensureInitialized(provider: ProviderBase): unknown {
+    // Register provider for reverse lookup (DevTools, dependency graph)
+    this.providerMap.set(provider.id, provider);
+
     // If the provider is marked as global, delegate to the root container
     if (provider.options.global && this.parent) {
       return this.getRootContainer().ensureInitialized(provider);
     }
 
     // promiseAccessor is stateless — computed on the fly from the parent's AsyncValue.
-    // It never stores state, so it won't leak in the states Map.
     if (provider.kind === 'promiseAccessor') {
       return this.resolvePromiseAccessor(provider as PromiseAccessor<unknown>);
     }
@@ -278,11 +237,6 @@ export class RiverContainer {
     return this.initializeProvider(provider, override);
   }
 
-  /**
-   * Resolve a promiseAccessor to a Promise without storing any state.
-   * The promiseAccessor is a transparent helper that derives a Promise
-   * from the parent provider's AsyncValue.
-   */
   private resolvePromiseAccessor(accessor: PromiseAccessor<unknown>): Promise<unknown> {
     const parentProvider = accessor._parentProvider;
     const parentValue = this.read(parentProvider) as AsyncValue<unknown>;
@@ -294,7 +248,6 @@ export class RiverContainer {
       return Promise.reject(parentValue.error);
     }
 
-    // Currently loading — resolve/reject when parent's status changes
     return new Promise((resolve, reject) => {
       const unsubscribe = this.listen(parentProvider, (next) => {
         const asyncNext = next as AsyncValue<unknown>;
@@ -328,213 +281,56 @@ export class RiverContainer {
     }
     this.initializingStack.add(provider.id);
 
-    const state = this.createState();
+    const state = createProviderState();
     this.states.set(provider.id, state);
 
-    const ref = this.createRef(provider.id);
+    const ref = createRef(this.cb, provider.id);
 
     try {
-      const kind = provider.kind;
-
-      switch (kind) {
-        case 'provider': {
-          const p = provider as unknown as { _create: (ref: Ref) => unknown };
-          const createFn = override ? override.create : p._create;
-          state.value = createFn(ref);
+      switch (provider.kind) {
+        case 'provider':
+          initSimpleProvider(this.cb, provider, ref, state, override);
           break;
-        }
-
-        case 'stateProvider': {
-          const p = provider as StateProvider<unknown>;
-          const createFn = override ? override.create : p._create;
-          const initialValue = createFn(ref);
-          state.value = initialValue;
-
-          // Create StateController
-          const controller: StateController<unknown> = {
-            get state() {
-              return state.value;
-            },
-            set state(v: unknown) {
-              this.update(() => v);
-            },
-            update: (updater: (current: unknown) => unknown) => {
-              const newValue = updater(state.value);
-              this.updateValue(provider.id, newValue);
-            },
-          };
-          state.notifierInstance = controller;
+        case 'stateProvider':
+          initStateProvider(this.cb, provider as StateProvider<unknown>, ref, state, override);
           break;
-        }
-
-        case 'promiseProvider': {
-          const p = provider as PromiseProvider<unknown>;
-          const createFn = override ? override.create : (r: Ref) => p._create(r);
-          state.value = asyncLoading();
-
-          const abortController = new AbortController();
-          state.abortController = abortController;
-
-          const promise = override ? (createFn(ref) as Promise<unknown>) : p._create(ref);
-
-          promise.then(
-            (data) => {
-              if (abortController.signal.aborted) return;
-              this.updateValue(provider.id, asyncData(data));
-            },
-            (error) => {
-              if (abortController.signal.aborted) return;
-              this.notifyObservers('error', provider, error);
-              this.updateValue(provider.id, asyncError(error));
-            },
-          );
+        case 'promiseProvider':
+          initPromiseProvider(this.cb, provider as PromiseProvider<unknown>, ref, state, override);
           break;
-        }
-
-        case 'observableProvider': {
-          const p = provider as ObservableProvider<unknown>;
-          state.value = asyncLoading();
-
-          const abortController = new AbortController();
-          state.abortController = abortController;
-
-          const result = p._create(ref);
-
-          const subscribe = (obs: ObservableLike<unknown>) => {
-            if (abortController.signal.aborted) return;
-            const subscription = obs.subscribe({
-              next: (data) => {
-                if (abortController.signal.aborted) return;
-                this.updateValue(provider.id, asyncData(data));
-              },
-              error: (error) => {
-                if (abortController.signal.aborted) return;
-                this.notifyObservers('error', provider, error);
-                this.updateValue(provider.id, asyncError(error));
-              },
-              complete: () => {
-                // Observables completing just stops updates
-              },
-            });
-            state.disposeCallbacks.push(() => subscription.unsubscribe());
-          };
-
-          if (result instanceof Promise) {
-            result.then(
-              (obs) => subscribe(obs),
-              (error) => {
-                if (abortController.signal.aborted) return;
-                this.notifyObservers('error', provider, error);
-                this.updateValue(provider.id, asyncError(error));
-              },
-            );
-          } else {
-            subscribe(result);
-          }
+        case 'observableProvider':
+          initObservableProvider(this.cb, provider as ObservableProvider<unknown>, ref, state, override);
           break;
-        }
-
-        case 'notifierProvider': {
-          const p = provider as unknown as {
-            _createNotifier: () => Notifier<unknown>;
-          };
-          const notifier = p._createNotifier();
-          notifier._ref = ref;
-          notifier._setState = (value: unknown) => {
-            notifier._state = value;
-            this.updateValue(provider.id, value);
-          };
-
-          const initialValue = notifier.build();
-          notifier._state = initialValue;
-          state.value = initialValue;
-          state.notifierInstance = notifier;
+        case 'notifierProvider':
+          initNotifierProvider(this.cb, provider, ref, state);
           break;
-        }
-
-        case 'asyncNotifierProvider': {
-          const p = provider as unknown as {
-            _createNotifier: () => AsyncNotifier<unknown>;
-          };
-          const notifier = p._createNotifier();
-          notifier._ref = ref;
-          notifier._setState = (value: AsyncValue<unknown>) => {
-            notifier._state = value;
-            this.updateValue(provider.id, value);
-          };
-
-          state.value = asyncLoading();
-          notifier._state = state.value as AsyncValue<unknown>;
-          state.notifierInstance = notifier;
-
-          const abortController = new AbortController();
-          state.abortController = abortController;
-
-          notifier.build().then(
-            (data) => {
-              if (abortController.signal.aborted) return;
-              const asyncVal = asyncData(data);
-              notifier._state = asyncVal;
-              this.updateValue(provider.id, asyncVal);
-            },
-            (error) => {
-              if (abortController.signal.aborted) return;
-              this.notifyObservers('error', provider, error);
-              const asyncVal = asyncError(error);
-              notifier._state = asyncVal;
-              this.updateValue(provider.id, asyncVal);
-            },
-          );
+        case 'asyncNotifierProvider':
+          initAsyncNotifierProvider(this.cb, provider, ref, state);
           break;
-        }
-
-        case 'notifierAccessor': {
-          const accessor = provider as NotifierAccessor<unknown>;
-          // Ensure parent is initialized
-          const parentId = accessor._parentId;
-          let parentProvider = this.providerMap.get(parentId);
-
-          if (!parentProvider && accessor._parentProvider) {
-            parentProvider = accessor._parentProvider;
-            this.providerMap.set(parentId, parentProvider);
-          }
-
-          if (parentProvider) {
-            this.ensureInitialized(parentProvider);
-          }
-          const parentState = this.getState(parentId);
-          if (!parentState) {
-            throw new Error(
-              `Parent provider not found for notifier accessor: ${provider.name ?? provider.id.description}`,
-            );
-          }
-          state.value = parentState.notifierInstance;
+        case 'notifierAccessor':
+          initNotifierAccessor(this.cb, provider as unknown as NotifierAccessor<unknown>, state);
           break;
-        }
-
         // promiseAccessor is handled in ensureInitialized/resolvePromiseAccessor
         // and never reaches initializeProvider.
-
         default:
-          throw new Error(`Unknown provider kind: ${kind}`);
+          throw new Error(`Unknown provider kind: ${provider.kind}`);
       }
 
       state.initialized = true;
       this.notifyObservers('create', provider, state.value);
     } catch (error) {
-      this.initializingStack.delete(provider.id);
       this.notifyObservers('error', provider, error);
       throw error;
+    } finally {
+      this.initializingStack.delete(provider.id);
     }
 
-    this.initializingStack.delete(provider.id);
     return state.value;
   }
 
   // ── Value updates & notification ─────────────────────────────
 
   private updateValue(providerId: symbol, newValue: unknown): void {
-    const state = this.getState(providerId);
+    const state = this.getOwnState(providerId);
     if (!state) return;
 
     const oldValue = state.value;
@@ -552,13 +348,13 @@ export class RiverContainer {
       this.notifyObservers('update', provider, newValue, oldValue);
     }
 
-    // Notify value listeners (next, prev)
+    // Notify value listeners (next, prev) — Array.from needed: callbacks may unsubscribe
     for (const cb of Array.from(state.valueListeners)) {
       cb(newValue, oldValue);
     }
 
-    // Notify snapshot listeners (just fire)
-    for (const cb of Array.from(state.snapshotListeners)) {
+    // Notify snapshot listeners — safe to iterate directly (React useSyncExternalStore)
+    for (const cb of state.snapshotListeners) {
       cb();
     }
 
@@ -567,7 +363,6 @@ export class RiverContainer {
   }
 
   private valuesEqual(a: unknown, b: unknown): boolean {
-    // For AsyncValue, use structural comparison
     if (a && b && typeof a === 'object' && typeof b === 'object' && 'status' in a && 'status' in b) {
       return asyncValueEquals(a as AsyncValue<unknown>, b as AsyncValue<unknown>);
     }
@@ -586,7 +381,6 @@ export class RiverContainer {
         if (state.watchSelectors) {
           const selectors = state.watchSelectors.get(depId);
           if (selectors) {
-            // Need to evaluate if any selector's result changed
             let anyChanged = false;
             for (const item of selectors) {
               try {
@@ -596,7 +390,6 @@ export class RiverContainer {
                   break;
                 }
               } catch {
-                // If selector throws, assume value changed
                 anyChanged = true;
                 break;
               }
@@ -657,11 +450,12 @@ export class RiverContainer {
     const override = this.overrideMap.get(provider.id);
     this.initializeProvider(provider, override);
 
-    // Restore listeners
-    const newState = this.getState(provider.id)!;
+    // Restore listeners and dependency graph
+    const newState = this.getOwnState(provider.id)!;
     newState.snapshotListeners = state.snapshotListeners;
     newState.valueListeners = state.valueListeners;
     newState.dependents = state.dependents;
+    newState.watchSelectors = state.watchSelectors;
 
     // Check if value actually changed
     if (!this.valuesEqual(oldValue, newState.value)) {
@@ -673,7 +467,7 @@ export class RiverContainer {
       for (const cb of Array.from(newState.valueListeners)) {
         cb(newState.value, oldValue);
       }
-      for (const cb of Array.from(newState.snapshotListeners)) {
+      for (const cb of newState.snapshotListeners) {
         cb();
       }
 
@@ -681,145 +475,15 @@ export class RiverContainer {
     }
   }
 
-  // ── Ref factory ──────────────────────────────────────────────
-
-  private createRef(ownerId: symbol): Ref {
-    return {
-      watch: <T, R = T>(provider: ProviderBase<T>, select?: (value: T) => R): R => {
-        this.providerMap.set(provider.id, provider);
-        this.ensureInitialized(provider);
-
-        let trackTarget: ProviderBase;
-        let effectiveSelector: ((val: unknown) => unknown) | undefined;
-        let selectedValue: unknown;
-        let returnValue: unknown;
-
-        if (provider.kind === 'promiseAccessor') {
-          // ── promiseAccessor ──
-          // The promiseAccessor is transparent in the dependency graph.
-          // Dependency is always tracked on the parent provider (which holds AsyncValue<T>).
-          // If a selector is provided, it receives the resolved data `T`, not `Promise<T>`.
-          const accessor = provider as unknown as PromiseAccessor<unknown>;
-          const parentProvider = accessor._parentProvider;
-          this.providerMap.set(parentProvider.id, parentProvider);
-          this.ensureInitialized(parentProvider);
-
-          const parentValue = this.read(parentProvider) as AsyncValue<unknown>;
-          trackTarget = parentProvider;
-
-          if (select) {
-            const data = parentValue.status === 'data' ? parentValue.data : undefined;
-            selectedValue = (select as (v: unknown) => unknown)(data);
-            // Wrap selector to extract data from AsyncValue for comparison
-            effectiveSelector = (val: unknown) => {
-              const av = val as AsyncValue<unknown>;
-              return av.status === 'data' ? (select as (v: unknown) => unknown)(av.data) : undefined;
-            };
-            returnValue = parentValue.status === 'data'
-              ? Promise.resolve(selectedValue)
-              : parentValue.status === 'error'
-                ? Promise.reject(parentValue.error)
-                : new Promise<unknown>((resolve, reject) => {
-                    const unsubscribe = this.listen(parentProvider, (next) => {
-                      const asyncNext = next as AsyncValue<unknown>;
-                      if (asyncNext.status === 'data') {
-                        unsubscribe();
-                        resolve((select as (v: unknown) => unknown)(asyncNext.data));
-                      } else if (asyncNext.status === 'error') {
-                        unsubscribe();
-                        reject(asyncNext.error);
-                      }
-                    });
-                  });
-          } else {
-            // No selector — return the raw Promise from the promiseAccessor
-            returnValue = this.read(provider);
-            selectedValue = undefined;
-            effectiveSelector = undefined;
-          }
-        } else {
-          // ── Normal watch ──
-          const rawValue = this.ensureInitialized(provider) as T;
-          selectedValue = select ? select(rawValue) : rawValue;
-          returnValue = selectedValue;
-          trackTarget = provider;
-          effectiveSelector = select ? (select as (val: unknown) => unknown) : undefined;
-        }
-
-        // ── Dependency tracking (shared) ──
-        const ownerState = this.getState(ownerId);
-        if (ownerState) {
-          ownerState.dependencies.add(trackTarget);
-        }
-        const targetState = this.getState(trackTarget.id);
-        if (targetState) {
-          targetState.dependents.add(ownerId);
-
-          if (effectiveSelector) {
-            if (!targetState.watchSelectors) targetState.watchSelectors = new Map();
-            let selectors = targetState.watchSelectors.get(ownerId);
-            // If it's already null, it means there's an unconditional watch somewhere,
-            // so we don't need to track selective watches anymore.
-            if (selectors !== null) {
-              if (!selectors) {
-                selectors = [];
-                targetState.watchSelectors.set(ownerId, selectors);
-              }
-              selectors.push({ selector: effectiveSelector, lastValue: selectedValue });
-            }
-          } else {
-            // Unconditional watch
-            if (!targetState.watchSelectors) targetState.watchSelectors = new Map();
-            targetState.watchSelectors.set(ownerId, null);
-          }
-        }
-
-        return returnValue as R;
-      },
-
-      read: <T>(provider: ProviderBase<T>): T => {
-        this.providerMap.set(provider.id, provider);
-        return this.ensureInitialized(provider) as T;
-      },
-
-      listen: <T>(provider: ProviderBase<T>, callback: ListenerCallback<T>): Unsubscribe => {
-        return this.listen(provider, callback);
-      },
-
-      onDispose: (callback: () => void): void => {
-        const state = this.getState(ownerId);
-        state?.disposeCallbacks.push(callback);
-      },
-
-      onCancel: (callback: () => void): void => {
-        const state = this.getState(ownerId);
-        state?.cancelCallbacks.push(callback);
-      },
-
-      onResume: (callback: () => void): void => {
-        const state = this.getState(ownerId);
-        state?.resumeCallbacks.push(callback);
-      },
-
-      invalidateSelf: (): void => {
-        const provider = this.providerMap.get(ownerId);
-        if (provider) this.invalidate(provider);
-      },
-    };
-  }
-
   // ── Auto-dispose ─────────────────────────────────────────────
 
   private checkAutoDispose(provider: ProviderBase): void {
     const state = this.getState(provider.id);
-    if (!state) return;
-    const hasListeners = this.hasListeners(state);
+    if (!state || !state.initialized) return;
 
-    if (!hasListeners) {
-      // Fire cancel callbacks
+    if (!this.hasListeners(state)) {
       for (const cb of Array.from(state.cancelCallbacks)) cb();
 
-      // Auto-dispose if configured
       if (provider.options.autoDispose) {
         const cacheTime = provider.options.cacheTime;
         if (cacheTime !== undefined && cacheTime > 0) {
@@ -830,7 +494,6 @@ export class RiverContainer {
             }
           }, cacheTime);
         } else {
-          // Use microtask to allow re-subscription during the same tick
           queueMicrotask(() => {
             const currentState = this.getState(provider.id);
             if (currentState && !this.hasListeners(currentState)) {
@@ -843,8 +506,8 @@ export class RiverContainer {
   }
 
   private disposeProvider(provider: ProviderBase): void {
-    const state = this.getState(provider.id);
-    if (!state) return;
+    const state = this.getOwnState(provider.id);
+    if (!state || !state.initialized) return;
 
     this.disposeState(provider.id, state);
     this.states.delete(provider.id);
@@ -852,12 +515,14 @@ export class RiverContainer {
   }
 
   private disposeState(id: symbol, state: ProviderState): void {
+    if (!state.initialized) return;
+    state.initialized = false;
+
     if (state.disposeTimeout) {
       clearTimeout(state.disposeTimeout);
       state.disposeTimeout = undefined;
     }
 
-    // Run dispose callbacks
     for (const cb of Array.from(state.disposeCallbacks)) {
       try {
         cb();
@@ -866,10 +531,8 @@ export class RiverContainer {
       }
     }
 
-    // Abort async operations
     state.abortController?.abort();
 
-    // Remove from dependency graph
     for (const depProvider of Array.from(state.dependencies)) {
       const depState = this.getState(depProvider.id);
       depState?.dependents.delete(id);
@@ -881,7 +544,6 @@ export class RiverContainer {
     state.valueListeners.clear();
     state.dependencies.clear();
     state.dependents.clear();
-    state.initialized = false;
   }
 
   // ── Observer notifications ───────────────────────────────────
@@ -923,21 +585,8 @@ export class RiverContainer {
     return this.states.get(id) ?? this.parent?.getState(id);
   }
 
-  private createState(): ProviderState {
-    return {
-      value: undefined,
-      previousValue: undefined,
-      version: 0,
-      snapshotListeners: new Set(),
-      valueListeners: new Set(),
-      dependencies: new Set(),
-      dependents: new Set(),
-      disposeCallbacks: [],
-      cancelCallbacks: [],
-      resumeCallbacks: [],
-      disposeTimeout: undefined,
-      initialized: false,
-    };
+  private getOwnState(id: symbol): ProviderState | undefined {
+    return this.states.get(id);
   }
 
   private assertNotDisposed(): void {
