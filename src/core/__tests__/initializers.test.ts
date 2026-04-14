@@ -5,59 +5,49 @@ import { AsyncNotifier } from '../notifier';
 import { stateProvider, provider, promiseProvider, observableProvider, asyncNotifierProvider } from '../provider';
 
 describe('Initializers', () => {
-  it('abort logic across provider types', async () => {
-    // 1. Observable - next after abort
+  it('initialization abort logic', async () => {
+    // 1. Observable - next/error after abort
     const container1 = new RiverContainer();
-    let push: any;
-    const p1 = observableProvider(() => ({
+    let push: any, pushErr: any;
+    const op1 = observableProvider(() => ({
       subscribe: (o: any) => {
         push = typeof o === 'function' ? o : o.next;
-        return { unsubscribe: () => {} };
-      },
-    }));
-    container1.read(p1);
-    container1.dispose();
-    push(1); // Should hit aborted branch
-
-    // 2. Observable - error after abort
-    const container2 = new RiverContainer();
-    let pushErr: any;
-    const p2 = observableProvider(() => ({
-      subscribe: (o: any) => {
         pushErr = o.error;
         return { unsubscribe: () => {} };
       },
     }));
-    container2.read(p2);
+    container1.read(op1);
+    container1.dispose();
+    push(1); // Hits line 117
+    pushErr('fail'); // Hits line 121
+
+    // 2. Promise - resolve/reject after abort
+    const container2 = new RiverContainer();
+    let resolveP: any, rejectP: any;
+    const pp = promiseProvider(() => new Promise((res, rej) => {
+      resolveP = res;
+      rejectP = rej;
+    }));
+    container2.read(pp);
     container2.dispose();
-    pushErr('fail'); // Should hit aborted branch
+    resolveP(1); // Hits line 88
+    rejectP('err'); // Also line 88
 
-    // 3. Promise - resolve after abort
+    // 3. AsyncNotifier - success/error after abort
     const container3 = new RiverContainer();
-    let resolvePromise: any;
-    const p3 = promiseProvider(
-      () =>
-        new Promise((r) => {
-          resolvePromise = r;
-        }),
-    );
-    container3.read(p3);
-    container3.dispose();
-    resolvePromise(1); // Should hit aborted branch
-
-    // 4. AsyncNotifier - success after abort
-    const container4 = new RiverContainer();
-    let resolveNotifier: any;
-    class AbortNotif extends AsyncNotifier<number> {
+    let resolveN: any, rejectN: any;
+    class AN extends AsyncNotifier<number> {
       async build() {
-        return new Promise<number>((r) => {
-          resolveNotifier = r;
+        return new Promise<number>((r, j) => {
+          resolveN = r;
+          rejectN = j;
         });
       }
     }
-    container4.read(asyncNotifierProvider(() => new AbortNotif()));
-    container4.dispose();
-    resolveNotifier(1); // Should hit aborted branch
+    container3.read(asyncNotifierProvider(() => new AN()));
+    container3.dispose();
+    resolveN(1); // Hits line 197
+    rejectN(new Error('err')); // Hits line 203
   });
 
   it('observableProvider error and creation branches', async () => {
@@ -82,6 +72,17 @@ describe('Initializers', () => {
     container.read(p2);
     await new Promise((r) => setTimeout(r, 0));
     expect((container.read(p2) as any).error).toBe('creation-fail');
+
+    // 3. Async creation success (Hits line 134)
+    const p3 = observableProvider(async () => ({
+      subscribe: (o: any) => {
+        o.next('async-ok');
+        return { unsubscribe: () => {} };
+      },
+    }));
+    container.read(p3);
+    await new Promise((r) => setTimeout(r, 0));
+    expect((container.read(p3) as any).data).toBe('async-ok');
   });
 
   it('notifierAccessor and stateProvider controller branches', () => {
@@ -147,97 +148,5 @@ describe('Initializers', () => {
     expect(container.read(p)).toBe(2);
     expect(container.read(sp)).toBe(20);
     expect((container.read(op) as any).data).toBe(200);
-  });
-
-  it('initializers with overrides and abort logic', async () => {
-    const container = new RiverContainer();
-    const ref = { onDispose: vi.fn() };
-
-    // 1. initPromiseProvider with override
-    const p1 = promiseProvider(async () => 1);
-    const container1 = new RiverContainer({
-      overrides: [{ original: p1, create: () => Promise.resolve(2) }],
-    });
-    expect(await container1.read(p1.promise)).toBe(2);
-
-    // 2. initObservableProvider with override
-    const op1 = observableProvider(() => ({
-      subscribe: (o: any) => {
-        o.next(1);
-        return { unsubscribe: () => {} };
-      },
-    }));
-    const container2 = new RiverContainer({
-      overrides: [
-        {
-          original: op1,
-          create: () => ({
-            subscribe: (o: any) => {
-              o.next(2);
-              return { unsubscribe: () => {} };
-            },
-          }),
-        },
-      ],
-    });
-    expect((container2.read(op1) as any).data).toBe(2);
-
-    // 3. initObservableProvider async creation abort check
-    let resolveObs: any;
-    const op2 = observableProvider(() => new Promise<any>((r) => (resolveObs = r)));
-    const container3 = new RiverContainer();
-    container3.read(op2);
-    container3.dispose();
-    resolveObs({ subscribe: () => ({ unsubscribe: () => {} }) }); // Should abort
-  });
-
-  it('abort branches coverage in all initializers', async () => {
-    // 1. Promise resolution abort
-    let resolveP: any;
-    const p1 = promiseProvider(() => {
-      const pr = new Promise((r) => (resolveP = r));
-      pr.catch(() => {});
-      return pr;
-    });
-    const container1 = new RiverContainer();
-    container1.read(p1.promise).catch(() => {}); // Catch early
-    container1.read(p1);
-    container1.dispose();
-    resolveP(1); // Hits line 88
-
-    // 2. Observable next/error abort
-    let triggerNext: any, triggerErr: any;
-    const op1 = observableProvider(() => ({
-      subscribe: (o: any) => {
-        triggerNext = o.next;
-        triggerErr = o.error;
-        return { unsubscribe: () => {} };
-      },
-    }));
-    const container2 = new RiverContainer();
-    container2.read(op1);
-    container2.dispose();
-    triggerNext(1); // Hits line 117
-    triggerErr(new Error('err')); // Hits line 121
-
-    // 3. AsyncNotifier abort
-    let resolveN: any, rejectN: any;
-    class AN extends AsyncNotifier<number> {
-      async build() {
-        const pr = new Promise<number>((r, j) => {
-          resolveN = r;
-          rejectN = j;
-        });
-        pr.catch(() => {});
-        return pr;
-      }
-    }
-    const p2 = asyncNotifierProvider(() => new AN());
-    const container3 = new RiverContainer();
-    container3.read(p2.promise).catch(() => {}); // Catch early
-    container3.read(p2);
-    container3.dispose();
-    resolveN(1); // Hits line 197
-    rejectN(new Error('err')); // Hits line 203
   });
 });

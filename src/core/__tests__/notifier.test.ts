@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { RiverContainer } from './container';
-import { notifierProvider, asyncNotifierProvider } from './provider';
-import { Notifier, AsyncNotifier } from './notifier';
+import { RiverContainer } from '../container';
+import { notifierProvider, asyncNotifierProvider } from '../provider';
+import { Notifier, AsyncNotifier } from '../notifier';
 
 describe('Notifier', () => {
   it('should manage synchronous state', () => {

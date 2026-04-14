@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { provider, stateProvider, promiseProvider, observableProvider, notifierProvider, asyncNotifierProvider } from './provider';
-import { Notifier, AsyncNotifier } from './notifier';
+import { provider, stateProvider, promiseProvider, observableProvider, notifierProvider, asyncNotifierProvider } from '../provider';
+import { Notifier, AsyncNotifier } from '../notifier';
 
 describe('Providers Factories', () => {
   it('provider() creates correct object', () => {

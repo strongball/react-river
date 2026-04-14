@@ -1,12 +1,22 @@
 import { describe, it, expect, vi } from 'vitest';
-import { RiverContainer } from './container';
-import { provider, stateProvider, promiseProvider } from './provider';
+
+import { RiverContainer } from '../container';
+import { createProviderState } from '../container_types';
+import { Notifier, AsyncNotifier } from '../notifier';
+import {
+  provider,
+  stateProvider,
+  promiseProvider,
+  observableProvider,
+  notifierProvider,
+  asyncNotifierProvider,
+} from '../provider';
 
 describe('RiverContainer', () => {
   it('should read initial value from provider', () => {
     const container = new RiverContainer();
     const p = provider(() => 'hello');
-    
+
     expect(container.read(p)).toBe('hello');
   });
 
@@ -14,7 +24,7 @@ describe('RiverContainer', () => {
     const container = new RiverContainer();
     let count = 0;
     const p = provider(() => ++count);
-    
+
     expect(container.read(p)).toBe(1);
     expect(container.read(p)).toBe(1);
   });
@@ -22,12 +32,12 @@ describe('RiverContainer', () => {
   it('should support stateProvider and set', () => {
     const container = new RiverContainer();
     const counter = stateProvider(() => 0);
-    
+
     expect(container.read(counter)).toBe(0);
-    
+
     container.set(counter, 10);
     expect(container.read(counter)).toBe(10);
-    
+
     container.set(counter, (prev) => prev + 5);
     expect(container.read(counter)).toBe(15);
   });
@@ -36,20 +46,20 @@ describe('RiverContainer', () => {
     const container = new RiverContainer();
     const base = stateProvider(() => 10);
     const doubled = provider((ref) => ref.watch(base) * 2);
-    
+
     expect(container.read(doubled)).toBe(20);
-    
+
     container.set(base, 20);
     expect(container.read(doubled)).toBe(40);
   });
 
   it('should detect circular dependencies', () => {
     const container = new RiverContainer();
-    
+
     // We need to use type casting or late definitions to create a loop
     const p1: any = provider((ref) => ref.watch(p2));
     const p2: any = provider((ref) => ref.watch(p1));
-    
+
     expect(() => container.read(p1)).toThrow(/Circular dependency/);
   });
 
@@ -57,7 +67,7 @@ describe('RiverContainer', () => {
     const container = new RiverContainer();
     let count = 0;
     const p = provider(() => ++count);
-    
+
     expect(container.read(p)).toBe(1);
     container.invalidate(p);
     expect(container.read(p)).toBe(2);
@@ -66,11 +76,9 @@ describe('RiverContainer', () => {
   it('should support overrides', () => {
     const p = provider(() => 'original');
     const container = new RiverContainer({
-      overrides: [
-        { original: p, create: () => 'overridden' }
-      ]
+      overrides: [{ original: p, create: () => 'overridden' }],
     });
-    
+
     expect(container.read(p)).toBe('overridden');
   });
 
@@ -79,11 +87,9 @@ describe('RiverContainer', () => {
     const root = new RiverContainer();
     const child = new RiverContainer({
       parent: root,
-      overrides: [
-        { original: p, create: () => 'child' }
-      ]
+      overrides: [{ original: p, create: () => 'child' }],
     });
-    
+
     expect(root.read(p)).toBe('root');
     expect(child.read(p)).toBe('child');
   });
@@ -95,37 +101,47 @@ describe('RiverContainer', () => {
       onProviderUpdate: vi.fn(),
       onProviderDispose: vi.fn(),
     };
-    
+
     const container = new RiverContainer({ observers: [observer] });
-    
+
     container.read(p);
     expect(observer.onProviderCreate).toHaveBeenCalledWith(p, 0);
-    
+
     container.set(p, 1);
     expect(observer.onProviderUpdate).toHaveBeenCalledWith(p, 0, 1);
-    
+
     container.dispose();
     expect(observer.onProviderDispose).toHaveBeenCalledWith(p);
   });
 
   it('should handle auto-dispose via microtask', async () => {
-    const p = provider((ref) => {
-      let disposed = false;
-      ref.onDispose(() => { disposed = true; });
-      return { setDisposed: (v: boolean) => { disposed = v; }, isDisposed: () => disposed };
-    }, { cacheTime: 0 }); // Use 0 for immediate microtask dispose
-    
+    const p = provider(
+      (ref) => {
+        let disposed = false;
+        ref.onDispose(() => {
+          disposed = true;
+        });
+        return {
+          setDisposed: (v: boolean) => {
+            disposed = v;
+          },
+          isDisposed: () => disposed,
+        };
+      },
+      { cacheTime: 0 },
+    ); // Use 0 for immediate microtask dispose
+
     const container = new RiverContainer();
     const val = container.read(p);
-    
+
     const unsubscribe = container.subscribe(p, () => {});
     expect(val.isDisposed()).toBe(false);
-    
+
     unsubscribe();
-    
+
     // Wait for microtask
     await new Promise((resolve) => queueMicrotask(() => resolve(undefined)));
-    
+
     expect(val.isDisposed()).toBe(true);
   });
 
@@ -133,12 +149,12 @@ describe('RiverContainer', () => {
     const container = new RiverContainer();
     let count = 0;
     const p = stateProvider(() => ++count);
-    
+
     const listener = vi.fn();
     container.listen(p, listener);
-    
+
     expect(container.read(p)).toBe(1);
-    
+
     container.invalidate(p);
     expect(container.read(p)).toBe(2);
     expect(listener).toHaveBeenCalledWith(2, 1);
@@ -147,21 +163,21 @@ describe('RiverContainer', () => {
   it('should support watch with selector', () => {
     const container = new RiverContainer();
     const user = stateProvider(() => ({ name: 'Alice', age: 25 }));
-    
+
     let computeCount = 0;
     const nameOnly = provider((ref) => {
       computeCount++;
       return ref.watch(user, (u) => u.name);
     });
-    
+
     expect(container.read(nameOnly)).toBe('Alice');
     expect(computeCount).toBe(1);
-    
+
     // Update unrelated property
     container.set(user, (u) => ({ ...u, age: 26 }));
     container.read(nameOnly);
     expect(computeCount).toBe(1); // Should NOT recompute because name is same
-    
+
     // Update watched property
     container.set(user, (u) => ({ ...u, name: 'Bob' }));
     expect(container.read(nameOnly)).toBe('Bob');
@@ -171,12 +187,12 @@ describe('RiverContainer', () => {
   it('should handle global providers', () => {
     const root = new RiverContainer();
     const child = new RiverContainer({ parent: root });
-    
+
     const globalP = stateProvider(() => 0, { global: true });
-    
+
     root.set(globalP, 1);
     expect(child.read(globalP)).toBe(1);
-    
+
     child.set(globalP, 2);
     expect(root.read(globalP)).toBe(2);
   });
@@ -185,30 +201,83 @@ describe('RiverContainer', () => {
     const container = new RiverContainer();
     let count = 0;
     const p = provider(() => ++count);
-    
+
     expect(container.read(p)).toBe(1);
     const newVal = container.refresh(p);
     expect(newVal).toBe(2);
     expect(container.read(p)).toBe(2);
   });
 
+  describe('Asynchronous Providers', () => {
+    it('promiseProvider should handle basic promise resolution', async () => {
+      const container = new RiverContainer();
+      const p = promiseProvider(async () => 'hello');
+
+      expect(container.read(p).status).toBe('loading');
+      const data = await container.read(p.promise);
+      expect(data).toBe('hello');
+      expect(container.read(p).data).toBe('hello');
+    });
+
+    it('promiseProvider should handle errors', async () => {
+      const container = new RiverContainer();
+      const p = promiseProvider(async () => {
+        throw new Error('fail');
+      });
+
+      container.read(p);
+      await expect(container.read(p.promise)).rejects.toThrow('fail');
+      expect(container.read(p).status).toBe('error');
+    });
+
+    it('observableProvider should handle observable stream', () => {
+      const container = new RiverContainer();
+      let nextCb: (v: string) => void;
+      const p = observableProvider(() => ({
+        subscribe: (callbacks: any) => {
+          nextCb = typeof callbacks === 'function' ? callbacks : callbacks.next;
+          return { unsubscribe: () => {} };
+        },
+      }));
+
+      expect(container.read(p).status).toBe('loading');
+      nextCb!('first');
+      expect(container.read(p).data).toBe('first');
+      nextCb!('second');
+      expect(container.read(p).data).toBe('second');
+    });
+
+    it('should support watching promiseAccessor with selector', async () => {
+      const container = new RiverContainer();
+      const p = promiseProvider(async () => ({ id: 1, name: 'test' }));
+      const nameP = provider((ref) => {
+        return ref.watch(p.promise, (data) => data?.name.toUpperCase());
+      });
+
+      const namePromise = container.read(nameP);
+      expect(namePromise).toBeInstanceOf(Promise);
+      const name = await namePromise;
+      expect(name).toBe('TEST');
+    });
+  });
+
   it('should handle onCancel and onResume', async () => {
     const container = new RiverContainer();
     const onCancel = vi.fn();
     const onResume = vi.fn();
-    
+
     const p = provider((ref) => {
       ref.onCancel(onCancel);
       ref.onResume(onResume);
       return 'data';
     });
-    
+
     const unsubscribe = container.subscribe(p, () => {});
     expect(onCancel).not.toHaveBeenCalled();
-    
+
     unsubscribe();
     expect(onCancel).toHaveBeenCalled();
-    
+
     container.subscribe(p, () => {});
     expect(onResume).toHaveBeenCalled();
   });
@@ -221,9 +290,9 @@ describe('RiverContainer', () => {
       refObj = ref;
       return ++count;
     });
-    
+
     expect(container.read(p)).toBe(1);
-    
+
     refObj.invalidateSelf();
     expect(container.read(p)).toBe(2);
   });
@@ -231,7 +300,9 @@ describe('RiverContainer', () => {
   describe('Edge Cases & Branch Coverage', () => {
     it('observer error swallowing', () => {
       const brokenObserver: any = {
-        onProviderInit: () => { throw new Error('broken'); }
+        onProviderInit: () => {
+          throw new Error('broken');
+        },
       };
       const container = new RiverContainer({ observers: [brokenObserver] });
       const p = provider(() => 1);
@@ -242,7 +313,7 @@ describe('RiverContainer', () => {
       const root = new RiverContainer();
       const mid = new RiverContainer({ parent: root });
       const child = new RiverContainer({ parent: mid });
-      
+
       const g = stateProvider(() => 0, { global: true });
       child.set(g, 100);
       expect(root.read(g)).toBe(100);
@@ -250,12 +321,14 @@ describe('RiverContainer', () => {
     });
 
     it('resolvePromiseAccessor error and disposal safety', async () => {
-      const p = promiseProvider(async () => { throw 'async-fail'; });
+      const p = promiseProvider(async () => {
+        throw 'async-fail';
+      });
       const container = new RiverContainer();
-      container.read(p); 
-      await new Promise(r => setTimeout(r, 0));
+      container.read(p);
+      await new Promise((r) => setTimeout(r, 0));
       await expect(container.read(p.promise)).rejects.toBe('async-fail');
-      
+
       container.dispose();
       expect(() => container.read(p.promise)).toThrow(/disposed/);
     });
@@ -270,11 +343,11 @@ describe('RiverContainer', () => {
       const container = new RiverContainer();
       const base = stateProvider(() => 1);
       const nameless = provider((ref) => ref.watch(base) + 1, { name: undefined });
-      
+
       container.read(nameless);
       const snapshots = container.getProviderStates();
       expect(snapshots.length).toBe(2);
-      expect(snapshots.some(s => s.name?.includes('provider_'))).toBe(true);
+      expect(snapshots.some((s) => s.name?.includes('provider_'))).toBe(true);
     });
 
     it('valuesEqual branches', () => {
@@ -289,13 +362,13 @@ describe('RiverContainer', () => {
       vi.useFakeTimers();
       const p = provider(() => 1, { autoDispose: true, cacheTime: 100 });
       const container = new RiverContainer();
-      
+
       const unsub = container.listen(p, () => {});
       unsub();
-      
-      // Simulate race condition where state is deleted before timeout 
+
+      // Simulate race condition where state is deleted before timeout
       (container as any).states.delete(p.id);
-      
+
       vi.advanceTimersByTime(110);
       vi.useRealTimers();
     });
@@ -305,7 +378,12 @@ describe('RiverContainer', () => {
       container.dispose();
       const p = provider(() => 1);
       expect(() => container.read(p)).toThrow(/disposed/);
-      expect(() => container.set(stateProvider(() => 1), 2)).toThrow(/disposed/);
+      expect(() =>
+        container.set(
+          stateProvider(() => 1),
+          2,
+        ),
+      ).toThrow(/disposed/);
       expect(() => container.invalidate(p)).toThrow(/disposed/);
     });
 
@@ -447,7 +525,7 @@ describe('RiverContainer', () => {
       const container = new RiverContainer();
       const id = Symbol('missing');
       (container as any).propagateToDependents(id);
-      
+
       const p = stateProvider(() => 1);
       container.read(p);
       const state = container.getState(p.id)!;
@@ -469,9 +547,12 @@ describe('RiverContainer', () => {
 
     it('resolvePromiseAccessor error path and null parentValue', async () => {
       const container = new RiverContainer();
-      
+
       // 1. null parentValue (simulated)
-      const fakeAccessor: any = { kind: 'promiseAccessor', _parentProvider: { id: Symbol('nonexistent'), options: {} } };
+      const fakeAccessor: any = {
+        kind: 'promiseAccessor',
+        _parentProvider: { id: Symbol('nonexistent'), options: {} },
+      };
       // Force read to return null
       const originalRead = container.read;
       container.read = () => null as any;
@@ -481,7 +562,7 @@ describe('RiverContainer', () => {
 
       // 2. error path in listener
       let triggerError: any;
-      const parent = promiseProvider(() => new Promise((_, reject) => triggerError = reject));
+      const parent = promiseProvider(() => new Promise((_, reject) => (triggerError = reject)));
       const promise = container.read(parent.promise);
       triggerError('fail');
       await expect(promise).rejects.toBe('fail');
@@ -499,31 +580,31 @@ describe('RiverContainer', () => {
       const container = new RiverContainer();
       const base = stateProvider(() => 1);
       const dependent = stateProvider(() => 1);
-      
+
       container.read(base);
       container.read(dependent);
-      
+
       const baseState = container.getState(base.id)!;
       baseState.dependents.add(dependent.id);
       // watchSelectors is undefined
-      container.set(base, 2); 
+      container.set(base, 2);
     });
 
     it('reinitialize uninitialized state early return', () => {
       const container = new RiverContainer();
       const p = provider(() => 1);
-      container.invalidate(p); // Already has a test, but making sure 
+      container.invalidate(p); // Already has a test, but making sure
     });
-    
+
     it('checkAutoDispose currentState null branch', async () => {
-       const container = new RiverContainer();
-       const p = provider(() => 1, { autoDispose: true });
-       container.read(p);
-       const unsub = container.listen(p, () => {});
-       unsub();
-       container.states.delete(p.id);
-       // microtask runs, currentState is null
-       await new Promise(r => queueMicrotask(r));
+      const container = new RiverContainer();
+      const p = provider(() => 1, { autoDispose: true });
+      container.read(p);
+      const unsub = container.listen(p, () => {});
+      unsub();
+      (container as any).states.delete(p.id);
+      // microtask runs, currentState is null
+      await new Promise<void>((r) => queueMicrotask(r));
     });
 
     it('disposeState and notifyObservers edge cases', () => {
@@ -536,7 +617,170 @@ describe('RiverContainer', () => {
       (container as any).disposeState(p.id, state);
 
       // Re-initialize uninitialized state
-      (container as any).reinitialize(p); 
+      (container as any).reinitialize(p);
+    });
+
+    it('getProviderStates with complex graph', () => {
+      const container = new RiverContainer();
+      const p1 = stateProvider(() => 1, { name: 'counter' });
+      const p2 = provider((ref) => ref.watch(p1) + 1, { name: 'derived' });
+      container.read(p2);
+
+      const states = container.getProviderStates();
+      expect(states.find((s) => s.name === 'counter')?.dependencies).toHaveLength(0);
+      expect(states.find((s) => s.name === 'derived')?.dependencies).toContain('counter');
+    });
+
+    it('resolvePromiseAccessor immediate resolution', async () => {
+      const container = new RiverContainer();
+
+      // 1. Immediate data
+      const p1 = promiseProvider(async () => 'data');
+      await container.read(p1.promise);
+      const acc1 = (container as any).resolvePromiseAccessor(p1.promise);
+      await expect(acc1).resolves.toBe('data');
+
+      // 2. Immediate error
+      const p2 = promiseProvider(async () => {
+        throw 'err';
+      });
+      try {
+        await container.read(p2.promise);
+      } catch {}
+      const acc2 = (container as any).resolvePromiseAccessor(p2.promise);
+      await expect(acc2).rejects.toBe('err');
+    });
+
+    it('notifier initialization branches', () => {
+      const container = new RiverContainer();
+
+      // notifierProvider
+      class MyNotif extends Notifier<number> {
+        build() {
+          return 1;
+        }
+      }
+      const p1 = notifierProvider(() => new MyNotif());
+      expect(container.read(p1)).toBe(1);
+
+      // asyncNotifierProvider
+      class MyAsyncNotif extends AsyncNotifier<number> {
+        async build() {
+          return 2;
+        }
+      }
+      const p2 = asyncNotifierProvider(() => new MyAsyncNotif());
+      expect(container.read(p2).status).toBe('loading');
+
+      // notifierAccessor
+      expect(container.read(p1.notifier)).toBeInstanceOf(MyNotif);
+    });
+
+    it('dispose loop with multiple providers', () => {
+      const container = new RiverContainer();
+      const p1 = stateProvider(() => 1);
+      const p2 = stateProvider(() => 2);
+      container.read(p1);
+      container.read(p2);
+
+      container.dispose();
+      expect(container.disposed).toBe(true);
+    });
+
+    it('snapshot listeners coverage', () => {
+      const container = new RiverContainer();
+      const p = stateProvider(() => 1);
+      const listener = vi.fn();
+
+      container.subscribe(p, listener);
+      container.set(p, 2);
+      expect(listener).toHaveBeenCalled();
+    });
+
+    it('initializeProvider default branch coverage', () => {
+      const container = new RiverContainer();
+      const p: any = { id: Symbol('unknown'), kind: 'unknown', options: {} };
+      expect(() => (container as any).initializeProvider(p)).toThrow(/Unknown provider kind/);
+    });
+    it('remaining branches (186, 268, 510) - final polish', async () => {
+      const container = new RiverContainer();
+
+      // --- 186: Explicitly test autoDispose: true branch ---
+      const pAutoTrue = provider(() => 1, { autoDispose: true });
+      container.read(pAutoTrue);
+      expect(container.getProviderStates().find(s => s.id === pAutoTrue.id)?.autoDispose).toBe(true);
+
+      // --- 268: resolvePromiseAccessor data/error branches in listener ---
+      // Data branch (Hits L265-267)
+      let resolveP1: any;
+      const pp1 = promiseProvider(() => new Promise((r) => resolveP1 = r));
+      const acc1 = (container as any).resolvePromiseAccessor(pp1.promise);
+      resolveP1('ok');
+      await expect(acc1).resolves.toBe('ok');
+
+      // Error branch (Hits L268-270)
+      let rejectP2: any;
+      const pp2 = promiseProvider(() => new Promise((_, r) => rejectP2 = r));
+      const acc2 = (container as any).resolvePromiseAccessor(pp2.promise);
+      rejectP2('fail');
+      await expect(acc2).rejects.toBe('fail');
+
+      // --- 510: checkAutoDispose microtask branch (currentState is null) ---
+      const pDelete = provider(() => 1, { autoDispose: true });
+      container.read(pDelete);
+      const unsub = container.listen(pDelete, () => {});
+      unsub();
+      // Force delete state from map before microtask runs
+      (container as any).states.delete(pDelete.id); 
+      await new Promise<void>(r => queueMicrotask(r)); 
+    });
+    it('comprehensive edge cases (141-186, 268, 358, 510)', async () => {
+      const container = new RiverContainer();
+
+      // 1. Snapshot and getLabel fallback (L162, L184-186)
+      const idDep = Symbol(); 
+      const depProvider: any = { id: idDep, kind: 'provider', options: { autoDispose: false } };
+      container.providerMap.set(idDep, depProvider);
+      const stateDep = createProviderState();
+      stateDep.initialized = true;
+      (container as any).states.set(idDep, stateDep);
+
+      // 2. Skip logic in getProviderStates (L168, L171)
+      const idGhost = Symbol('ghost');
+      const stateGhost = createProviderState();
+      stateGhost.initialized = false; 
+      (container as any).states.set(idGhost, stateGhost);
+
+      const idMissing = Symbol('missing');
+      const stateMissing = createProviderState();
+      stateMissing.initialized = true; 
+      (container as any).states.set(idMissing, stateMissing);
+
+      const snapshots = container.getProviderStates();
+      expect(snapshots.length).toBe(1);
+      expect(snapshots[0].name).toBe('unknown'); 
+
+      // 3. resolvePromiseAccessor both branches (L265, L268)
+      let resolveP1: any, rejectP2: any;
+      const pp1 = promiseProvider(() => new Promise(r => resolveP1 = r));
+      const pp2 = promiseProvider(() => new Promise((_, r) => rejectP2 = r));
+      const acc1 = (container as any).resolvePromiseAccessor(pp1.promise);
+      const acc2 = (container as any).resolvePromiseAccessor(pp2.promise);
+      resolveP1('ok'); rejectP2('fail');
+      await Promise.allSettled([acc1, acc2]);
+
+      // 4. updateValue missing provider case (L358)
+      (container as any).updateValue(idMissing, 456);
+
+      // 5. checkAutoDispose microtask state deletion (L510)
+      const pDelete = provider(() => 1, { autoDispose: true });
+      container.read(pDelete);
+      container.listen(pDelete, () => {})() ; 
+      (container as any).states.delete(pDelete.id); 
+      await new Promise<void>(r => queueMicrotask(r));
+
+      // 6. dispose specific branches (L141, L144)
+      container.dispose();
     });
   });
 });

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { asyncData, asyncLoading, asyncError, when, whenOrNull, mapAsyncValue, requireData, asyncValueEquals } from './async_value';
+import { asyncData, asyncLoading, asyncError, when, whenOrNull, mapAsyncValue, requireData, asyncValueEquals } from '../async_value';
 
 describe('AsyncValue', () => {
   describe('constructors', () => {
