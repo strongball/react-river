@@ -1,3 +1,11 @@
+## [1.0.20](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.19...v1.0.20) (2026-04-14)
+
+
+### Features
+
+* add unit test ([eda4a5e](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/commit/eda4a5e8897b57fe24b6f6e5c1acb0fa919669e6))
+* integrate Vitest with React Testing Library and configure CI coverage reporting ([3127975](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/commit/31279754dba936902f687097356dad2c00ecef6d))
+
 ## [1.0.19](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.18...v1.0.19) (2026-04-10)
 
 ## [1.0.18](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.17...v1.0.18) (2026-04-09)
