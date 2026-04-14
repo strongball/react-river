@@ -3,7 +3,7 @@
  *  Render-prop alternative to hooks (for class components etc).
  * ════════════════════════════════════════════════════════════════ */
 
-import type { ReactNode } from 'react';
+import { useReducer, useRef, useEffect, useMemo, type ReactNode } from 'react';
 
 import { useRiverRef } from './hooks';
 
@@ -24,43 +24,38 @@ export interface ConsumerProps {
 
 /**
  * Render-prop component for consuming providers without hooks.
- *
- * ```tsx
- * <Consumer>
- *   {(ref) => {
- *     const count = ref.watch(counterProvider)
- *     return <span>{count}</span>
- *   }}
- * </Consumer>
- * ```
- *
- * Note: Each `ref.watch()` call causes the Consumer to re-render
- * when the watched provider changes.
  */
 export function Consumer({ children }: ConsumerProps) {
   return <ConsumerInner>{children}</ConsumerInner>;
 }
 
 /**
- * Inner component that collects watched providers and re-renders.
- * Uses a two-pass approach: first render collects watches,
- * subsequent renders use hooks in stable order.
+ * Concise reactive Consumer using useReducer for force updates.
  */
 function ConsumerInner({ children }: { children: (ref: ConsumerRef) => ReactNode }) {
+  const [, forceUpdate] = useReducer((x) => x + 1, 0);
   const riverRef = useRiverRef();
+  const subs = useRef(new Map<symbol, () => void>());
 
-  // Build a ConsumerRef that delegates watch to useRiverWatch
-  // Note: This is a simplified implementation. For production use,
-  // the watch calls must follow Rules of Hooks (stable order).
-  // Users should prefer the useRiverWatch hook directly.
-  const consumerRef: ConsumerRef = {
+  // Standard cleanup on unmount
+  useEffect(() => {
+    const activeSubs = subs.current;
+    return () => {
+      // biome-ignore lint/nursery/noForEach: Map.forEach is concise here
+      activeSubs.forEach((unsub) => unsub());
+      activeSubs.clear();
+    };
+  }, []);
+
+  const consumerRef = useMemo(() => ({
     ...riverRef,
-    watch<T>(provider: ProviderBase<T>): T {
-      // Delegate to the container's read (not reactive in this simple impl)
-      // For full reactivity, users should use useRiverWatch hook
-      return riverRef.read(provider);
+    watch<T>(p: ProviderBase<T>): T {
+      if (!subs.current.has(p.id)) {
+        subs.current.set(p.id, riverRef.listen(p, forceUpdate));
+      }
+      return riverRef.read(p);
     },
-  };
+  }), [riverRef]);
 
-  return <>{children(consumerRef)}</>;
+  return <>{children(consumerRef as ConsumerRef)}</>;
 }

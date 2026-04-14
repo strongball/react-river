@@ -17,13 +17,21 @@ default:
 # -----------------
 # Lint Stage
 # -----------------
-lint:
+check:
   stage: lint
   script:
-    - echo $NPM_TOKEN
     - npm ci
     - npm run lint
-    - npm run build # Includes build only in CI/CD as per user request
+    - npm run test:coverage
+    - npm run build
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage/cobertura-coverage.xml
+    paths:
+      - coverage/
+      - dist/
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH

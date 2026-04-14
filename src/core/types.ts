@@ -79,6 +79,8 @@ export interface RiverRef {
   refresh<T>(provider: ProviderBase<T>): T;
   /** Set a StateProvider's value directly. */
   set<T>(provider: StateProvider<T>, value: T | ((prev: T) => T)): void;
+  /** Listen to a provider's changes with a callback. */
+  listen<T>(provider: ProviderBase<T>, callback: ListenerCallback<T>): Unsubscribe;
 }
 
 // ── Provider Base ──────────────────────────────────────────────
