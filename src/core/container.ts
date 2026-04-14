@@ -5,7 +5,7 @@
  * ════════════════════════════════════════════════════════════════ */
 
 import { asyncValueEquals } from './async_value';
-
+import { createProviderState } from './container_types';
 import {
   initSimpleProvider,
   initStateProvider,
@@ -18,6 +18,7 @@ import {
 import { createRef } from './ref_factory';
 
 import type { AsyncValue } from './async_value';
+import type { ProviderState, ContainerCallbacks } from './container_types';
 import type { RiverObserver } from './observer';
 import type {
   ListenerCallback,
@@ -30,8 +31,6 @@ import type {
   ObservableProvider,
   Unsubscribe,
 } from './types';
-import type { ProviderState, ContainerCallbacks } from './container_types';
-import { createProviderState } from './container_types';
 
 // Re-export public types so existing imports keep working
 export type { DevToolsProviderSnapshot, RiverContainerOptions } from './container_types';
@@ -45,7 +44,7 @@ export class RiverContainer {
   private initializingStack = new Set<symbol>();
   private parent: RiverContainer | undefined;
   private observers: RiverObserver[];
-  private disposed = false;
+  public disposed = false;
 
   /** Bound callbacks passed to extracted initializer / ref-factory modules. */
   private readonly cb: ContainerCallbacks;
@@ -121,6 +120,12 @@ export class RiverContainer {
   /** Set a StateProvider's value directly. */
   set<T>(provider: StateProvider<T>, value: T | ((prev: T) => T)): void {
     this.assertNotDisposed();
+
+    if (provider.options.global && this.parent) {
+      this.getRootContainer().set(provider, value);
+      return;
+    }
+
     this.ensureInitialized(provider);
 
     const state = this.getOwnState(provider.id)!;
@@ -133,7 +138,13 @@ export class RiverContainer {
   /** Dispose the container and all provider states. */
   dispose(): void {
     for (const [id, state] of this.states) {
-      this.disposeState(id, state);
+      if (state.initialized) {
+        const provider = this.providerMap.get(id);
+        this.disposeState(id, state);
+        if (provider) {
+          this.notifyObservers('dispose', provider);
+        }
+      }
     }
     this.states.clear();
     this.overrideMap.clear();
@@ -225,7 +236,6 @@ export class RiverContainer {
     if (provider.kind === 'promiseAccessor') {
       return this.resolvePromiseAccessor(provider as PromiseAccessor<unknown>);
     }
-
     // Check for override
     const override = this.overrideMap.get(provider.id);
 
@@ -240,6 +250,7 @@ export class RiverContainer {
   private resolvePromiseAccessor(accessor: PromiseAccessor<unknown>): Promise<unknown> {
     const parentProvider = accessor._parentProvider;
     const parentValue = this.read(parentProvider) as AsyncValue<unknown>;
+    if (!parentValue) return new Promise(() => {});
 
     if (parentValue.status === 'data') {
       return Promise.resolve(parentValue.data);
@@ -581,7 +592,7 @@ export class RiverContainer {
     return state.snapshotListeners.size > 0 || state.valueListeners.size > 0 || state.dependents.size > 0;
   }
 
-  private getState(id: symbol): ProviderState | undefined {
+  public getState(id: symbol): ProviderState | undefined {
     return this.states.get(id) ?? this.parent?.getState(id);
   }
 

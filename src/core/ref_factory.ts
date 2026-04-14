@@ -22,8 +22,6 @@ interface WatchResult {
 export function createRef(cb: ContainerCallbacks, ownerId: symbol): Ref {
   return {
     watch: <T, R = T>(provider: ProviderBase<T>, select?: (value: T) => R): R => {
-      cb.ensureInitialized(provider);
-
       let result: WatchResult;
 
       if (provider.kind === 'promiseAccessor') {

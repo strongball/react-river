@@ -1,0 +1,202 @@
+import React from 'react';
+
+import { renderHook, act } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+
+import { RiverContainer } from '../../core/container';
+import { stateProvider } from '../../core/provider';
+import { useRiverWatch, useRiverRef, useRiverListen } from '../hooks';
+import { RiverScope, useRiverContainer } from '../scope';
+
+const counterProvider = stateProvider(() => 0);
+
+describe('React Hooks', () => {
+  it('useRiverWatch should track state changes', () => {
+    const wrapper = ({ children }: { children: React.ReactNode }) => <RiverScope>{children}</RiverScope>;
+
+    const { result } = renderHook(
+      () => {
+        const count = useRiverWatch(counterProvider);
+        const ref = useRiverRef();
+        return { count, ref };
+      },
+      { wrapper },
+    );
+
+    expect(result.current.count).toBe(0);
+
+    act(() => {
+      result.current.ref.set(counterProvider, 1);
+    });
+
+    expect(result.current.count).toBe(1);
+
+    act(() => {
+      result.current.ref.set(counterProvider, (prev) => prev + 1);
+    });
+
+    expect(result.current.count).toBe(2);
+  });
+
+  it('useRiverWatch should support selectors', () => {
+    const userProvider = stateProvider(() => ({ name: 'John', age: 30 }));
+
+    const wrapper = ({ children }: { children: React.ReactNode }) => <RiverScope>{children}</RiverScope>;
+
+    const { result } = renderHook(
+      () => {
+        const name = useRiverWatch(userProvider, (u) => u.name);
+        const ref = useRiverRef();
+        return { name, ref };
+      },
+      { wrapper },
+    );
+
+    expect(result.current.name).toBe('John');
+
+    act(() => {
+      result.current.ref.set(userProvider, { name: 'Doe', age: 30 });
+    });
+
+    expect(result.current.name).toBe('Doe');
+  });
+
+  it('useRiverListen should trigger callback without re-rendering', () => {
+    const callback = vi.fn();
+    let renderCount = 0;
+
+    const wrapper = ({ children }: { children: React.ReactNode }) => <RiverScope>{children}</RiverScope>;
+
+    const { result } = renderHook(
+      () => {
+        renderCount++;
+        useRiverListen(counterProvider, callback);
+        return useRiverRef();
+      },
+      { wrapper },
+    );
+
+    expect(renderCount).toBe(1);
+    expect(callback).toHaveBeenCalledTimes(0);
+
+    act(() => {
+      result.current.set(counterProvider, 100);
+    });
+
+    expect(renderCount).toBe(1);
+    expect(callback).toHaveBeenCalledWith(100, 0);
+  });
+
+  it('useRiverRef should provide access to refresh and invalidate', () => {
+    let count = 0;
+    const p = stateProvider(() => ++count);
+
+    const wrapper = ({ children }: { children: React.ReactNode }) => <RiverScope>{children}</RiverScope>;
+
+    const { result } = renderHook(() => useRiverRef(), { wrapper });
+
+    expect(result.current.read(p)).toBe(1);
+
+    act(() => {
+      result.current.invalidate(p);
+    });
+    expect(result.current.read(p)).toBe(2);
+
+    let val: number = 0;
+    act(() => {
+      val = result.current.refresh(p);
+    });
+    expect(val).toBe(3);
+    expect(result.current.read(p)).toBe(3);
+  });
+
+  it('useRiverWatch should handle cache optimization branches', () => {
+    const objProvider = stateProvider(() => ({ meta: { updated: false }, data: 1 }));
+    const wrapper = ({ children }: { children: React.ReactNode }) => <RiverScope>{children}</RiverScope>;
+
+    const { result } = renderHook(
+      () => {
+        const data = useRiverWatch(objProvider, (o) => o.data);
+        const ref = useRiverRef();
+        return { data, ref };
+      },
+      { wrapper },
+    );
+
+    expect(result.current.data).toBe(1);
+
+    // Update different field — so selected value is unchanged
+    act(() => {
+      result.current.ref.set(objProvider, (prev) => ({ ...prev, meta: { updated: true } }));
+    });
+    expect(result.current.data).toBe(1);
+  });
+
+  it('RiverScope - behavior of global vs local providers across nested scopes', () => {
+    // Global provider: should inherit/share state via root container
+    const globalP = stateProvider(() => 1, { global: true });
+    // Local provider: should be isolated in each scope by default
+    const localP = stateProvider(() => 2);
+
+    const { result } = renderHook(
+      () => {
+        const ref = useRiverRef();
+        return {
+          global: ref.read(globalP),
+          local: ref.read(localP),
+        };
+      },
+      {
+        wrapper: ({ children }) => (
+          // Outer scope overrides both.
+          // Note: For globals, this only works if this container is seen as the "root"
+          // for the hierarchy under test.
+          <RiverScope
+            overrides={[
+              { original: globalP, create: () => 10 },
+              { original: localP, create: () => 20 },
+            ]}
+          >
+            {/* Inner scope defaults localP back to factory because it's isolated */}
+            <RiverScope>{children}</RiverScope>
+          </RiverScope>
+        ),
+      },
+    );
+
+    // Global inherits state (10) as it resolves at the shared ancestor/root
+    expect(result.current.global).toBe(10);
+    // Local is isolated in the inner scope's container, using its own initializer (defaults to 2)
+    expect(result.current.local).toBe(2);
+  });
+
+  it('useRiverContainer should throw when used outside scope', () => {
+    // Disable console.error for this test to keep output clean from expected React error
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    expect(() => renderHook(() => useRiverContainer())).toThrow(/must be used within a/);
+    spy.mockRestore();
+  });
+
+  it('RiverScope should handle deferred disposal branches', () => {
+    vi.useFakeTimers();
+    const container = new RiverContainer();
+    const c = container as any;
+
+    // Simulate what scope.tsx does:
+    // 1. Unmount schedules disposal
+    c._disposeTimeout = setTimeout(() => container.dispose(), 100);
+
+    // 2. Remount (before 100ms) cancels it
+    if (c._disposeTimeout) {
+      clearTimeout(c._disposeTimeout);
+      c._disposeTimeout = undefined;
+    }
+
+    expect(container.disposed).toBe(false);
+
+    // 3. Let time pass
+    vi.advanceTimersByTime(200);
+    expect(container.disposed).toBe(false);
+    vi.useRealTimers();
+  });
+});

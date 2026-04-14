@@ -103,6 +103,7 @@ export function useRiverRef(): RiverRef {
       invalidate: (provider) => containerRef.current.invalidate(provider),
       refresh: (provider) => containerRef.current.refresh(provider),
       set: <T>(provider: StateProvider<T>, value: T | ((prev: T) => T)) => containerRef.current.set(provider, value),
+      listen: (provider, callback) => containerRef.current.listen(provider, callback),
     };
   }
 
