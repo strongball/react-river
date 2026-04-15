@@ -1,5 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import { asyncData, asyncLoading, asyncError, when, whenOrNull, mapAsyncValue, requireData, asyncValueEquals } from '../async_value';
+import {
+  asyncData,
+  asyncLoading,
+  asyncError,
+  when,
+  whenOrNull,
+  mapAsyncValue,
+  requireData,
+  asyncValueEquals,
+  asyncValueToPromise,
+} from '../async_value';
 
 describe('AsyncValue', () => {
   describe('constructors', () => {
@@ -125,6 +135,48 @@ describe('AsyncValue', () => {
       expect(asyncValueEquals(asyncError('e1'), asyncError('e2'))).toBe(false);
       expect(asyncValueEquals(asyncLoading(1), asyncLoading(1))).toBe(true);
       expect(asyncValueEquals(asyncLoading(1), asyncLoading(2))).toBe(false);
+    });
+  });
+
+  describe('asyncValueToPromise', () => {
+    it('resolves immediately for data state', async () => {
+      const val = asyncData('done');
+      const res = await asyncValueToPromise(val);
+      expect(res).toBe('done');
+    });
+
+    it('rejects immediately for error state', async () => {
+      const val = asyncError('fail');
+      await expect(asyncValueToPromise(val)).rejects.toBe('fail');
+    });
+
+    it('waits for resolution when loading', async () => {
+      const loading = asyncLoading();
+      let onNextCb: any;
+      const listen = (cb: any) => {
+        onNextCb = cb;
+        return () => {};
+      };
+
+      const promise = asyncValueToPromise(loading, (v) => (v as any).data, listen);
+
+      onNextCb(asyncData('resolved'));
+      const res = await promise;
+      expect(res).toBe('resolved');
+    });
+
+    it('handles error during resolution when loading', async () => {
+      const loading = asyncLoading();
+      let onNextCb: any;
+      const listen = (cb: any) => {
+        onNextCb = cb;
+        return () => {};
+      };
+
+      const promise = asyncValueToPromise(loading, (v) => (v as any).data, listen);
+
+      onNextCb(asyncError('async-fail'));
+      await expect(promise).rejects.toBe('async-fail');
     });
   });
 });

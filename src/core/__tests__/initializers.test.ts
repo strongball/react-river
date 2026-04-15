@@ -24,17 +24,28 @@ describe('Initializers', () => {
     // 2. Promise - resolve/reject after abort
     const container2 = new RiverContainer();
     let resolveP: any, rejectP: any;
-    const pp = promiseProvider(() => new Promise((res, rej) => {
-      resolveP = res;
-      rejectP = rej;
-    }));
+    const pp = promiseProvider(
+      () =>
+        new Promise((res, rej) => {
+          resolveP = res;
+          rejectP = rej;
+        }),
+    );
     container2.read(pp);
     container2.dispose();
-    resolveP(1); // Hits line 88
-    rejectP('err'); // Also line 88
+    resolveP(1); // Hits line 80
+    rejectP('err'); // Hits line 88
 
-    // 3. AsyncNotifier - success/error after abort
+    // 3. Async creation success after abort (Observable)
     const container3 = new RiverContainer();
+    let resolveObs: any;
+    const op2 = observableProvider(() => new Promise<any>((r) => (resolveObs = r)));
+    container3.read(op2);
+    container3.dispose();
+    resolveObs({ subscribe: () => ({ unsubscribe: () => {} }) }); // Hits line 133 (if statement)
+
+    // 4. AsyncNotifier - success/error after abort
+    const container4 = new RiverContainer();
     let resolveN: any, rejectN: any;
     class AN extends AsyncNotifier<number> {
       async build() {
@@ -44,8 +55,8 @@ describe('Initializers', () => {
         });
       }
     }
-    container3.read(asyncNotifierProvider(() => new AN()));
-    container3.dispose();
+    container4.read(asyncNotifierProvider(() => new AN()));
+    container4.dispose();
     resolveN(1); // Hits line 197
     rejectN(new Error('err')); // Hits line 203
   });
