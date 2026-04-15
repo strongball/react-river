@@ -1,3 +1,10 @@
+## [1.0.22](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.21...v1.0.22) (2026-04-15)
+
+
+### Performance Improvements
+
+* **Devtools:** memery usage ([74d9d13](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/commit/74d9d135e82cc6186675b3823a157e95e7022211))
+
 ## [1.0.21](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.20...v1.0.21) (2026-04-14)
 
 ## [1.0.20](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.19...v1.0.20) (2026-04-14)
