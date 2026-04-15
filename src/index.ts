@@ -13,6 +13,7 @@ export {
   mapAsyncValue,
   requireData,
   asyncValueEquals,
+  asyncValueToPromise,
 } from './core/async_value';
 
 // ── Core: Provider Factories ───────────────────────────────────

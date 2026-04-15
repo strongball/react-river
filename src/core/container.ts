@@ -4,7 +4,8 @@
  *  provider states. Framework-agnostic (no React dependency).
  * ════════════════════════════════════════════════════════════════ */
 
-import { asyncValueEquals } from './async_value';
+import { asyncValueEquals, asyncValueToPromise } from './async_value';
+import type { AsyncData, AsyncValue } from './async_value';
 import { createProviderState } from './container_types';
 import {
   initSimpleProvider,
@@ -17,7 +18,7 @@ import {
 } from './initializers';
 import { createRef } from './ref_factory';
 
-import type { AsyncValue } from './async_value';
+
 import type { ProviderState, ContainerCallbacks } from './container_types';
 import type { RiverObserver } from './observer';
 import {
@@ -251,25 +252,11 @@ export class RiverContainer {
     const parentValue = this.read(parentProvider) as AsyncValue<unknown>;
     if (!parentValue) return new Promise(() => {});
 
-    if (parentValue.status === 'data') {
-      return Promise.resolve(parentValue.data);
-    }
-    if (parentValue.status === 'error') {
-      return Promise.reject(parentValue.error);
-    }
-
-    return new Promise((resolve, reject) => {
-      const unsubscribe = this.listen(parentProvider, (next) => {
-        const asyncNext = next as AsyncValue<unknown>;
-        if (asyncNext.status === 'data') {
-          unsubscribe();
-          resolve(asyncNext.data);
-        } else if (asyncNext.status === 'error') {
-          unsubscribe();
-          reject(asyncNext.error);
-        }
-      });
-    });
+    return asyncValueToPromise(
+      parentValue,
+      (av) => (av as AsyncData<unknown>).data,
+      (onNext) => this.listen(parentProvider, (next) => onNext(next as AsyncValue<unknown>)),
+    );
   }
 
   /** Walk up the parent chain to find the root (topmost) container. */

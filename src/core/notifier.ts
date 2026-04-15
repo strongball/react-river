@@ -3,7 +3,7 @@
  *  Class-based state management, analogous to Riverpod's Notifier.
  * ════════════════════════════════════════════════════════════════ */
 
-import { asyncData, asyncError, asyncLoading } from './async_value';
+
 
 import type { AsyncValue } from './async_value';
 import type { Ref } from './types';
@@ -54,7 +54,10 @@ export abstract class Notifier<T> {
     this.state = updater(this.state);
   }
 
-  /** Register a cleanup callback for when this provider is disposed. */
+  /**
+   * Register a cleanup callback for when this provider is disposed.
+   * @deprecated Use `this.ref.onDispose(callback)` directly for consistency.
+   */
   onDispose(callback: () => void): void {
     this._ref.onDispose(callback);
   }
@@ -106,11 +109,13 @@ export abstract class AsyncNotifier<T> {
     this._setState(value);
   }
 
-  /** Register a cleanup callback for when this provider is disposed. */
+  /**
+   * Register a cleanup callback for when this provider is disposed.
+   * @deprecated Use `this.ref.onDispose(callback)` directly for consistency.
+   */
   onDispose(callback: () => void): void {
     this._ref.onDispose(callback);
   }
 }
 
-// Re-export AsyncValue helpers for convenience inside notifiers
-export { asyncData, asyncError, asyncLoading };
+

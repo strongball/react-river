@@ -133,3 +133,40 @@ export function asyncValueEquals<T>(a: AsyncValue<T>, b: AsyncValue<T>): boolean
   if (!Object.is(a.error, b.error)) return false;
   return true;
 }
+
+/**
+ * Convert an AsyncValue to a Promise.
+ *
+ * - `data`    → `Promise.resolve(extractData(av))`
+ * - `error`   → `Promise.reject(av.error)`
+ * - `loading` → Subscribes via `listenForResolution` and resolves/rejects when settled.
+ *
+ * @param av          The current async value
+ * @param extractData Extract the data payload (defaults to `av.data`)
+ * @param listenForResolution Subscribe to future state changes (required when `av.status === 'loading'`)
+ */
+export function asyncValueToPromise<T>(
+  av: AsyncValue<T>,
+  extractData: (av: AsyncValue<T>) => unknown = (v) => (v as AsyncData<T>).data,
+  listenForResolution?: (onNext: (next: AsyncValue<T>) => void) => () => void,
+): Promise<unknown> {
+  if (av.status === 'data') {
+    return Promise.resolve(extractData(av));
+  }
+  if (av.status === 'error') {
+    return Promise.reject(av.error);
+  }
+
+  // loading — subscribe and wait
+  return new Promise((resolve, reject) => {
+    const unsubscribe = listenForResolution?.((next) => {
+      if (next.status === 'data') {
+        unsubscribe?.();
+        resolve(extractData(next));
+      } else if (next.status === 'error') {
+        unsubscribe?.();
+        reject(next.error);
+      }
+    });
+  });
+}

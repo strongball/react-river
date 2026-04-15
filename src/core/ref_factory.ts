@@ -4,6 +4,7 @@
  *  and handles watch/dependency-tracking logic.
  * ════════════════════════════════════════════════════════════════ */
 
+import { asyncValueToPromise } from './async_value';
 import type { AsyncValue } from './async_value';
 import type { ContainerCallbacks } from './container_types';
 import type { ListenerCallback, PromiseAccessor, ProviderBase, Ref, Unsubscribe } from './types';
@@ -91,23 +92,12 @@ function watchPromiseAccessor(
       const av = val as AsyncValue<unknown>;
       return av.status === 'data' ? select(av.data) : undefined;
     };
-    const returnValue =
-      parentValue.status === 'data'
-        ? Promise.resolve(selectedValue)
-        : parentValue.status === 'error'
-          ? Promise.reject(parentValue.error)
-          : new Promise<unknown>((resolve, reject) => {
-              const unsubscribe = cb.listen(parentProvider, (next) => {
-                const asyncNext = next as AsyncValue<unknown>;
-                if (asyncNext.status === 'data') {
-                  unsubscribe();
-                  resolve(select(asyncNext.data));
-                } else if (asyncNext.status === 'error') {
-                  unsubscribe();
-                  reject(asyncNext.error);
-                }
-              });
-            });
+    const extractSelected = (av: AsyncValue<unknown>) => select((av as { data: unknown }).data);
+    const returnValue = asyncValueToPromise(
+      parentValue,
+      extractSelected,
+      (onNext) => cb.listen(parentProvider, (next) => onNext(next as AsyncValue<unknown>)),
+    );
     return { trackTarget, effectiveSelector, selectedValue, returnValue };
   }
 
