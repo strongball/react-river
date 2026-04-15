@@ -26,13 +26,6 @@ export interface ConsumerProps {
  * Render-prop component for consuming providers without hooks.
  */
 export function Consumer({ children }: ConsumerProps) {
-  return <ConsumerInner>{children}</ConsumerInner>;
-}
-
-/**
- * Concise reactive Consumer using useReducer for force updates.
- */
-function ConsumerInner({ children }: { children: (ref: ConsumerRef) => ReactNode }) {
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
   const riverRef = useRiverRef();
   const subs = useRef(new Map<symbol, () => void>());

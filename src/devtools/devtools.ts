@@ -4,11 +4,7 @@
  * ════════════════════════════════════════════════════════════════ */
 
 import type { RiverObserver } from '../core/observer';
-import type { ProviderBase } from '../core/types';
-
-function getProviderLabel(provider: ProviderBase): string {
-  return provider.name ?? provider.id.description ?? 'unknown';
-}
+import { getProviderLabel } from '../core/types';
 
 /**
  * A simple console-based observer for debugging.

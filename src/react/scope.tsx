@@ -35,11 +35,6 @@ export interface RiverScopeProps {
   /** Global observers for provider lifecycle events */
   observers?: RiverObserver[];
 }
-declare global {
-  interface Window {
-    riverContainer: RiverContainer;
-  }
-}
 /**
  * Root state container for React River.
  *
@@ -72,7 +67,6 @@ export function RiverScope({ children, overrides, observers }: RiverScopeProps) 
       clearTimeout(c._disposeTimeout);
       c._disposeTimeout = undefined;
     }
-    window.riverContainer = container;
     return () => {
       // Defer disposal. If this is a StrictMode unmount, the subsequent
       // remount will cancel this timeout.

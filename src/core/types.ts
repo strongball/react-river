@@ -93,6 +93,11 @@ export interface ProviderBase<T = unknown> {
   readonly __phantom?: T;
 }
 
+/** Get a human-readable label for a provider (for DevTools / debugging). */
+export function getProviderLabel(provider: ProviderBase): string {
+  return provider.name ?? provider.id.description ?? 'unknown';
+}
+
 // ── Observable Support ──────────────────────────────────────────
 
 export interface ObservableLike<T> {

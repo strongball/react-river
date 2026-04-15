@@ -614,7 +614,7 @@ describe('RiverContainer', () => {
       const state = container.getState(p.id)!;
       state.initialized = false;
       // Should return early at line 529
-      (container as any).disposeState(p.id, state);
+      (container as any).teardownState(p.id, state, { clearListeners: true, cascadeAutoDispose: true });
 
       // Re-initialize uninitialized state
       (container as any).reinitialize(p);

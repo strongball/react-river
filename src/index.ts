@@ -47,6 +47,7 @@ export {
 export type { RiverObserver } from './core/observer';
 
 // ── Core: Types ────────────────────────────────────────────────
+export { getProviderLabel } from './core/types';
 export type {
   Ref,
   RiverRef,

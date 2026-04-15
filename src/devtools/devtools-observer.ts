@@ -5,7 +5,7 @@
  * ════════════════════════════════════════════════════════════════ */
 
 import type { RiverObserver } from '../core/observer';
-import type { ProviderBase } from '../core/types';
+import { getProviderLabel } from '../core/types';
 
 // ── Event Types ────────────────────────────────────────────────
 
@@ -38,10 +38,6 @@ export interface DevToolsObserverHandle {
 }
 
 // ── Factory ────────────────────────────────────────────────────
-
-function getProviderLabel(provider: ProviderBase): string {
-  return provider.name ?? provider.id.description ?? 'unknown';
-}
 
 /**
  * Create a DevTools observer handle.

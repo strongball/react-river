@@ -20,16 +20,17 @@ import { createRef } from './ref_factory';
 import type { AsyncValue } from './async_value';
 import type { ProviderState, ContainerCallbacks } from './container_types';
 import type { RiverObserver } from './observer';
-import type {
-  ListenerCallback,
-  NotifierAccessor,
-  PromiseAccessor,
-  ProviderBase,
-  ProviderOverride,
-  StateProvider,
-  PromiseProvider,
-  ObservableProvider,
-  Unsubscribe,
+import {
+  getProviderLabel,
+  type ListenerCallback,
+  type NotifierAccessor,
+  type PromiseAccessor,
+  type ProviderBase,
+  type ProviderOverride,
+  type StateProvider,
+  type PromiseProvider,
+  type ObservableProvider,
+  type Unsubscribe,
 } from './types';
 
 // Re-export public types so existing imports keep working
@@ -140,7 +141,7 @@ export class RiverContainer {
     for (const [id, state] of this.states) {
       if (state.initialized) {
         const provider = this.providerMap.get(id);
-        this.disposeState(id, state);
+        this.teardownState(id, state, { clearListeners: true, cascadeAutoDispose: false });
         if (provider) {
           this.notifyObservers('dispose', provider);
         }
@@ -159,11 +160,6 @@ export class RiverContainer {
   getProviderStates(): import('./container_types').DevToolsProviderSnapshot[] {
     const snapshots: import('./container_types').DevToolsProviderSnapshot[] = [];
 
-    const getLabel = (sym: symbol) => {
-      const p = this.providerMap.get(sym);
-      return p?.name ?? sym.description ?? 'unknown';
-    };
-
     for (const [id, state] of this.states) {
       if (!state.initialized) continue;
 
@@ -172,7 +168,7 @@ export class RiverContainer {
 
       snapshots.push({
         id,
-        name: provider.name ?? provider.id.description ?? 'unknown',
+        name: getProviderLabel(provider),
         kind: provider.kind,
         value: state.value,
         previousValue: state.previousValue,
@@ -181,8 +177,11 @@ export class RiverContainer {
         listenerCount: state.snapshotListeners.size + state.valueListeners.size,
         dependencyCount: state.dependencies.size,
         dependentCount: state.dependents.size,
-        dependencies: Array.from(state.dependencies).map((d) => d.name ?? d.id.description ?? 'unknown'),
-        dependents: Array.from(state.dependents).map(getLabel),
+        dependencies: Array.from(state.dependencies).map(getProviderLabel),
+        dependents: Array.from(state.dependents).map((sym) => {
+          const p = this.providerMap.get(sym);
+          return p ? getProviderLabel(p) : (sym.description ?? 'unknown');
+        }),
         autoDispose: provider.options.autoDispose ?? true,
         cacheTime: provider.options.cacheTime,
       });
@@ -356,7 +355,7 @@ export class RiverContainer {
     // Notify observers
     const provider = this.providerMap.get(providerId);
     if (provider) {
-      this.notifyObservers('update', provider, newValue, oldValue);
+      this.notifyObservers('update', provider, { oldValue, newValue });
     }
 
     // Notify value listeners (next, prev) — Array.from needed: callbacks may unsubscribe
@@ -424,37 +423,10 @@ export class RiverContainer {
 
     const oldValue = state.value;
 
-    if (state.disposeTimeout) {
-      clearTimeout(state.disposeTimeout);
-      state.disposeTimeout = undefined;
-    }
-
-    // Run dispose callbacks
-    for (const cb of Array.from(state.disposeCallbacks)) {
-      try {
-        cb();
-      } catch {
-        // Dispose callbacks should not throw
-      }
-    }
-
-    // Abort any async operations
-    state.abortController?.abort();
-
-    // Clear old dependencies
-    for (const depProvider of Array.from(state.dependencies)) {
-      const depState = this.getState(depProvider.id);
-      depState?.dependents.delete(provider.id);
-      depState?.watchSelectors?.delete(provider.id);
-    }
-    state.dependencies.clear();
-    state.disposeCallbacks = [];
-    state.cancelCallbacks = [];
-    state.resumeCallbacks = [];
-    state.abortController = undefined;
+    // Teardown without clearing listeners or cascading auto-dispose
+    this.teardownState(provider.id, state, { clearListeners: false, cascadeAutoDispose: false });
 
     // Remove from states so initializeProvider creates fresh
-    state.initialized = false;
     this.states.delete(provider.id);
 
     // Re-initialize
@@ -473,7 +445,7 @@ export class RiverContainer {
       newState.previousValue = oldValue;
       newState.version++;
 
-      this.notifyObservers('update', provider, newState.value, oldValue);
+      this.notifyObservers('update', provider, { oldValue, newValue: newState.value });
 
       for (const cb of Array.from(newState.valueListeners)) {
         cb(newState.value, oldValue);
@@ -520,13 +492,20 @@ export class RiverContainer {
     const state = this.getOwnState(provider.id);
     if (!state || !state.initialized) return;
 
-    this.disposeState(provider.id, state);
+    this.teardownState(provider.id, state, { clearListeners: true, cascadeAutoDispose: true });
     this.states.delete(provider.id);
     this.notifyObservers('dispose', provider);
   }
 
-  private disposeState(id: symbol, state: ProviderState): void {
-    if (!state.initialized) return;
+  /**
+   * Shared cleanup logic for both reinitialize and dispose.
+   * Clears timeouts, runs dispose callbacks, aborts async ops, and removes dependency links.
+   */
+  private teardownState(
+    id: symbol,
+    state: ProviderState,
+    opts: { clearListeners: boolean; cascadeAutoDispose: boolean },
+  ): void {
     state.initialized = false;
 
     if (state.disposeTimeout) {
@@ -538,7 +517,7 @@ export class RiverContainer {
       try {
         cb();
       } catch {
-        // swallow
+        // Dispose callbacks should not throw
       }
     }
 
@@ -548,21 +527,32 @@ export class RiverContainer {
       const depState = this.getState(depProvider.id);
       depState?.dependents.delete(id);
       depState?.watchSelectors?.delete(id);
-      this.checkAutoDispose(depProvider);
+      if (opts.cascadeAutoDispose) {
+        this.checkAutoDispose(depProvider);
+      }
     }
 
-    state.snapshotListeners.clear();
-    state.valueListeners.clear();
     state.dependencies.clear();
-    state.dependents.clear();
+    state.disposeCallbacks = [];
+    state.cancelCallbacks = [];
+    state.resumeCallbacks = [];
+    state.abortController = undefined;
+
+    if (opts.clearListeners) {
+      state.snapshotListeners.clear();
+      state.valueListeners.clear();
+      state.dependents.clear();
+    }
   }
 
   // ── Observer notifications ───────────────────────────────────
 
+  private notifyObservers(event: 'create' | 'dispose' | 'error', provider: ProviderBase, ...args: unknown[]): void;
+  private notifyObservers(event: 'update', provider: ProviderBase, payload: { oldValue: unknown; newValue: unknown }): void;
   private notifyObservers(
     event: 'create' | 'update' | 'dispose' | 'error',
     provider: ProviderBase,
-    ...args: unknown[]
+    ...args: any[]
   ): void {
     for (const observer of this.observers) {
       try {
@@ -571,7 +561,7 @@ export class RiverContainer {
             observer.onProviderCreate?.(provider, args[0]);
             break;
           case 'update':
-            observer.onProviderUpdate?.(provider, args[1], args[0]);
+            observer.onProviderUpdate?.(provider, args[0].oldValue, args[0].newValue);
             break;
           case 'dispose':
             observer.onProviderDispose?.(provider);

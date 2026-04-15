@@ -64,13 +64,20 @@ describe('RiverScope', () => {
 
   it('should dispose container on unmount after timeout', async () => {
     vi.useFakeTimers();
+    let containerInstance: any;
+
+    function Child() {
+      containerInstance = useRiverContainer();
+      return null;
+    }
+
     const { unmount } = render(
       <RiverScope>
-        <div />
+        <Child />
       </RiverScope>,
     );
 
-    const container = window.riverContainer;
+    const container = containerInstance;
     unmount();
 
     expect(container.disposed).toBe(false);

@@ -10,13 +10,16 @@ import type {
   NotifierAccessor,
   NotifierProvider,
   Provider,
+  ProviderBase,
   ProviderOptions,
+  PromiseAccessor,
   Ref,
   StateController,
   StateProvider,
   ObservableProvider,
   ObservableLike,
 } from './types';
+import type { AsyncValue } from './async_value';
 
 // ── Internal ID counter for debugging ──────────────────────────
 
@@ -33,12 +36,43 @@ function normalizeOptions(options: ProviderOptions = {}): ProviderOptions {
   };
 }
 
+// ── Sub-provider factories ─────────────────────────────────────
+
+function createNotifierAccessor<N>(
+  parentId: symbol,
+  options: ProviderOptions,
+): NotifierAccessor<N> {
+  return {
+    id: Symbol(`${options.name ?? parentId.description}.notifier`),
+    kind: 'notifierAccessor',
+    name: options.name ? `${options.name}.notifier` : undefined,
+    options,
+    _parentId: parentId,
+  } as NotifierAccessor<N>;
+}
+
+function createPromiseAccessor<T>(
+  parentId: symbol,
+  parentProvider: ProviderBase<AsyncValue<T>>,
+  options: ProviderOptions,
+  fallbackLabel: string,
+): PromiseAccessor<T> {
+  return {
+    id: Symbol(`${options.name ?? fallbackLabel}.promise`),
+    kind: 'promiseAccessor',
+    name: options.name ? `${options.name}.promise` : undefined,
+    options,
+    _parentId: parentId,
+    _parentProvider: parentProvider,
+  } as PromiseAccessor<T>;
+}
+
 // ── provider() — Read-only computed value ──────────────────────
 
 export function provider<T>(create: (ref: Ref) => T, options: ProviderOptions = {}): Provider<T> {
   const normOptions = normalizeOptions(options);
   return {
-    id: nextId(options.name),
+    id: nextId(normOptions.name),
     kind: 'provider',
     name: normOptions.name,
     options: normOptions,
@@ -52,24 +86,18 @@ export function stateProvider<T>(create: (ref: Ref) => T, options: ProviderOptio
   const normOptions = normalizeOptions(options);
   const id = nextId(normOptions.name);
 
-  const notifierAccessor: NotifierAccessor<StateController<T>> = {
-    id: Symbol(`${normOptions.name ?? id.description}.notifier`),
-    kind: 'notifierAccessor',
-    name: normOptions.name ? `${normOptions.name}.notifier` : undefined,
-    options: normOptions,
-    _parentId: id,
-  };
+  const notifier = createNotifierAccessor<StateController<T>>(id, normOptions);
 
-  const provider: StateProvider<T> = {
+  const stateP: StateProvider<T> = {
     id,
     kind: 'stateProvider',
     name: normOptions.name,
     options: normOptions,
     _create: create,
-    notifier: notifierAccessor,
+    notifier,
   };
-  (notifierAccessor as any)._parentProvider = provider;
-  return provider;
+  (notifier as any)._parentProvider = stateP;
+  return stateP;
 }
 
 // ── promiseProvider() — Async data source ───────────────────────
@@ -79,24 +107,18 @@ export function promiseProvider<T>(
   options: ProviderOptions = {},
 ): PromiseProvider<T> {
   const normOptions = normalizeOptions(options);
-  const provider: PromiseProvider<T> = {
-    id: nextId(normOptions.name),
+  const id = nextId(normOptions.name);
+
+  const promiseP = {
+    id,
     kind: 'promiseProvider',
     name: normOptions.name,
     options: normOptions,
     _create: create,
-    promise: {
-      id: Symbol(`${normOptions.name ?? 'promiseProvider'}.promise`),
-      kind: 'promiseAccessor',
-      name: normOptions.name ? `${normOptions.name}.promise` : undefined,
-      options: normOptions,
-      _parentId: null as any, // Will be set below
-      _parentProvider: null as any, // Will be set below
-    },
-  };
-  (provider.promise as any)._parentId = provider.id;
-  (provider.promise as any)._parentProvider = provider;
-  return provider;
+  } as PromiseProvider<T>;
+
+  (promiseP as any).promise = createPromiseAccessor(id, promiseP, normOptions, 'promiseProvider');
+  return promiseP;
 }
 
 // ── observableProvider() — Observable / Data source ──────────
@@ -106,24 +128,18 @@ export function observableProvider<T>(
   options: ProviderOptions = {},
 ): ObservableProvider<T> {
   const normOptions = normalizeOptions(options);
-  const provider: ObservableProvider<T> = {
-    id: nextId(normOptions.name),
+  const id = nextId(normOptions.name);
+
+  const obsP = {
+    id,
     kind: 'observableProvider',
     name: normOptions.name,
     options: normOptions,
     _create: create,
-    promise: {
-      id: Symbol(`${normOptions.name ?? 'observableProvider'}.promise`),
-      kind: 'promiseAccessor',
-      name: normOptions.name ? `${normOptions.name}.promise` : undefined,
-      options: normOptions,
-      _parentId: null as any,
-      _parentProvider: null as any,
-    },
-  };
-  (provider.promise as any)._parentId = provider.id;
-  (provider.promise as any)._parentProvider = provider;
-  return provider;
+  } as ObservableProvider<T>;
+
+  (obsP as any).promise = createPromiseAccessor(id, obsP, normOptions, 'observableProvider');
+  return obsP;
 }
 
 // ── notifierProvider() — Class-based synchronous state ─────────
@@ -135,24 +151,18 @@ export function notifierProvider<N extends Notifier<any>>(
   const normOptions = normalizeOptions(options);
   const id = nextId(normOptions.name);
 
-  const notifierAccessor: NotifierAccessor<N> = {
-    id: Symbol(`${normOptions.name ?? id.description}.notifier`),
-    kind: 'notifierAccessor',
-    name: normOptions.name ? `${normOptions.name}.notifier` : undefined,
-    options: normOptions,
-    _parentId: id,
-  };
+  const notifier = createNotifierAccessor<N>(id, normOptions);
 
-  const provider: NotifierProvider<N, any> = {
+  const notifierP: NotifierProvider<N, any> = {
     id,
     kind: 'notifierProvider',
     name: normOptions.name,
     options: normOptions,
     _createNotifier: createNotifier,
-    notifier: notifierAccessor,
+    notifier,
   };
-  (notifierAccessor as any)._parentProvider = provider;
-  return provider;
+  (notifier as any)._parentProvider = notifierP;
+  return notifierP;
 }
 
 // ── asyncNotifierProvider() — Class-based async state ──────────
@@ -164,31 +174,18 @@ export function asyncNotifierProvider<N extends AsyncNotifier<any>>(
   const normOptions = normalizeOptions(options);
   const id = nextId(normOptions.name);
 
-  const notifierAccessor: NotifierAccessor<N> = {
-    id: Symbol(`${normOptions.name ?? id.description}.notifier`),
-    kind: 'notifierAccessor',
-    name: normOptions.name ? `${normOptions.name}.notifier` : undefined,
-    options: normOptions,
-    _parentId: id,
-  };
+  const notifier = createNotifierAccessor<N>(id, normOptions);
 
-  const provider: AsyncNotifierProvider<N, any> = {
+  const asyncP = {
     id,
     kind: 'asyncNotifierProvider',
     name: normOptions.name,
     options: normOptions,
     _createNotifier: createNotifier,
-    notifier: notifierAccessor,
-    promise: {
-      id: Symbol(`${normOptions.name ?? id.description}.promise`),
-      kind: 'promiseAccessor',
-      name: normOptions.name ? `${normOptions.name}.promise` : undefined,
-      options: normOptions,
-      _parentId: id,
-      _parentProvider: null as any, // Set below
-    },
-  };
-  (notifierAccessor as any)._parentProvider = provider;
-  (provider.promise as any)._parentProvider = provider;
-  return provider;
+    notifier,
+  } as AsyncNotifierProvider<N, any>;
+
+  (asyncP as any).promise = createPromiseAccessor(id, asyncP, normOptions, id.description!);
+  (notifier as any)._parentProvider = asyncP;
+  return asyncP;
 }
