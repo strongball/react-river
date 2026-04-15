@@ -373,6 +373,16 @@ describe('RiverContainer', () => {
       vi.useRealTimers();
     });
 
+    it('getProviderStates with ghost dependent', () => {
+      const container = new RiverContainer();
+      const p = stateProvider(() => 1);
+      container.read(p);
+      const state = container.getState(p.id)!;
+      state.dependents.add(Symbol()); // description-less symbol
+      const snapshots = container.getProviderStates();
+      expect(snapshots.find(s => s.id === p.id)?.dependents).toContain('unknown');
+    });
+
     it('assertNotDisposed on all public methods', () => {
       const container = new RiverContainer();
       container.dispose();
