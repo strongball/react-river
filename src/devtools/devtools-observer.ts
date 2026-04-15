@@ -73,7 +73,11 @@ export function createDevToolsObserver(maxEvents = 100): DevToolsObserverHandle 
   }
 
   function pushEvent(event: DevToolsEvent) {
-    events = [event, ...events].slice(0, max);
+    events.unshift(event);
+    if (events.length > max) {
+      events.length = max;
+    }
+    events = [...events];
     version++;
     notifySubscribers();
   }

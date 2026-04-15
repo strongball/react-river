@@ -101,25 +101,37 @@ export function buildGraphLayout(
 
   // Compute dependency depth for layout columns
   const depthMap = new Map<string, number>();
+  const itemMap = new Map<string, DevToolsProviderSnapshot>();
+  for (const s of items) itemMap.set(s.name, s);
+  
+  const visited = new Set<string>();
 
-  function getDepth(name: string, visited = new Set<string>()): number {
-    if (visited.has(name)) return 0;
-    visited.add(name);
+  function getDepth(name: string): number {
+    if (visited.has(name)) return 0; // Break circular
+    
     const cached = depthMap.get(name);
     if (cached !== undefined) return cached;
+    
+    visited.add(name);
 
-    const snap = items.find((s) => s.name === name);
+    const snap = itemMap.get(name);
     if (!snap || snap.dependencies.length === 0) {
+      visited.delete(name);
       depthMap.set(name, 0);
       return 0;
     }
 
-    const maxDep = Math.max(
-      ...snap.dependencies
-        .filter((d) => items.some((s) => s.name === d))
-        .map((d) => getDepth(d, new Set(visited))),
-    );
-    const depth = maxDep + 1;
+    let maxDep = -1;
+    for (const d of snap.dependencies) {
+      if (itemMap.has(d)) {
+        const dDepth = getDepth(d);
+        if (dDepth > maxDep) maxDep = dDepth;
+      }
+    }
+
+    visited.delete(name);
+    
+    const depth = maxDep === -1 ? 0 : maxDep + 1;
     depthMap.set(name, depth);
     return depth;
   }
