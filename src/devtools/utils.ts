@@ -64,7 +64,8 @@ export function getConnectedNodes(
   snapshots: DevToolsProviderSnapshot[],
   rootName: string,
 ): Set<string> {
-  const reachable = new Set<string>([rootName]);
+  const reachable = new Set<string>();
+  reachable.add(rootName);
 
   function addAncestors(name: string) {
     const snap = snapshots.find((s) => s.name === name);
@@ -79,6 +80,8 @@ export function getConnectedNodes(
 
   function addDescendants(name: string) {
     for (const snap of snapshots) {
+      // For groups, dependents contains actual dependents. The layout primarily relies on dependencies,
+      // but to walk downwards, checking `snap.dependencies.includes(name)` works perfectly.
       if (!reachable.has(snap.name) && snap.dependencies.includes(name)) {
         reachable.add(snap.name);
         addDescendants(snap.name);
@@ -91,12 +94,65 @@ export function getConnectedNodes(
   return reachable;
 }
 
+/** Merges developer tools snapshots of family instances into single nodes */
+export function groupFamilySnapshots(
+  snapshots: DevToolsProviderSnapshot[],
+): DevToolsProviderSnapshot[] {
+  const grouped = new Map<string, DevToolsProviderSnapshot>();
+  const nameMapping = new Map<string, string>(); // Maps original name -> base name
+
+  // Step 1: Assign a base name to every snapshot
+  for (const s of snapshots) {
+    const match = s.name.match(/^(.+?)\(.*\)$/);
+    const baseName = match ? `${match[1]}(ƒ)` : s.name;
+    nameMapping.set(s.name, baseName);
+
+    if (!grouped.has(baseName)) {
+      // Create a merged snapshot template
+      // We purposefully do not copy the dependents / dependencies directly here,
+      // because we want to de-duplicate them next
+      grouped.set(baseName, {
+        ...s,
+        id: Symbol(baseName),
+        name: baseName,
+        dependencies: [],
+        dependents: [],
+      });
+    }
+  }
+
+  // Step 2: Merge subsets (specifically their dependencies)
+  for (const s of snapshots) {
+    const baseName = nameMapping.get(s.name)!;
+    const merged = grouped.get(baseName)!;
+
+    // Map original dependencies to their new base names and union them
+    for (const dep of s.dependencies) {
+      const depBase = nameMapping.get(dep) || dep;
+      if (depBase !== baseName && !merged.dependencies.includes(depBase)) {
+        merged.dependencies.push(depBase);
+      }
+    }
+    
+    // We can optionally merge dependents too, but for building the graph layout,
+    // only `dependencies` field is technically required by getConnectedNodes and buildGraphLayout.
+    for (const dep of s.dependents) {
+      const depBase = nameMapping.get(dep) || dep;
+      if (depBase !== baseName && !merged.dependents.includes(depBase)) {
+        merged.dependents.push(depBase);
+      }
+    }
+  }
+
+  return Array.from(grouped.values());
+}
+
 /** Computes the SVG layout for the dependency graph */
 export function buildGraphLayout(
   items: DevToolsProviderSnapshot[],
-): { nodes: GraphNode[]; edges: GraphEdge[]; viewBox: string } {
+): { nodes: GraphNode[]; edges: GraphEdge[]; viewBox: string; width: number; height: number } {
   if (items.length === 0) {
-    return { nodes: [], edges: [], viewBox: '0 0 400 200' };
+    return { nodes: [], edges: [], viewBox: '0 0 400 200', width: 400, height: 200 };
   }
 
   // Compute dependency depth for layout columns
@@ -146,9 +202,9 @@ export function buildGraphLayout(
     groups.get(d)!.push(s);
   }
 
-  const nodeWidth = 120;
+  const nodeWidth = 180; // Increased width to show more text
   const nodeHeight = 34;
-  const colGap = 170;
+  const colGap = 220; // Increased colGap to fit wider nodes without overlapping
   const rowGap = 52;
   const padX = 24;
   const padY = 24;
@@ -190,7 +246,7 @@ export function buildGraphLayout(
   const maxX = Math.max(...graphNodes.map((n) => n.x + n.width)) + padX;
   const maxY = Math.max(...graphNodes.map((n) => n.y + n.height)) + padY;
 
-  return { nodes: graphNodes, edges: graphEdges, viewBox: `0 0 ${maxX} ${maxY}` };
+  return { nodes: graphNodes, edges: graphEdges, viewBox: `0 0 ${maxX} ${maxY}`, width: maxX, height: maxY };
 }
 
 export const KIND_FILL: Record<string, string> = {

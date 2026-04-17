@@ -44,7 +44,12 @@ export function createRef(cb: ContainerCallbacks, ownerId: symbol): Ref {
     },
 
     listen: <T>(provider: ProviderBase<T>, callback: ListenerCallback<T>): Unsubscribe => {
-      return cb.listen(provider, callback);
+      // Track as a dependency for DevTools graph visibility
+      cb.ensureInitialized(provider);
+      trackListenDependency(cb, ownerId, provider);
+      const unsub = cb.listen(provider, callback);
+      cb.getState(ownerId)?.disposeCallbacks.push(unsub);
+      return unsub;
     },
 
     onDispose: (callback: () => void): void => {
@@ -163,5 +168,23 @@ function trackDependency(
       if (!targetState.watchSelectors) targetState.watchSelectors = new Map();
       targetState.watchSelectors.set(ownerId, null);
     }
+  }
+}
+
+// ── Listen Dependency Tracking (graph-only) ────────────────────
+
+/**
+ * Record a listen dependency for DevTools graph visibility.
+ * Only adds to ownerState.dependencies — does NOT add to targetState.dependents,
+ * because propagateToDependents would re-initialize the listener (unwanted rebuild).
+ */
+function trackListenDependency(
+  cb: ContainerCallbacks,
+  ownerId: symbol,
+  target: ProviderBase,
+): void {
+  const ownerState = cb.getState(ownerId);
+  if (ownerState) {
+    ownerState.dependencies.add(target);
   }
 }

@@ -56,6 +56,15 @@ export function ProviderItem({
             <span className="rd-detail-value">{snapshot.kind}</span>
           </div>
 
+          {snapshot.name.match(/^.+?\((.*)\)$/) && (
+            <div className="rd-detail-row">
+              <span className="rd-detail-label">Arguments</span>
+              <span className="rd-detail-value">
+                <pre>{snapshot.name.match(/^.+?\((.*)\)$/)![1]}</pre>
+              </span>
+            </div>
+          )}
+
           <div className="rd-detail-row">
             <span className="rd-detail-label">Listeners</span>
             <span className="rd-detail-value">{snapshot.listenerCount}</span>
