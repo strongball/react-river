@@ -230,3 +230,7 @@ const appOverrides = [
 ```
 
 ---
+
+## 🏗️ Architecture & Deep Dive
+
+For a detailed look at the internal workings of React River, including dependency tracking, state propagation, and the auto-disposal mechanism, please check out our [Architecture Documentation](./ARCHITECTURE.md).
