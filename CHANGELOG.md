@@ -1,3 +1,10 @@
+## [1.0.23](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.22...v1.0.23) (2026-04-17)
+
+
+### Features
+
+* add family snapshot grouping, graph panning/zooming, and argument display to devtools ([4a936d6](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/commit/4a936d67c26deb7b7c74a693eda4bc5630dbe47e))
+
 ## [1.0.22](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.21...v1.0.22) (2026-04-15)
 
 
