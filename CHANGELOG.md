@@ -1,3 +1,5 @@
+## [1.0.24](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.23...v1.0.24) (2026-04-17)
+
 ## [1.0.23](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.22...v1.0.23) (2026-04-17)
 
 
