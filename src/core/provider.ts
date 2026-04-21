@@ -25,7 +25,11 @@ import type { AsyncValue } from './async_value';
 
 let providerCount = 0;
 function nextId(name?: string): symbol {
-  return Symbol(name ?? `provider_${++providerCount}`);
+  // Use Symbol.for() for named providers so the same name always yields the
+  // same Symbol identity.  This is critical for HMR: when a module re-executes,
+  // the provider object is recreated but its Symbol id stays identical, so
+  // container overrides (keyed by Symbol) remain valid.
+  return name ? Symbol.for(`river:${name}`) : Symbol(`provider_${++providerCount}`);
 }
 
 function normalizeOptions(options: ProviderOptions = {}): ProviderOptions {
