@@ -150,7 +150,13 @@ export function initNotifierProvider(
   provider: ProviderBase,
   ref: Ref,
   state: ProviderState,
+  override?: ProviderOverride,
 ): void {
+  if (override) {
+    state.value = override.create(ref);
+    return;
+  }
+
   const p = provider as unknown as {
     _createNotifier: () => Notifier<unknown>;
   };
@@ -174,7 +180,29 @@ export function initAsyncNotifierProvider(
   provider: ProviderBase,
   ref: Ref,
   state: ProviderState,
+  override?: ProviderOverride,
 ): void {
+  state.value = asyncLoading();
+
+  const abortController = new AbortController();
+  state.abortController = abortController;
+
+  if (override) {
+    const promise = override.create(ref) as Promise<unknown>;
+    promise.then(
+      (data) => {
+        if (abortController.signal.aborted) return;
+        cb.updateValue(provider.id, asyncData(data));
+      },
+      (error) => {
+        if (abortController.signal.aborted) return;
+        cb.notifyObservers('error', provider, error);
+        cb.updateValue(provider.id, asyncError(error));
+      },
+    );
+    return;
+  }
+
   const p = provider as unknown as {
     _createNotifier: () => AsyncNotifier<unknown>;
   };
@@ -185,12 +213,8 @@ export function initAsyncNotifierProvider(
     cb.updateValue(provider.id, value);
   };
 
-  state.value = asyncLoading();
   notifier._state = state.value as AsyncValue<unknown>;
   state.notifierInstance = notifier;
-
-  const abortController = new AbortController();
-  state.abortController = abortController;
 
   notifier.build().then(
     (data) => {

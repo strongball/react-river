@@ -94,6 +94,103 @@ describe('RiverContainer', () => {
     expect(child.read(p)).toBe('child');
   });
 
+  describe('Overrides for notifierProvider and asyncNotifierProvider', () => {
+    it('notifierProvider override: create() should be called instead of the original notifier factory', () => {
+      class OriginalNotifier extends Notifier<string> {
+        build() {
+          return 'original';
+        }
+      }
+      const p = notifierProvider(() => new OriginalNotifier());
+
+      const overrideValue = 'overridden';
+      const container = new RiverContainer({
+        overrides: [{ original: p, create: () => overrideValue }],
+      });
+
+      // Bug: without the fix, this returns 'original' because override is ignored
+      expect(container.read(p)).toBe('overridden');
+    });
+
+    it('notifierProvider override: scoped child container should use overridden value', () => {
+      class OriginalNotifier extends Notifier<number> {
+        build() {
+          return 0;
+        }
+      }
+      const p = notifierProvider(() => new OriginalNotifier());
+
+      const root = new RiverContainer();
+      const child = new RiverContainer({
+        parent: root,
+        overrides: [{ original: p, create: () => 999 }],
+      });
+
+      expect(root.read(p)).toBe(0);
+      // Bug: without the fix, child also returns 0
+      expect(child.read(p)).toBe(999);
+    });
+
+    it('asyncNotifierProvider override: create() should be called instead of the original notifier factory', async () => {
+      class OriginalAsyncNotifier extends AsyncNotifier<string> {
+        async build() {
+          return 'original';
+        }
+      }
+      const p = asyncNotifierProvider(() => new OriginalAsyncNotifier());
+
+      const overrideResolved = 'overridden-async';
+      const container = new RiverContainer({
+        overrides: [
+          {
+            original: p,
+            create: () => Promise.resolve(overrideResolved),
+          },
+        ],
+      });
+
+      // Bug: without the fix, the override create() is not called at all,
+      // so the original AsyncNotifier.build() runs and produces asyncLoading → 'original'
+      const result = container.read(p);
+      // Both original and override start as loading, but check which build() ran
+      expect(result.status).toBe('loading');
+
+      // With the fix, the override promise resolves to 'overridden-async'
+      const data = await container.read(p.promise);
+      expect(data).toBe('overridden-async');
+    });
+
+    it('notifierProvider override: ref passed to create() is functional', () => {
+      const base = notifierProvider(
+        () =>
+          new (class extends Notifier<number> {
+            build() {
+              return 42;
+            }
+          })(),
+      );
+
+      class OriginalNotifier extends Notifier<string> {
+        build() {
+          return 'should-not-be-used';
+        }
+      }
+      const p = notifierProvider(() => new OriginalNotifier());
+
+      const container = new RiverContainer({
+        overrides: [
+          {
+            original: p,
+            create: (ref) => `value-is-${ref.read(base)}`,
+          },
+        ],
+      });
+
+      // Bug: without fix, original notifier runs and returns 'should-not-be-used'
+      expect(container.read(p)).toBe('value-is-42');
+    });
+  });
+
   it('should notify observers', () => {
     const p = stateProvider(() => 0);
     const observer = {

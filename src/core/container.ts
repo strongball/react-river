@@ -298,10 +298,10 @@ export class RiverContainer {
           initObservableProvider(this.cb, provider as ObservableProvider<unknown>, ref, state, override);
           break;
         case 'notifierProvider':
-          initNotifierProvider(this.cb, provider, ref, state);
+          initNotifierProvider(this.cb, provider, ref, state, override);
           break;
         case 'asyncNotifierProvider':
-          initAsyncNotifierProvider(this.cb, provider, ref, state);
+          initAsyncNotifierProvider(this.cb, provider, ref, state, override);
           break;
         case 'notifierAccessor':
           initNotifierAccessor(this.cb, provider as unknown as NotifierAccessor<unknown>, state);
