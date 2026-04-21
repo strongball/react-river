@@ -1,3 +1,10 @@
+## [1.0.25](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.24...v1.0.25) (2026-04-21)
+
+
+### Bug Fixes
+
+* enable overrides for notifierProvider and asyncNotifierProvider in RiverContainer ([e42da96](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/commit/e42da9649a329debe918d1ade98ae4e7a1503614))
+
 ## [1.0.24](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.23...v1.0.24) (2026-04-17)
 
 ## [1.0.23](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.22...v1.0.23) (2026-04-17)
