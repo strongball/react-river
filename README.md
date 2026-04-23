@@ -191,20 +191,16 @@ Enhance your development experience with the built-in DevTools! It provides a fl
 
 ```tsx
 import {
-  createDevToolsObserver,
   RiverDevTools,
   RiverScope,
 } from "@zerologix/react-river";
 
 function App() {
-  // Create an observer to track events
-  const devtools = createDevToolsObserver();
-
   return (
-    <RiverScope observers={[devtools.observer]}>
+    <RiverScope>
       <YourAppShell />
-      {/* Add the UI panel */}
-      <RiverDevTools devtools={devtools} />
+      {/* Add the UI panel, it automatically binds to the nearest RiverScope container */}
+      <RiverDevTools />
     </RiverScope>
   );
 }

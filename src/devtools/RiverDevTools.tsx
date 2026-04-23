@@ -14,18 +14,15 @@ import { DependencyGraph } from './components/DependencyGraph';
 import { EventItem } from './components/EventItem';
 import { IconTrash } from './components/Icons';
 import { ProviderItem } from './components/ProviderItem';
+import { createDevToolsObserver } from './devtools-observer';
 // Hooks
 import { useDraggable } from './hooks/useDraggable';
 import { injectDevToolsStyles } from './inject-styles';
-
-// Types
-import type { DevToolsObserverHandle } from './devtools-observer';
 
 // Inject styles at module load time
 injectDevToolsStyles();
 
 export interface RiverDevToolsProps {
-  devtools: DevToolsObserverHandle;
   /** Default position of the panel */
   defaultPosition?: { x: number; y: number };
   /** Default open state */
@@ -38,14 +35,19 @@ type Tab = 'providers' | 'events' | 'graph';
  * Main DevTools Component
  * Orchestrates the floating panel, tabs, and data synchronization.
  */
-export function RiverDevTools({ devtools, defaultPosition, defaultOpen = false }: RiverDevToolsProps) {
+export function RiverDevTools({ defaultPosition, defaultOpen = false }: RiverDevToolsProps) {
   const container = useRiverContainer();
 
-  // ── Pin devtools on first render ───────────────────────────
-  // Fixes the case where createDevToolsObserver() is called inside
-  // the render function — ensures we always read from the same instance
-  // that was registered in RiverScope observers[].
+  // ── Initialize DevTools Observer ────────────────────────────
+  const [devtools] = useState(() => createDevToolsObserver());
   const pinnedDevtools = useRef(devtools);
+
+  // ── Bind to Container ────────────────────────────────────────
+  useEffect(() => {
+    const observer = pinnedDevtools.current.observer;
+    container.addObserver(observer);
+    return () => container.removeObserver(observer);
+  }, [container]);
 
   // Stable subscribe/getSnapshot — never recreated, always delegates
   // through the ref so re-renders don't reset subscriptions

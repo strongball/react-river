@@ -1,4 +1,4 @@
-import { createDevToolsObserver, RiverDevTools, RiverScope } from '@zerologix/react-river';
+import { RiverDevTools, RiverScope } from '@zerologix/react-river';
 
 import './App.css';
 import {
@@ -16,10 +16,8 @@ import {
 // ════════════════════════════════════════════════════════════════
 
 export default function App() {
-  const devtools = createDevToolsObserver();
-
   return (
-    <RiverScope observers={[devtools.observer]}>
+    <RiverScope>
       <div className="app">
         <header className="app-header">
           <h1>🌊 React River</h1>
@@ -40,7 +38,7 @@ export default function App() {
           <p>Open DevTools console to see 🌊 River observer logs</p>
         </footer>
       </div>
-      <RiverDevTools devtools={devtools} />
+      <RiverDevTools />
     </RiverScope>
   );
 }

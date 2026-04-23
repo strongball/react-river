@@ -67,7 +67,6 @@ export class RiverContainer {
       }
     }
 
-    // Create bound callbacks once — avoids allocating closures per-call
     this.cb = {
       updateValue: this.updateValue.bind(this),
       notifyObservers: this.notifyObservers.bind(this),
@@ -78,6 +77,19 @@ export class RiverContainer {
       invalidate: this.invalidate.bind(this),
       providerMap: this.providerMap,
     };
+  }
+
+  // ── Observers ────────────────────────────────────────────────
+
+  addObserver(observer: RiverObserver): void {
+    this.observers.push(observer);
+  }
+
+  removeObserver(observer: RiverObserver): void {
+    const index = this.observers.indexOf(observer);
+    if (index !== -1) {
+      this.observers.splice(index, 1);
+    }
   }
 
   // ── Public API ───────────────────────────────────────────────
