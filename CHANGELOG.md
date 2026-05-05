@@ -1,3 +1,10 @@
+## [1.0.29](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.28...v1.0.29) (2026-05-05)
+
+
+### Features
+
+* add configurable cache policy to RiverContainer with scope-based default overrides ([4e5eacd](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/commit/4e5eacd25dbb7ff65bf33e15bad23813fb8ac219))
+
 ## [1.0.28](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.27...v1.0.28) (2026-05-05)
 
 
