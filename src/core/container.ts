@@ -6,7 +6,7 @@
 
 import { asyncValueEquals, asyncValueToPromise } from './async_value';
 import type { AsyncData, AsyncValue } from './async_value';
-import { createProviderState } from './container_types';
+import { createProviderState, type RiverCachePolicy } from './container_types';
 import {
   initSimpleProvider,
   initStateProvider,
@@ -35,7 +35,7 @@ import {
 } from './types';
 
 // Re-export public types so existing imports keep working
-export type { DevToolsProviderSnapshot, RiverContainerOptions } from './container_types';
+export type { DevToolsProviderSnapshot, RiverContainerOptions, RiverCachePolicy } from './container_types';
 
 // ── RiverContainer ─────────────────────────────────────────────
 
@@ -48,6 +48,9 @@ export class RiverContainer {
   private observers: RiverObserver[];
   public disposed = false;
 
+  /** Default auto-dispose and cache-time policy for providers in this scope. */
+  private readonly cachePolicy: Required<RiverCachePolicy>;
+
   /** Bound callbacks passed to extracted initializer / ref-factory modules. */
   private readonly cb: ContainerCallbacks;
 
@@ -56,10 +59,12 @@ export class RiverContainer {
       parent?: RiverContainer;
       overrides?: ProviderOverride[];
       observers?: RiverObserver[];
+      cachePolicy?: RiverCachePolicy;
     } = {},
   ) {
     this.parent = options.parent;
     this.observers = options.observers ?? [];
+    this.cachePolicy = { autoDispose: true, cacheTime: 0, ...options.cachePolicy };
 
     if (options.overrides) {
       for (const override of options.overrides) {
@@ -195,8 +200,8 @@ export class RiverContainer {
           const p = this.providerMap.get(sym);
           return p ? getProviderLabel(p) : (sym.description ?? 'unknown');
         }),
-        autoDispose: provider.options.autoDispose ?? true,
-        cacheTime: provider.options.cacheTime,
+        autoDispose: state.autoDispose,
+        cacheTime: state.cacheTime,
       });
     }
 
@@ -291,6 +296,9 @@ export class RiverContainer {
     this.initializingStack.add(provider.id);
 
     const state = createProviderState();
+    // Resolve effective autoDispose / cacheTime: provider option → scope cachePolicy (includes built-in defaults)
+    state.autoDispose = provider.options.autoDispose ?? this.cachePolicy.autoDispose;
+    state.cacheTime = provider.options.cacheTime ?? this.cachePolicy.cacheTime;
     this.states.set(provider.id, state);
 
     const ref = createRef(this.cb, provider.id);
@@ -466,15 +474,14 @@ export class RiverContainer {
     if (!this.hasListeners(state)) {
       for (const cb of Array.from(state.cancelCallbacks)) cb();
 
-      if (provider.options.autoDispose) {
-        const cacheTime = provider.options.cacheTime;
-        if (cacheTime !== undefined && cacheTime > 0) {
+      if (state.autoDispose) {
+        if (state.cacheTime > 0) {
           state.disposeTimeout = setTimeout(() => {
             const currentState = this.getState(provider.id);
             if (currentState && !this.hasListeners(currentState)) {
               this.disposeProvider(provider);
             }
-          }, cacheTime);
+          }, state.cacheTime);
         } else {
           queueMicrotask(() => {
             const currentState = this.getState(provider.id);

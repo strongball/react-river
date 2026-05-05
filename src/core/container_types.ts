@@ -40,6 +40,11 @@ export interface ProviderState {
   /** AbortController for async operations */
   abortController?: AbortController;
 
+  /** Resolved auto-dispose flag (computed at init from provider option → scope cachePolicy → built-in default) */
+  autoDispose: boolean;
+  /** Resolved cache time in ms (computed at init from provider option → scope cachePolicy → built-in default) */
+  cacheTime: number;
+
   initialized: boolean;
 }
 
@@ -62,12 +67,38 @@ export interface DevToolsProviderSnapshot {
   cacheTime: number | undefined;
 }
 
+// ── Cache Policy ───────────────────────────────────────────────
+
+/**
+ * Controls the default auto-dispose and cache-time behavior for
+ * providers within a scope (container).
+ *
+ * Individual providers can still override these via their own `ProviderOptions`.
+ *
+ * Resolution order: provider option → scope cachePolicy → built-in defaults.
+ */
+export interface RiverCachePolicy {
+  /**
+   * Default `autoDispose` for providers that don't specify their own.
+   * Built-in default is `true`.
+   */
+  autoDispose?: boolean;
+  /**
+   * Default `cacheTime` (ms) for providers that don't specify their own.
+   * Only effective when the provider's resolved `autoDispose` is `true`.
+   * Built-in default is `0` (dispose immediately).
+   */
+  cacheTime?: number;
+}
+
 // ── Container Options ──────────────────────────────────────────
 
 export interface RiverContainerOptions {
   parent?: import('./container').RiverContainer;
   overrides?: ProviderOverride[];
   observers?: RiverObserver[];
+  /** Default auto-dispose and cache-time policy for providers in this scope. */
+  cachePolicy?: RiverCachePolicy;
 }
 
 // ── Container Callbacks (for extracted modules) ────────────────
@@ -107,6 +138,8 @@ export function createProviderState(): ProviderState {
     cancelCallbacks: [],
     resumeCallbacks: [],
     disposeTimeout: undefined,
+    autoDispose: true,
+    cacheTime: 0,
     initialized: false,
   };
 }

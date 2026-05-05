@@ -31,7 +31,7 @@ export { Notifier, AsyncNotifier } from './core/notifier';
 
 // ── Core: Container ────────────────────────────────────────────
 export { RiverContainer } from './core/container';
-export type { RiverContainerOptions } from './core/container';
+export type { RiverContainerOptions, RiverCachePolicy } from './core/container';
 
 // ── Core: Family ───────────────────────────────────────────────
 export type { ProviderFamily } from './core/family';

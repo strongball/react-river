@@ -7,6 +7,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 
 import { RiverContainer } from '../core/container';
 
+import type { RiverCachePolicy } from '../core/container_types';
 import type { RiverObserver } from '../core/observer';
 import type { ProviderOverride } from '../core/types';
 
@@ -34,6 +35,18 @@ export interface RiverScopeProps {
   overrides?: ProviderOverride[];
   /** Global observers for provider lifecycle events */
   observers?: RiverObserver[];
+  /**
+   * Default auto-dispose and cache-time policy for providers in this scope.
+   * Individual providers can still override these via their own options.
+   *
+   * @example
+   * ```tsx
+   * <RiverScope cachePolicy={{ autoDispose: true, cacheTime: 5000 }}>
+   *   <App />
+   * </RiverScope>
+   * ```
+   */
+  cachePolicy?: RiverCachePolicy;
 }
 /**
  * Root state container for React River.
@@ -47,7 +60,7 @@ export interface RiverScopeProps {
  * </RiverScope>
  * ```
  */
-export function RiverScope({ children, overrides, observers }: RiverScopeProps) {
+export function RiverScope({ children, overrides, observers, cachePolicy }: RiverScopeProps) {
   const parentContainer = useContext(RiverScopeContext);
 
   const [container] = useState(
@@ -56,6 +69,7 @@ export function RiverScope({ children, overrides, observers }: RiverScopeProps) 
         parent: parentContainer ?? undefined,
         overrides,
         observers,
+        cachePolicy,
       }),
   );
 
