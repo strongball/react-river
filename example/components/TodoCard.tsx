@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { useRiverWatch, useRiverRef } from '@zerologix/react-river';
+import { useRiverWatch, useRiverRef, useRiverMutation } from '@zerologix/react-river';
 
 import { todosProvider } from '../providers';
 
@@ -10,11 +10,14 @@ export function TodoCard() {
   const [input, setInput] = useState('');
 
   const notifier = ref.read(todosProvider.notifier);
+  const { mutate: add } = useRiverMutation(async (ref, id: string) => {
+    return ref.read(todosProvider.notifier).add(id);
+  });
 
   const handleAdd = () => {
     const trimmed = input.trim();
     if (!trimmed) return;
-    notifier.add(trimmed);
+    add(trimmed);
     setInput('');
   };
 

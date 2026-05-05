@@ -1,12 +1,14 @@
 /* ════════════════════════════════════════════════════════════════
  *  React River — React Hooks
- *  useRiverWatch / useRiverRef / useRiverListen
+ *  useRiverWatch / useRiverRef / useRiverListen / useRiverMutation
  * ════════════════════════════════════════════════════════════════ */
 
-import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 
 import { useRiverContainer } from './scope';
 
+import type { AsyncValue } from '../core/async_value';
+import { asyncData, asyncError, asyncLoading } from '../core/async_value';
 import type { ListenerCallback, ProviderBase, RiverRef, StateProvider } from '../core/types';
 
 // ── useRiverWatch — subscribe to a provider (triggers re-render) ────
@@ -133,4 +135,145 @@ export function useRiverListen<T>(provider: ProviderBase<T>, callback: ListenerC
     });
     // oxlint-disable-next-line eslint-plugin-react-hooks/exhaustive-deps
   }, [container, provider.id]);
+}
+
+// ── useRiverMutation — imperative async operation (React-local state) ──
+
+/**
+ * Mutation function signature.
+ * Receives a `RiverRef` for reading providers and the variables passed to `mutate()`.
+ */
+export type MutationFn<TData, TVariables> = (ref: RiverRef, variables: TVariables) => Promise<TData>;
+
+/**
+ * Options for `useRiverMutation`.
+ *
+ * `TContext` is the type returned by `onMutate`, which is then forwarded
+ * to `onSuccess`, `onError`, and `onSettled` for optimistic update / rollback patterns.
+ */
+export interface UseRiverMutationOptions<TData, TVariables, TContext = unknown> {
+  /**
+   * Called **before** the mutation function fires.
+   * Use this for optimistic updates — return a context value that will be
+   * forwarded to `onSuccess`, `onError`, and `onSettled`.
+   *
+   * ```ts
+   * onMutate: (variables, ref) => {
+   *   const previous = ref.read(listProvider);
+   *   ref.set(listProvider, optimisticUpdate(previous, variables));
+   *   return { previous }; // context
+   * }
+   * ```
+   */
+  onMutate?: (variables: TVariables, ref: RiverRef) => TContext | Promise<TContext>;
+  /** Called when the mutation succeeds. */
+  onSuccess?: (data: TData, variables: TVariables, ref: RiverRef, context: TContext | undefined) => void;
+  /** Called when the mutation fails. */
+  onError?: (error: unknown, variables: TVariables, ref: RiverRef, context: TContext | undefined) => void;
+  /** Called when the mutation completes (success or error). */
+  onSettled?: (data: TData | undefined, error: unknown | undefined, variables: TVariables, ref: RiverRef, context: TContext | undefined) => void;
+}
+
+/**
+ * Return type of `useRiverMutation`.
+ */
+export interface UseRiverMutationResult<TData, TVariables> {
+  /** Current mutation state as an AsyncValue. */
+  state: AsyncValue<TData | undefined>;
+  /** Trigger the mutation. */
+  mutate: (variables: TVariables) => Promise<TData>;
+  /** Reset state back to idle. */
+  reset: () => void;
+}
+
+/**
+ * Hook for imperative async operations with React-local state tracking.
+ * Analogous to `useMutation` from TanStack Query, but integrated with River.
+ *
+ * The mutation function receives a `RiverRef` so it can read providers
+ * without relying on closure capture — avoiding stale-closure issues.
+ *
+ * Each hook instance maintains its own isolated state, making it
+ * perfect for per-item mutations in tables/lists.
+ *
+ * ```ts
+ * // Basic usage
+ * const { state, mutate } = useRiverMutation(async (ref, traderId: string) => {
+ *   const service = ref.read(serviceProvider);
+ *   await service.syncTrader(traderId);
+ * });
+ *
+ * // With optimistic update & rollback
+ * const { mutate } = useRiverMutation(
+ *   async (ref, id: string) => {
+ *     await ref.read(serviceProvider).deleteItem(id);
+ *   },
+ *   {
+ *     onMutate: (id, ref) => {
+ *       const previous = ref.read(listProvider);
+ *       ref.set(listProvider, prev => prev.filter(item => item.id !== id));
+ *       return { previous };
+ *     },
+ *     onError: (_err, _id, ref, context) => {
+ *       if (context?.previous) ref.set(listProvider, context.previous);
+ *     },
+ *   },
+ * );
+ * ```
+ */
+export function useRiverMutation<TData = void, TVariables = void, TContext = unknown>(
+  mutationFn: MutationFn<TData, TVariables>,
+  options?: UseRiverMutationOptions<TData, TVariables, TContext>,
+): UseRiverMutationResult<TData, TVariables> {
+  const riverRef = useRiverRef();
+
+  // Store latest fn & options in refs to avoid stale closures
+  const fnRef = useRef(mutationFn);
+  fnRef.current = mutationFn;
+
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
+
+  const [state, setState] = useState<AsyncValue<TData | undefined>>(
+    () => asyncData<TData | undefined>(undefined),
+  );
+  const stateRef = useRef(state);
+  stateRef.current = state;
+
+  const mutate = useCallback(
+    async (variables: TVariables): Promise<TData> => {
+      let context: TContext | undefined;
+      const onMutateFn = optionsRef.current?.onMutate;
+      if (onMutateFn) {
+        try {
+          // onMutate — before the mutation (optimistic updates go here)
+          context = await onMutateFn(variables, riverRef);
+        } catch {
+          // If onMutate itself throws, still proceed with the mutation
+        }
+      }
+
+      setState(asyncLoading(stateRef.current.data));
+      try {
+        const result = await fnRef.current(riverRef, variables);
+        setState(asyncData<TData | undefined>(result));
+        optionsRef.current?.onSuccess?.(result, variables, riverRef, context);
+        optionsRef.current?.onSettled?.(result, undefined, variables, riverRef, context);
+        return result;
+      } catch (err) {
+        setState(asyncError<TData | undefined>(err, stateRef.current.data));
+        optionsRef.current?.onError?.(err, variables, riverRef, context);
+        optionsRef.current?.onSettled?.(undefined, err, variables, riverRef, context);
+        throw err;
+      }
+    },
+    [riverRef],
+  );
+
+  const reset = useCallback(
+    () => setState(asyncData<TData | undefined>(undefined)),
+    [],
+  );
+
+  return { state, mutate, reset };
 }

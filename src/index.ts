@@ -72,7 +72,8 @@ export { RiverScope } from './react/scope';
 export type { RiverScopeProps } from './react/scope';
 
 // ── React: Hooks ───────────────────────────────────────────────
-export { useRiverWatch, useRiverRef, useRiverListen } from './react/hooks';
+export { useRiverWatch, useRiverRef, useRiverListen, useRiverMutation } from './react/hooks';
+export type { MutationFn, UseRiverMutationOptions, UseRiverMutationResult } from './react/hooks';
 
 // ── React: Consumer ────────────────────────────────────────────
 export { Consumer } from './react/consumer';
