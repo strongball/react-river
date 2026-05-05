@@ -496,7 +496,7 @@ describe('RiverContainer', () => {
 
     it('unknown provider kind', () => {
       const container = new RiverContainer();
-      const fakeProvider: any = { id: Symbol('fake'), kind: 'wrong' };
+      const fakeProvider: any = { id: Symbol('fake'), kind: 'wrong', options: {} };
       expect(() => (container as any).initializeProvider(fakeProvider)).toThrow(/Unknown provider kind/);
     });
 

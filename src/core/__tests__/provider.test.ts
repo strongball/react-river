@@ -7,7 +7,7 @@ describe('Providers Factories', () => {
     const p = provider(() => 1, { name: 'test' });
     expect(p.kind).toBe('provider');
     expect(p.name).toBe('test');
-    expect(p.options.autoDispose).toBe(true);
+    expect(p.options).toEqual({ name: 'test' });
   });
 
   it('stateProvider() creates correct object with notifier accessor', () => {
