@@ -5,7 +5,6 @@
  * ════════════════════════════════════════════════════════════════ */
 
 import { asyncValueEquals, asyncValueToPromise } from './async_value';
-import type { AsyncData, AsyncValue } from './async_value';
 import { createProviderState, type RiverCachePolicy } from './container_types';
 import {
   initSimpleProvider,
@@ -17,10 +16,6 @@ import {
   initNotifierAccessor,
 } from './initializers';
 import { createRef } from './ref_factory';
-
-
-import type { ProviderState, ContainerCallbacks } from './container_types';
-import type { RiverObserver } from './observer';
 import {
   getProviderLabel,
   type ListenerCallback,
@@ -33,6 +28,10 @@ import {
   type ObservableProvider,
   type Unsubscribe,
 } from './types';
+
+import type { AsyncData, AsyncValue } from './async_value';
+import type { ProviderState, ContainerCallbacks } from './container_types';
+import type { RiverObserver } from './observer';
 
 // Re-export public types so existing imports keep working
 export type { DevToolsProviderSnapshot, RiverContainerOptions, RiverCachePolicy } from './container_types';
@@ -64,7 +63,7 @@ export class RiverContainer {
   ) {
     this.parent = options.parent;
     this.observers = options.observers ?? [];
-    this.cachePolicy = { autoDispose: true, cacheTime: 0, ...options.cachePolicy };
+    this.cachePolicy = { autoDispose: true, cacheTime: 60000, ...options.cachePolicy };
 
     if (options.overrides) {
       for (const override of options.overrides) {
@@ -554,7 +553,11 @@ export class RiverContainer {
   // ── Observer notifications ───────────────────────────────────
 
   private notifyObservers(event: 'create' | 'dispose' | 'error', provider: ProviderBase, ...args: unknown[]): void;
-  private notifyObservers(event: 'update', provider: ProviderBase, payload: { oldValue: unknown; newValue: unknown }): void;
+  private notifyObservers(
+    event: 'update',
+    provider: ProviderBase,
+    payload: { oldValue: unknown; newValue: unknown },
+  ): void;
   private notifyObservers(
     event: 'create' | 'update' | 'dispose' | 'error',
     provider: ProviderBase,
