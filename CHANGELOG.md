@@ -1,3 +1,10 @@
+## [1.0.28](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.27...v1.0.28) (2026-05-05)
+
+
+### Features
+
+* **useRiverMutation:** add useRiverMutation hook for imperative async operations with local state tracking ([46461c6](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/commit/46461c618b838a31a400e2e00c01bd1d14dc13a1))
+
 ## [1.0.27](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.26...v1.0.27) (2026-04-23)
 
 ## [1.0.26](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.25...v1.0.26) (2026-04-21)
