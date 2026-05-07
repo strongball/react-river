@@ -167,11 +167,11 @@ export interface UseRiverMutationOptions<TData, TVariables, TContext = unknown> 
    */
   onMutate?: (variables: TVariables, ref: RiverRef) => TContext | Promise<TContext>;
   /** Called when the mutation succeeds. */
-  onSuccess?: (data: TData, variables: TVariables, ref: RiverRef, context: TContext | undefined) => void;
+  onSuccess?: (data: TData, variables: TVariables, context: TContext | undefined, ref: RiverRef) => void;
   /** Called when the mutation fails. */
-  onError?: (error: unknown, variables: TVariables, ref: RiverRef, context: TContext | undefined) => void;
+  onError?: (error: unknown, variables: TVariables, context: TContext | undefined, ref: RiverRef) => void;
   /** Called when the mutation completes (success or error). */
-  onSettled?: (data: TData | undefined, error: unknown | undefined, variables: TVariables, ref: RiverRef, context: TContext | undefined) => void;
+  onSettled?: (data: TData | undefined, error: unknown | undefined, variables: TVariables, context: TContext | undefined, ref: RiverRef) => void;
 }
 
 /**
@@ -214,7 +214,7 @@ export interface UseRiverMutationResult<TData, TVariables> {
  *       ref.set(listProvider, prev => prev.filter(item => item.id !== id));
  *       return { previous };
  *     },
- *     onError: (_err, _id, ref, context) => {
+ *     onError: (_err, _id, context, ref) => {
  *       if (context?.previous) ref.set(listProvider, context.previous);
  *     },
  *   },
@@ -257,13 +257,13 @@ export function useRiverMutation<TData = void, TVariables = void, TContext = unk
       try {
         const result = await fnRef.current(riverRef, variables);
         setState(asyncData<TData | undefined>(result));
-        optionsRef.current?.onSuccess?.(result, variables, riverRef, context);
-        optionsRef.current?.onSettled?.(result, undefined, variables, riverRef, context);
+        optionsRef.current?.onSuccess?.(result, variables, context, riverRef);
+        optionsRef.current?.onSettled?.(result, undefined, variables, context, riverRef);
         return result;
       } catch (err) {
         setState(asyncError<TData | undefined>(err, stateRef.current.data));
-        optionsRef.current?.onError?.(err, variables, riverRef, context);
-        optionsRef.current?.onSettled?.(undefined, err, variables, riverRef, context);
+        optionsRef.current?.onError?.(err, variables, context, riverRef);
+        optionsRef.current?.onSettled?.(undefined, err, variables, context, riverRef);
         throw err;
       }
     },

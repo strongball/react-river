@@ -121,10 +121,10 @@ describe('useRiverMutation', () => {
     expect(onMutate).toHaveBeenCalledWith(5, expect.any(Object));
 
     expect(onSuccess).toHaveBeenCalledTimes(1);
-    expect(onSuccess).toHaveBeenCalledWith(10, 5, expect.any(Object), { snapshot: 'before' });
+    expect(onSuccess).toHaveBeenCalledWith(10, 5, { snapshot: 'before' }, expect.any(Object));
 
     expect(onSettled).toHaveBeenCalledTimes(1);
-    expect(onSettled).toHaveBeenCalledWith(10, undefined, 5, expect.any(Object), { snapshot: 'before' });
+    expect(onSettled).toHaveBeenCalledWith(10, undefined, 5, { snapshot: 'before' }, expect.any(Object));
   });
 
   it('should call onError / onSettled callbacks with context on failure', async () => {
@@ -147,10 +147,10 @@ describe('useRiverMutation', () => {
     });
 
     expect(onError).toHaveBeenCalledTimes(1);
-    expect(onError).toHaveBeenCalledWith(error, undefined, expect.any(Object), { rollback: true });
+    expect(onError).toHaveBeenCalledWith(error, undefined, { rollback: true }, expect.any(Object));
 
     expect(onSettled).toHaveBeenCalledTimes(1);
-    expect(onSettled).toHaveBeenCalledWith(undefined, error, undefined, expect.any(Object), { rollback: true });
+    expect(onSettled).toHaveBeenCalledWith(undefined, error, undefined, { rollback: true }, expect.any(Object));
   });
 
   it('should support optimistic update & rollback via onMutate context', async () => {
@@ -169,7 +169,7 @@ describe('useRiverMutation', () => {
               ref.set(listProvider, prev => prev.filter(i => i !== itemToRemove));
               return { previous };
             },
-            onError: (_err, _vars, ref, context) => {
+            onError: (_err, _vars, context, ref) => {
               // Rollback on error
               if (context?.previous) ref.set(listProvider, context.previous);
             },
