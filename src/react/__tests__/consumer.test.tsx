@@ -5,7 +5,7 @@ import { stateProvider } from '../../core/provider';
 import { Consumer } from '../consumer';
 import { RiverScope } from '../scope';
 
-const counterProvider = stateProvider(() => 0);
+const counterProvider = stateProvider(() => 0, { name: 'test_stateProvider_counter' });
 
 describe('Consumer Component', () => {
   it('should render children using render-prop', () => {

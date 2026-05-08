@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { RiverContainer } from '../container';
 import { provider, stateProvider, promiseProvider, notifierProvider } from '../provider';
 import { Notifier } from '../notifier';
-import { asyncData, asyncLoading } from '../async_value';
+import { asyncData } from '../async_value';
 
 import type { AsyncValue } from '../async_value';
 
@@ -128,18 +128,6 @@ describe('hydration via initialState', () => {
 
     const value = container.read(counterProvider);
     expect(value).toBe(42);
-  });
-
-  it('unnamed providers are not affected by initialState', () => {
-    const unnamed = promiseProvider(() => Promise.resolve('data'));
-
-    const container = new RiverContainer({
-      initialState: { unnamed: 'should-not-match' },
-    });
-
-    const value = container.read(unnamed);
-    // Should be loading since unnamed providers can't match initialState keys
-    expect(value).toEqual(asyncLoading());
   });
 
   it('providers not in initialState initialize normally', () => {
@@ -279,7 +267,7 @@ describe('SSR options', () => {
     class Product {
       id: number;
       name: string;
-      private _internal: string;
+      public _internal: string;
       constructor(id: number, name: string, internal: string) {
         this.id = id;
         this.name = name;

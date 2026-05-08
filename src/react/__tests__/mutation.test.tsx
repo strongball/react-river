@@ -4,7 +4,7 @@ import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 
 import { stateProvider } from '../../core/provider';
-import { useRiverMutation, useRiverRef, useRiverWatch } from '../hooks';
+import { useRiverMutation, useRiverWatch } from '../hooks';
 import { RiverScope } from '../scope';
 
 const wrapper = ({ children }: { children: React.ReactNode }) => <RiverScope>{children}</RiverScope>;
@@ -154,7 +154,7 @@ describe('useRiverMutation', () => {
   });
 
   it('should support optimistic update & rollback via onMutate context', async () => {
-    const listProvider = stateProvider(() => ['a', 'b', 'c']);
+    const listProvider = stateProvider(() => ['a', 'b', 'c'], { name: 'test_stateProvider_list' });
     const error = new Error('server error');
 
     const { result } = renderHook(
@@ -243,7 +243,7 @@ describe('useRiverMutation', () => {
   });
 
   it('should access providers via ref inside mutation fn', async () => {
-    const nameProvider = stateProvider(() => 'River');
+    const nameProvider = stateProvider(() => 'River', { name: 'test_stateProvider_name' });
 
     const { result } = renderHook(
       () =>
