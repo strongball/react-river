@@ -99,6 +99,18 @@ export interface RiverContainerOptions {
   observers?: RiverObserver[];
   /** Default auto-dispose and cache-time policy for providers in this scope. */
   cachePolicy?: RiverCachePolicy;
+  /**
+   * Pre-computed state from server-side rendering (SSR).
+   * Keys are provider `name` strings; values are the serialized state.
+   *
+   * For async providers (`promiseProvider`, `observableProvider`, `asyncNotifierProvider`),
+   * the hydrated value is wrapped in `asyncData()` as the initial state instead of
+   * `asyncLoading()`, avoiding a loading flash. The client-side factory still executes
+   * and will update the value when fresh data arrives.
+   *
+   * Only providers with a `name` option can be hydrated.
+   */
+  initialState?: Record<string, unknown>;
 }
 
 // ── Container Callbacks (for extracted modules) ────────────────

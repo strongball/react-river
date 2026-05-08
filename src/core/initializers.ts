@@ -71,8 +71,11 @@ export function initPromiseProvider(
   ref: Ref,
   state: ProviderState,
   override?: ProviderOverride,
+  hydratedValue?: unknown,
 ): void {
-  state.value = asyncLoading();
+  // Use hydrated value (wrapped in asyncData) instead of asyncLoading when available.
+  // The client-side factory still executes and will update the value when fresh data arrives.
+  state.value = hydratedValue !== undefined ? asyncData(hydratedValue) : asyncLoading();
 
   const abortController = new AbortController();
   state.abortController = abortController;
@@ -100,8 +103,10 @@ export function initObservableProvider(
   ref: Ref,
   state: ProviderState,
   override?: ProviderOverride,
+  hydratedValue?: unknown,
 ): void {
-  state.value = asyncLoading();
+  // Use hydrated value (wrapped in asyncData) instead of asyncLoading when available.
+  state.value = hydratedValue !== undefined ? asyncData(hydratedValue) : asyncLoading();
 
   const abortController = new AbortController();
   state.abortController = abortController;
@@ -151,6 +156,7 @@ export function initNotifierProvider(
   ref: Ref,
   state: ProviderState,
   override?: ProviderOverride,
+  hydratedValue?: unknown,
 ): void {
   if (override) {
     state.value = override.create(ref);
@@ -168,8 +174,11 @@ export function initNotifierProvider(
   };
 
   const initialValue = notifier.build();
-  notifier._state = initialValue;
-  state.value = initialValue;
+  // Use hydrated value as the initial state if available, otherwise use build() result.
+  // The notifier instance is still created so client-side mutations work.
+  const effectiveValue = hydratedValue !== undefined ? hydratedValue : initialValue;
+  notifier._state = effectiveValue;
+  state.value = effectiveValue;
   state.notifierInstance = notifier;
 }
 
@@ -181,8 +190,10 @@ export function initAsyncNotifierProvider(
   ref: Ref,
   state: ProviderState,
   override?: ProviderOverride,
+  hydratedValue?: unknown,
 ): void {
-  state.value = asyncLoading();
+  // Use hydrated value (wrapped in asyncData) instead of asyncLoading when available.
+  state.value = hydratedValue !== undefined ? asyncData(hydratedValue) : asyncLoading();
 
   const abortController = new AbortController();
   state.abortController = abortController;

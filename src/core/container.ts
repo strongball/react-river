@@ -47,6 +47,9 @@ export class RiverContainer {
   private observers: RiverObserver[];
   public disposed = false;
 
+  /** SSR hydration state: provider name → pre-computed value. */
+  private readonly initialState: Record<string, unknown> | undefined;
+
   /** Default auto-dispose and cache-time policy for providers in this scope. */
   private readonly cachePolicy: Required<RiverCachePolicy>;
 
@@ -59,11 +62,13 @@ export class RiverContainer {
       overrides?: ProviderOverride[];
       observers?: RiverObserver[];
       cachePolicy?: RiverCachePolicy;
+      initialState?: Record<string, unknown>;
     } = {},
   ) {
     this.parent = options.parent;
     this.observers = options.observers ?? [];
     this.cachePolicy = { autoDispose: true, cacheTime: 60000, ...options.cachePolicy };
+    this.initialState = options.initialState;
 
     if (options.overrides) {
       for (const override of options.overrides) {
@@ -207,6 +212,47 @@ export class RiverContainer {
     return snapshots;
   }
 
+  /**
+   * Export the current state of all **named** providers as a serializable object.
+   * Use this on the server after rendering to produce the hydration payload.
+   *
+   * For async providers, if the value is an `AsyncData`, the inner `data` is exported.
+   * Loading / error states are omitted.
+   *
+   * @example
+   * ```ts
+   * const container = new RiverContainer();
+   * // ... render on server, providers get initialized ...
+   * const state = container.dehydrate();
+   * // => { 'userProfile': { id: 1, name: 'John' }, 'themeMode': 'dark' }
+   * ```
+   */
+  dehydrate(): Record<string, unknown> {
+    const result: Record<string, unknown> = {};
+
+    for (const [id, state] of this.states) {
+      if (!state.initialized) continue;
+
+      const provider = this.providerMap.get(id);
+      if (!provider?.name) continue;
+
+      const value = state.value;
+
+      // For async providers, only export resolved data values
+      if (value && typeof value === 'object' && 'status' in value) {
+        const asyncVal = value as import('./async_value').AsyncValue<unknown>;
+        if (asyncVal.status === 'data') {
+          result[provider.name] = (asyncVal as import('./async_value').AsyncData<unknown>).data;
+        }
+        // Skip loading / error states — nothing useful to hydrate
+      } else {
+        result[provider.name] = value;
+      }
+    }
+
+    return result;
+  }
+
   // ── Listener management ──────────────────────────────────────
 
   private addListener<TCallback>(
@@ -302,6 +348,9 @@ export class RiverContainer {
 
     const ref = createRef(this.cb, provider.id);
 
+    // Resolve hydrated value from SSR initialState (only for named providers)
+    const hydratedValue = provider.name && this.initialState ? this.initialState[provider.name] : undefined;
+
     try {
       switch (provider.kind) {
         case 'provider':
@@ -311,16 +360,16 @@ export class RiverContainer {
           initStateProvider(this.cb, provider as StateProvider<unknown>, ref, state, override);
           break;
         case 'promiseProvider':
-          initPromiseProvider(this.cb, provider as PromiseProvider<unknown>, ref, state, override);
+          initPromiseProvider(this.cb, provider as PromiseProvider<unknown>, ref, state, override, hydratedValue);
           break;
         case 'observableProvider':
-          initObservableProvider(this.cb, provider as ObservableProvider<unknown>, ref, state, override);
+          initObservableProvider(this.cb, provider as ObservableProvider<unknown>, ref, state, override, hydratedValue);
           break;
         case 'notifierProvider':
-          initNotifierProvider(this.cb, provider, ref, state, override);
+          initNotifierProvider(this.cb, provider, ref, state, override, hydratedValue);
           break;
         case 'asyncNotifierProvider':
-          initAsyncNotifierProvider(this.cb, provider, ref, state, override);
+          initAsyncNotifierProvider(this.cb, provider, ref, state, override, hydratedValue);
           break;
         case 'notifierAccessor':
           initNotifierAccessor(this.cb, provider as unknown as NotifierAccessor<unknown>, state);

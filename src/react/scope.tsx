@@ -47,6 +47,19 @@ export interface RiverScopeProps {
    * ```
    */
   cachePolicy?: RiverCachePolicy;
+  /**
+   * Pre-computed state from server-side rendering (SSR).
+   * Pass the output of `container.dehydrate()` from the server to hydrate
+   * the client container with initial values, avoiding loading flashes.
+   *
+   * @example
+   * ```tsx
+   * <RiverScope initialState={window.__RIVER_STATE__}>
+   *   <App />
+   * </RiverScope>
+   * ```
+   */
+  initialState?: Record<string, unknown>;
 }
 /**
  * Root state container for React River.
@@ -60,7 +73,7 @@ export interface RiverScopeProps {
  * </RiverScope>
  * ```
  */
-export function RiverScope({ children, overrides, observers, cachePolicy }: RiverScopeProps) {
+export function RiverScope({ children, overrides, observers, cachePolicy, initialState }: RiverScopeProps) {
   const parentContainer = useContext(RiverScopeContext);
 
   const [container] = useState(
@@ -70,6 +83,7 @@ export function RiverScope({ children, overrides, observers, cachePolicy }: Rive
         overrides,
         observers,
         cachePolicy,
+        initialState,
       }),
   );
 
