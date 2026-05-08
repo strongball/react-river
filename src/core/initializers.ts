@@ -25,14 +25,15 @@ import type {
 
 export function initSimpleProvider(
   _cb: ContainerCallbacks,
-  provider: ProviderBase,
+  provider: ProviderBase<any>,
   ref: Ref,
   state: ProviderState,
   override?: ProviderOverride,
+  hydratedValue?: unknown,
 ): void {
-  const p = provider as unknown as { _create: (ref: Ref) => unknown };
+  const p = provider as any;
   const createFn = override ? override.create : p._create;
-  state.value = createFn(ref);
+  state.value = hydratedValue !== undefined ? hydratedValue : createFn(ref);
 }
 
 // ── State Provider ─────────────────────────────────────────────
@@ -43,9 +44,11 @@ export function initStateProvider(
   ref: Ref,
   state: ProviderState,
   override?: ProviderOverride,
+  hydratedValue?: unknown,
 ): void {
   const createFn = override ? override.create : provider._create;
-  state.value = createFn(ref);
+  // Use hydrated value if available, otherwise run the factory
+  state.value = hydratedValue !== undefined ? hydratedValue : createFn(ref);
 
   // Create StateController
   const controller: StateController<unknown> = {
@@ -152,7 +155,7 @@ export function initObservableProvider(
 
 export function initNotifierProvider(
   cb: ContainerCallbacks,
-  provider: ProviderBase,
+  provider: ProviderBase<any>,
   ref: Ref,
   state: ProviderState,
   override?: ProviderOverride,
@@ -186,7 +189,7 @@ export function initNotifierProvider(
 
 export function initAsyncNotifierProvider(
   cb: ContainerCallbacks,
-  provider: ProviderBase,
+  provider: ProviderBase<any>,
   ref: Ref,
   state: ProviderState,
   override?: ProviderOverride,

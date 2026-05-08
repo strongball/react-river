@@ -23,8 +23,8 @@ export type ProviderKind =
 
 // ── Provider Options ───────────────────────────────────────────
 
-export interface ProviderOptions {
-  /** Human-readable name for debugging & DevTools */
+export interface ProviderOptions<T = any> {
+  /** Human-readable name for debugging & DevTools. Required for SSR hydration support. */
   name?: string;
   /**
    * If true, provider is disposed when all listeners are removed.
@@ -43,6 +43,34 @@ export interface ProviderOptions {
    * If false (default), each scope creates its own isolated instance.
    */
   global?: boolean;
+  /**
+   * Whether this provider participates in SSR dehydration/hydration.
+   * - `true` (default): State is exported by `dehydrate()` and can be hydrated from `initialState`.
+   * - `false`: State is excluded from SSR entirely.
+   */
+  ssr?: boolean;
+  /**
+   * Custom serialization function for SSR dehydration.
+   * Transforms the provider's state value into a JSON-safe representation.
+   * When provided, the serializability check is skipped (you are responsible for producing safe output).
+   *
+   * @example
+   * ```ts
+   * toJSON: (user: User) => ({ id: user.id, name: user.name })
+   * ```
+   */
+  toJSON?: (value: T) => unknown;
+  /**
+   * Custom deserialization function for SSR hydration.
+   * Transforms the serialized JSON representation back into the provider's state type.
+   * Called on the client side when hydrating from `initialState`.
+   *
+   * @example
+   * ```ts
+   * fromJSON: (json) => new User(json.id, json.name)
+   * ```
+   */
+  fromJSON?: (json: unknown) => T;
 }
 
 // ── Ref (used inside provider create functions) ────────────────
@@ -74,7 +102,7 @@ export interface RiverRef {
   /** Read a provider's current value once. */
   read<T>(provider: ProviderBase<T>): T;
   /** Force a provider to re-initialize. */
-  invalidate(provider: ProviderBase): void;
+  invalidate(provider: ProviderBase<any>): void;
   /** Invalidate and immediately return the new value. */
   refresh<T>(provider: ProviderBase<T>): T;
   /** Set a StateProvider's value directly. */
@@ -89,12 +117,12 @@ export interface ProviderBase<T = unknown> {
   readonly id: symbol;
   readonly kind: ProviderKind;
   readonly name: string | undefined;
-  readonly options: ProviderOptions;
+  readonly options: ProviderOptions<T>;
   readonly __phantom?: T;
 }
 
 /** Get a human-readable label for a provider (for DevTools / debugging). */
-export function getProviderLabel(provider: ProviderBase): string {
+export function getProviderLabel(provider: ProviderBase<any>): string {
   return provider.name ?? provider.id.description ?? 'unknown';
 }
 

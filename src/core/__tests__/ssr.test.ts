@@ -237,3 +237,188 @@ describe('familyProvider SSR', () => {
     expect(userValue).toEqual(asyncData({ id: 456, name: 'Hydrated User' }));
   });
 });
+
+// ── SSR Options (ssr flag, toJSON, fromJSON) ───────────────────
+
+describe('SSR options', () => {
+  it('ssr: false excludes provider from dehydration', () => {
+    const secretProvider = stateProvider(() => 'secret-token', { name: 'secret', ssr: false });
+    const publicProvider = stateProvider(() => 'public', { name: 'public' });
+    const container = new RiverContainer();
+
+    container.read(secretProvider);
+    container.read(publicProvider);
+
+    const state = container.dehydrate();
+    expect(state).toEqual({ public: 'public' });
+    expect(state).not.toHaveProperty('secret');
+  });
+
+  it('default behavior: named providers participate in SSR (ssr defaults to true)', () => {
+    const themeProvider = stateProvider(() => 'dark', { name: 'theme' });
+    const container = new RiverContainer();
+    container.read(themeProvider);
+
+    const state = container.dehydrate();
+    expect(state).toEqual({ theme: 'dark' });
+  });
+
+  it('non-serializable values are still skipped with warning even without explicit ssr flag', () => {
+    class User {
+      name: string;
+      constructor(name: string) {
+        this.name = name;
+      }
+      greet() { return `Hi, ${this.name}`; }
+    }
+
+    const userProvider = stateProvider(() => new User('John'), { name: 'user' });
+    const container = new RiverContainer();
+    container.read(userProvider);
+
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const state = container.dehydrate();
+
+    // Non-serializable → skipped from output
+    expect(state).not.toHaveProperty('user');
+    // Warning is issued in dev mode
+    expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
+  it('toJSON transforms the exported value', () => {
+    class Product {
+      id: number;
+      name: string;
+      private _internal: string;
+      constructor(id: number, name: string, internal: string) {
+        this.id = id;
+        this.name = name;
+        this._internal = internal;
+      }
+    }
+
+    const productProvider = stateProvider(
+      () => new Product(1, 'Widget', 'secret'),
+      {
+        name: 'product',
+        toJSON: (product: Product) => ({ id: product.id, name: product.name }),
+      },
+    );
+    const container = new RiverContainer();
+    container.read(productProvider);
+
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const state = container.dehydrate();
+
+    expect(state).toEqual({ product: { id: 1, name: 'Widget' } });
+    // toJSON output is serializable, so no warning
+    expect(warnSpy).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
+  it('toJSON works with async providers (transforms unwrapped data)', async () => {
+    const userProvider = promiseProvider(
+      () => Promise.resolve({ id: 1, name: 'John', password: 'secret' }),
+      {
+        name: 'user',
+        toJSON: (data: any) => ({ id: data.id, name: data.name }),
+      },
+    );
+    const container = new RiverContainer();
+    container.read(userProvider);
+    await new Promise((r) => setTimeout(r, 10));
+
+    const state = container.dehydrate();
+    expect(state).toEqual({ user: { id: 1, name: 'John' } });
+  });
+
+  it('fromJSON transforms the hydrated value', () => {
+    class User {
+      id: number;
+      name: string;
+      constructor(id: number, name: string) {
+        this.id = id;
+        this.name = name;
+      }
+      greet() { return `Hi, ${this.name}`; }
+    }
+
+    const userProvider = stateProvider(
+      () => new User(0, 'default'),
+      {
+        name: 'user',
+        fromJSON: (json: any) => new User(json.id, json.name),
+      },
+    );
+
+    const container = new RiverContainer({
+      initialState: { user: { id: 1, name: 'Hydrated' } },
+    });
+
+    const value = container.read(userProvider);
+    expect(value).toBeInstanceOf(User);
+    expect(value.greet()).toBe('Hi, Hydrated');
+  });
+
+  it('fromJSON works with async providers', () => {
+    class UserData {
+      id: number;
+      name: string;
+      constructor(id: number, name: string) {
+        this.id = id;
+        this.name = name;
+      }
+      display() { return `${this.id}: ${this.name}`; }
+    }
+
+    const userProvider = promiseProvider(
+      () => Promise.resolve(new UserData(2, 'Fresh')),
+      {
+        name: 'user',
+        fromJSON: (json: any) => new UserData(json.id, json.name),
+      },
+    );
+
+    const container = new RiverContainer({
+      initialState: { user: { id: 1, name: 'Hydrated' } },
+    });
+
+    const value = container.read(userProvider) as AsyncValue<UserData>;
+    expect(value.status).toBe('data');
+    expect(value.data).toBeInstanceOf(UserData);
+    expect(value.data!.display()).toBe('1: Hydrated');
+  });
+
+  it('toJSON + fromJSON round-trip', async () => {
+    class Config {
+      theme: string;
+      locale: string;
+      constructor(theme: string, locale: string) {
+        this.theme = theme;
+        this.locale = locale;
+      }
+      label() { return `${this.theme}/${this.locale}`; }
+    }
+
+    const options = {
+      name: 'config',
+      toJSON: (c: Config) => ({ theme: c.theme, locale: c.locale }),
+      fromJSON: (json: any) => new Config(json.theme, json.locale),
+    };
+
+    // Server
+    const serverContainer = new RiverContainer();
+    const configProvider = stateProvider(() => new Config('dark', 'en'), options);
+    serverContainer.read(configProvider);
+
+    const dehydrated = serverContainer.dehydrate();
+    expect(dehydrated).toEqual({ config: { theme: 'dark', locale: 'en' } });
+
+    // Client
+    const clientContainer = new RiverContainer({ initialState: dehydrated });
+    const value = clientContainer.read(configProvider);
+    expect(value).toBeInstanceOf(Config);
+    expect(value.label()).toBe('dark/en');
+  });
+});

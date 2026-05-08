@@ -19,7 +19,7 @@ export interface ProviderState {
   valueListeners: Set<ListenerCallback<unknown>>;
 
   /** Providers this one depends on (via ref.watch) */
-  dependencies: Set<ProviderBase>;
+  dependencies: Set<ProviderBase<any>>;
   /** Providers that depend on this one */
   dependents: Set<symbol>;
   /** Selectors used by dependents. A value of null means unconditional dependency. */
@@ -124,15 +124,15 @@ export interface ContainerCallbacks {
   updateValue(providerId: symbol, newValue: unknown): void;
   notifyObservers(
     event: 'create' | 'update' | 'dispose' | 'error',
-    provider: ProviderBase,
+    provider: ProviderBase<any>,
     ...args: unknown[]
   ): void;
   getState(id: symbol): ProviderState | undefined;
-  ensureInitialized(provider: ProviderBase): unknown;
+  ensureInitialized(provider: ProviderBase<any>): unknown;
   listen<T>(provider: ProviderBase<T>, callback: ListenerCallback<T>): Unsubscribe;
   read<T>(provider: ProviderBase<T>): T;
-  invalidate(provider: ProviderBase): void;
-  providerMap: Map<symbol, ProviderBase>;
+  invalidate(provider: ProviderBase<any>): void;
+  providerMap: Map<symbol, ProviderBase<any>>;
 }
 
 // ── Factory ────────────────────────────────────────────────────

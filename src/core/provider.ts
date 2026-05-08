@@ -38,7 +38,7 @@ function nextId(name?: string): symbol {
 
 function createNotifierAccessor<N>(
   parentId: symbol,
-  options: ProviderOptions,
+  options: ProviderOptions<any>,
 ): NotifierAccessor<N> {
   return {
     id: Symbol(`${options.name ?? parentId.description}.notifier`),
@@ -52,7 +52,7 @@ function createNotifierAccessor<N>(
 function createPromiseAccessor<T>(
   parentId: symbol,
   parentProvider: ProviderBase<AsyncValue<T>>,
-  options: ProviderOptions,
+  options: ProviderOptions<T>,
   fallbackLabel: string,
 ): PromiseAccessor<T> {
   return {
@@ -67,7 +67,7 @@ function createPromiseAccessor<T>(
 
 // ── provider() — Read-only computed value ──────────────────────
 
-export function provider<T>(create: (ref: Ref) => T, options: ProviderOptions = {}): Provider<T> {
+export function provider<T>(create: (ref: Ref) => T, options: ProviderOptions<T> = {}): Provider<T> {
   return {
     id: nextId(options.name),
     kind: 'provider',
@@ -79,7 +79,7 @@ export function provider<T>(create: (ref: Ref) => T, options: ProviderOptions = 
 
 // ── stateProvider() — Simple mutable state ─────────────────────
 
-export function stateProvider<T>(create: (ref: Ref) => T, options: ProviderOptions = {}): StateProvider<T> {
+export function stateProvider<T>(create: (ref: Ref) => T, options: ProviderOptions<T> = {}): StateProvider<T> {
   const id = nextId(options.name);
 
   const notifier = createNotifierAccessor<StateController<T>>(id, options);
@@ -100,7 +100,7 @@ export function stateProvider<T>(create: (ref: Ref) => T, options: ProviderOptio
 
 export function promiseProvider<T>(
   create: (ref: Ref) => Promise<T>,
-  options: ProviderOptions = {},
+  options: ProviderOptions<T> = {},
 ): PromiseProvider<T> {
   const id = nextId(options.name);
 
@@ -120,7 +120,7 @@ export function promiseProvider<T>(
 
 export function observableProvider<T>(
   create: (ref: Ref) => ObservableLike<T> | Promise<ObservableLike<T>>,
-  options: ProviderOptions = {},
+  options: ProviderOptions<T> = {},
 ): ObservableProvider<T> {
   const id = nextId(options.name);
 
@@ -140,7 +140,7 @@ export function observableProvider<T>(
 
 export function notifierProvider<N extends Notifier<any>>(
   createNotifier: () => N,
-  options: ProviderOptions = {},
+  options: ProviderOptions<N extends Notifier<infer T> ? T : unknown> = {},
 ): NotifierProvider<N, N extends Notifier<infer T> ? T : unknown> {
   const id = nextId(options.name);
 
@@ -162,7 +162,7 @@ export function notifierProvider<N extends Notifier<any>>(
 
 export function asyncNotifierProvider<N extends AsyncNotifier<any>>(
   createNotifier: () => N,
-  options: ProviderOptions = {},
+  options: ProviderOptions<N extends AsyncNotifier<infer T> ? T : unknown> = {},
 ): AsyncNotifierProvider<N, N extends AsyncNotifier<infer T> ? T : unknown> {
   const id = nextId(options.name);
 
