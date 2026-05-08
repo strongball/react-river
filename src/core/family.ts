@@ -76,12 +76,12 @@ function createFamily<P, Arg>(factory: (arg: Arg, argKey: string) => P): Provide
  */
 export function providerFamily<T, Arg>(
   create: (ref: Ref, arg: Arg) => T,
-  options: ProviderOptions<T> = {},
+  options: ProviderOptions<T>,
 ): ProviderFamily<Provider<T>, Arg> {
   return createFamily((arg, key) =>
     provider((ref) => create(ref, arg), {
       ...options,
-      name: options.name ? `${options.name}(${key})` : undefined,
+      name: `${options.name}(${key})`,
     }),
   );
 }
@@ -91,12 +91,12 @@ export function providerFamily<T, Arg>(
  */
 export function stateProviderFamily<T, Arg>(
   create: (ref: Ref, arg: Arg) => T,
-  options: ProviderOptions<T> = {},
+  options: ProviderOptions<T>,
 ): ProviderFamily<StateProvider<T>, Arg> {
   return createFamily((arg, key) =>
     stateProvider((ref) => create(ref, arg), {
       ...options,
-      name: options.name ? `${options.name}(${key})` : undefined,
+      name: `${options.name}(${key})`,
     }),
   );
 }
@@ -113,12 +113,12 @@ export function stateProviderFamily<T, Arg>(
  */
 export function promiseProviderFamily<T, Arg>(
   create: (ref: Ref, arg: Arg) => Promise<T>,
-  options: ProviderOptions<T> = {},
+  options: ProviderOptions<T>,
 ): ProviderFamily<PromiseProvider<T>, Arg> {
   return createFamily((arg, key) =>
     promiseProvider((ref) => create(ref, arg), {
       ...options,
-      name: options.name ? `${options.name}(${key})` : undefined,
+      name: `${options.name}(${key})`,
     }),
   );
 }
@@ -128,12 +128,12 @@ export function promiseProviderFamily<T, Arg>(
  */
 export function observableProviderFamily<T, Arg>(
   create: (ref: Ref, arg: Arg) => ObservableLike<T> | Promise<ObservableLike<T>>,
-  options: ProviderOptions<T> = {},
+  options: ProviderOptions<T>,
 ): ProviderFamily<ObservableProvider<T>, Arg> {
   return createFamily((arg, key) =>
     observableProvider((ref) => create(ref, arg), {
       ...options,
-      name: options.name ? `${options.name}(${key})` : undefined,
+      name: `${options.name}(${key})`,
     }),
   );
 }
@@ -143,12 +143,12 @@ export function observableProviderFamily<T, Arg>(
  */
 export function notifierProviderFamily<N extends Notifier<any>, Arg>(
   createNotifier: (arg: Arg) => N,
-  options: ProviderOptions<N extends Notifier<infer T> ? T : unknown> = {},
+  options: ProviderOptions<N extends Notifier<infer T> ? T : unknown>,
 ): ProviderFamily<NotifierProvider<N, N extends Notifier<infer T> ? T : unknown>, Arg> {
   return createFamily((arg, key) =>
     notifierProvider(() => createNotifier(arg), {
       ...options,
-      name: options.name ? `${options.name}(${key})` : undefined,
+      name: `${options.name}(${key})`,
     }),
   );
 }
@@ -158,12 +158,12 @@ export function notifierProviderFamily<N extends Notifier<any>, Arg>(
  */
 export function asyncNotifierProviderFamily<N extends AsyncNotifier<any>, Arg>(
   createNotifier: (arg: Arg) => N,
-  options: ProviderOptions<N extends AsyncNotifier<infer T> ? T : unknown> = {},
+  options: ProviderOptions<N extends AsyncNotifier<infer T> ? T : unknown>,
 ): ProviderFamily<AsyncNotifierProvider<N, N extends AsyncNotifier<infer T> ? T : unknown>, Arg> {
   return createFamily((arg, key) =>
     asyncNotifierProvider(() => createNotifier(arg), {
       ...options,
-      name: options.name ? `${options.name}(${key})` : undefined,
+      name: `${options.name}(${key})`,
     }),
   );
 }

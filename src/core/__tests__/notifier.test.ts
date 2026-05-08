@@ -15,7 +15,7 @@ describe('Notifier', () => {
       }
     }
 
-    const p = notifierProvider(() => new CounterNotifier());
+    const p = notifierProvider(() => new CounterNotifier(), { name: 'test_notifierProvider_480' });
     const container = new RiverContainer();
 
     expect(container.read(p)).toBe(0);
@@ -33,7 +33,7 @@ describe('Notifier', () => {
         return 'a';
       }
     }
-    const p = notifierProvider(() => new TextNotifier());
+    const p = notifierProvider(() => new TextNotifier(), { name: 'test_notifierProvider_982' });
     const container = new RiverContainer();
     const notifier = container.read(p.notifier);
 
@@ -43,7 +43,7 @@ describe('Notifier', () => {
 
   it('Notifier listening to B receives updates, builds once, and B disposes when A disposes', async () => {
     let aBuildCount = 0;
-    const bProvider = stateProvider((ref) => 0, { autoDispose: true, cacheTime: 0 }); // initial value 0
+    const bProvider = stateProvider((ref) => 0, { name: 'b', autoDispose: true, cacheTime: 0 }); // initial value 0
     let aNotif: ANotifier;
 
     class ANotifier extends Notifier<number> {
@@ -51,14 +51,14 @@ describe('Notifier', () => {
         aBuildCount++;
         // oxlint-disable-next-line typescript/no-this-alias
         aNotif = this;
-        this.ref.listen(bProvider, (next) => {
+        this.ref.listen(bProvider, (next: number) => {
           this.state = next;
         });
         return 0; // initial state
       }
     }
 
-    const aProvider = notifierProvider(() => new ANotifier(), { autoDispose: true, cacheTime: 0 });
+    const aProvider = notifierProvider(() => new ANotifier(), { name: 'a', autoDispose: true, cacheTime: 0 });
     const container = new RiverContainer();
 
     // Subscribe to A to initialize and keep alive (this starts listening to B)
@@ -102,7 +102,7 @@ describe('AsyncNotifier', () => {
       }
     }
 
-    const p = asyncNotifierProvider(() => new DelayedNotifier());
+    const p = asyncNotifierProvider(() => new DelayedNotifier(), { name: 'test_asyncNotifierProvider_3196' });
     const container = new RiverContainer();
 
     // Initial read returns loading
@@ -126,7 +126,7 @@ describe('AsyncNotifier', () => {
       }
     }
 
-    const p = asyncNotifierProvider(() => new ManualAsyncNotifier());
+    const p = asyncNotifierProvider(() => new ManualAsyncNotifier(), { name: 'test_asyncNotifierProvider_4017' });
     const container = new RiverContainer();
     const notifier = container.read(p.notifier);
 
@@ -143,7 +143,7 @@ describe('AsyncNotifier', () => {
         throw 'notif-fail';
       }
     }
-    const p = asyncNotifierProvider(() => new FailNotifier());
+    const p = asyncNotifierProvider(() => new FailNotifier(), { name: 'test_asyncNotifierProvider_4584' });
     const container = new RiverContainer();
 
     await expect(container.read(p.promise)).rejects.toBe('notif-fail');
@@ -161,7 +161,7 @@ describe('AsyncNotifier', () => {
         this.onDispose(() => {});
       }
     }
-    const p = notifierProvider(() => new MixedNotif());
+    const p = notifierProvider(() => new MixedNotif(), { name: 'test_notifierProvider_5042' });
     const container = new RiverContainer();
     container.read(p.notifier).testAccessors();
   });
@@ -180,7 +180,7 @@ describe('AsyncNotifier', () => {
         });
       }
     }
-    const p = asyncNotifierProvider(() => new MixedAsyncNotif());
+    const p = asyncNotifierProvider(() => new MixedAsyncNotif(), { name: 'test_asyncNotifierProvider_5773' });
     const container = new RiverContainer();
     await container.read(p.promise);
     const notifier = container.read(p.notifier);

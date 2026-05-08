@@ -36,7 +36,7 @@ describe('Providers Factories', () => {
       override build() { return 0; }
       updateState(val: number) { this.state = val; }
     }
-    const p = notifierProvider(() => new MyNotifier());
+    const p = notifierProvider(() => new MyNotifier(), { name: 'test_notifierProvider_1598' });
     expect(p.kind).toBe('notifierProvider');
     expect(p.notifier.kind).toBe('notifierAccessor');
   });
@@ -45,7 +45,7 @@ describe('Providers Factories', () => {
     class MyAsyncNotifier extends AsyncNotifier<number> {
       async build() { return 0; }
     }
-    const p = asyncNotifierProvider(() => new MyAsyncNotifier());
+    const p = asyncNotifierProvider(() => new MyAsyncNotifier(), { name: 'test_asyncNotifierProvider_1961' });
     expect(p.kind).toBe('asyncNotifierProvider');
     expect(p.promise.kind).toBe('promiseAccessor');
   });

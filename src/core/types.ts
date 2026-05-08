@@ -24,8 +24,8 @@ export type ProviderKind =
 // ── Provider Options ───────────────────────────────────────────
 
 export interface ProviderOptions<T = any> {
-  /** Human-readable name for debugging & DevTools. Required for SSR hydration support. */
-  name?: string;
+  /** Unique name for debugging, DevTools, and SSR hydration. */
+  name: string;
   /**
    * If true, provider is disposed when all listeners are removed.
    * Default is true.
@@ -113,7 +113,7 @@ export interface RiverRef {
 
 // ── Provider Base ──────────────────────────────────────────────
 
-export interface ProviderBase<T = unknown> {
+export interface ProviderBase<T = any> {
   readonly id: symbol;
   readonly kind: ProviderKind;
   readonly name: string | undefined;
@@ -224,7 +224,7 @@ export interface StateController<T> {
 
 // ── Provider Override (for testing / scoping) ──────────────────
 
-export interface ProviderOverride<T = unknown> {
+export interface ProviderOverride<T = any> {
   readonly original: ProviderBase<T>;
   readonly create: (ref: Ref) => T;
 }

@@ -9,7 +9,7 @@ import { RiverScope, useRiverContainer } from '../scope';
 
 describe('RiverScope', () => {
   it('should provide container to children', () => {
-    const p = stateProvider(() => 'hello');
+    const p = stateProvider(() => 'hello', { name: 'test_stateProvider_387' });
     function Child() {
       const ref = useRiverRef();
       return <div data-testid="val">{ref.read(p)}</div>;

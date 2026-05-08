@@ -25,18 +25,7 @@ describe('dehydrate()', () => {
     expect(state).toEqual({ greeting: 'hello' });
   });
 
-  it('ignores providers without a name', () => {
-    const unnamed = stateProvider(() => 42);
-    const named = stateProvider(() => 'ok', { name: 'named' });
-    const container = new RiverContainer();
-
-    container.read(unnamed);
-    container.read(named);
-    const state = container.dehydrate();
-
-    expect(state).toEqual({ named: 'ok' });
-    expect(Object.keys(state)).toHaveLength(1);
-  });
+  // Removed: ignores providers without a name (names are now mandatory)
 
   it('exports async provider data values (unwrapped)', async () => {
     const userProvider = promiseProvider(() => Promise.resolve({ id: 1, name: 'John' }), {
