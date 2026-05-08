@@ -391,25 +391,71 @@ export class RiverContainer {
     try {
       switch (provider.kind) {
         case 'provider':
-          initSimpleProvider(this.cb, provider, ref, state, override, hydratedValue);
+          initSimpleProvider({
+            cb: this.cb,
+            provider,
+            ref,
+            state,
+            override,
+            hydratedValue,
+          });
           break;
         case 'stateProvider':
-          initStateProvider(this.cb, provider as StateProvider<unknown>, ref, state, override, hydratedValue);
+          initStateProvider({
+            cb: this.cb,
+            provider: provider as StateProvider<unknown>,
+            ref,
+            state,
+            override,
+            hydratedValue,
+          });
           break;
         case 'promiseProvider':
-          initPromiseProvider(this.cb, provider as PromiseProvider<unknown>, ref, state, override, hydratedValue);
+          initPromiseProvider({
+            cb: this.cb,
+            provider: provider as PromiseProvider<unknown>,
+            ref,
+            state,
+            override,
+            hydratedValue,
+          });
           break;
         case 'observableProvider':
-          initObservableProvider(this.cb, provider as ObservableProvider<unknown>, ref, state, override, hydratedValue);
+          initObservableProvider({
+            cb: this.cb,
+            provider: provider as ObservableProvider<unknown>,
+            ref,
+            state,
+            override,
+            hydratedValue,
+          });
           break;
         case 'notifierProvider':
-          initNotifierProvider(this.cb, provider, ref, state, override, hydratedValue);
+          initNotifierProvider({
+            cb: this.cb,
+            provider,
+            ref,
+            state,
+            override,
+            hydratedValue,
+          });
           break;
         case 'asyncNotifierProvider':
-          initAsyncNotifierProvider(this.cb, provider, ref, state, override, hydratedValue);
+          initAsyncNotifierProvider({
+            cb: this.cb,
+            provider,
+            ref,
+            state,
+            override,
+            hydratedValue,
+          });
           break;
         case 'notifierAccessor':
-          initNotifierAccessor(this.cb, provider as unknown as NotifierAccessor<unknown>, state);
+          initNotifierAccessor({
+            cb: this.cb,
+            accessor: provider as unknown as NotifierAccessor<unknown>,
+            state,
+          });
           break;
         // promiseAccessor is handled in ensureInitialized/resolvePromiseAccessor
         // and never reaches initializeProvider.
