@@ -49,7 +49,7 @@ export class RiverContainer {
   public disposed = false;
 
   /** SSR hydration state: provider name → pre-computed value. */
-  private readonly initialState: Record<string, unknown> | undefined;
+  private initialState: Record<string, unknown> | undefined;
 
   /** Default auto-dispose and cache-time policy for providers in this scope. */
   private readonly cachePolicy: Required<RiverCachePolicy>;
@@ -374,8 +374,14 @@ export class RiverContainer {
 
     const ref = createRef(this.cb, provider.id);
 
-    // Resolve hydrated value from SSR initialState (only for named providers)
-    let hydratedValue = provider.name && this.initialState ? this.initialState[provider.name] : undefined;
+    // Resolve hydrated value from SSR initialState (only for named providers).
+    // Once consumed, the key is deleted so re-initialization (refresh/invalidate)
+    // will use the factory instead of the stale hydrated value.
+    let hydratedValue: unknown;
+    if (provider.name && this.initialState && provider.name in this.initialState) {
+      hydratedValue = this.initialState[provider.name];
+      delete this.initialState[provider.name];
+    }
 
     // Apply fromJSON transformation if configured
     if (hydratedValue !== undefined && provider.options.fromJSON) {

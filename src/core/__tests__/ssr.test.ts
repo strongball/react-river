@@ -411,3 +411,138 @@ describe('SSR options', () => {
     expect(value.label()).toBe('dark/en');
   });
 });
+
+// ── initialState stale hydration on refresh/invalidate ─────────
+
+describe('initialState should NOT be re-applied on refresh/invalidate', () => {
+  it('stateProvider: refresh should re-run factory, not reuse initialState', () => {
+    let callCount = 0;
+    const themeProvider = stateProvider(() => {
+      callCount++;
+      return `factory-${callCount}`;
+    }, { name: 'theme' });
+
+    const container = new RiverContainer({
+      initialState: { theme: 'hydrated-dark' },
+    });
+
+    // First read: should use hydrated value
+    expect(container.read(themeProvider)).toBe('hydrated-dark');
+    expect(callCount).toBe(0); // factory was NOT called because hydrated value was used
+
+    // Refresh: should re-run factory, NOT reuse initialState
+    const refreshed = container.refresh(themeProvider);
+    expect(callCount).toBe(1);
+    expect(refreshed).toBe('factory-1');
+    expect(container.read(themeProvider)).toBe('factory-1');
+  });
+
+  it('stateProvider: set then invalidate should re-run factory, not reuse initialState', () => {
+    const themeProvider = stateProvider(() => 'factory-default', { name: 'theme' });
+
+    const container = new RiverContainer({
+      initialState: { theme: 'hydrated-dark' },
+    });
+
+    // Hydrated value
+    expect(container.read(themeProvider)).toBe('hydrated-dark');
+
+    // Set to a new value
+    container.set(themeProvider, 'user-light');
+    expect(container.read(themeProvider)).toBe('user-light');
+
+    // Invalidate: should re-run factory
+    container.invalidate(themeProvider);
+    expect(container.read(themeProvider)).toBe('factory-default');
+  });
+
+  it('provider (read-only): refresh should re-run factory, not reuse initialState', () => {
+    let callCount = 0;
+    const computedProvider = provider(() => {
+      callCount++;
+      return `computed-${callCount}`;
+    }, { name: 'computed' });
+
+    const container = new RiverContainer({
+      initialState: { computed: 'hydrated-42' },
+    });
+
+    expect(container.read(computedProvider)).toBe('hydrated-42');
+    expect(callCount).toBe(0);
+
+    const refreshed = container.refresh(computedProvider);
+    expect(callCount).toBe(1);
+    expect(refreshed).toBe('computed-1');
+  });
+
+  it('promiseProvider: refresh should re-fetch, not reuse initialState', async () => {
+    let callCount = 0;
+    const fetchUser = vi.fn(async () => {
+      callCount++;
+      return { id: callCount, name: `Fresh-${callCount}` };
+    });
+    const userProvider = promiseProvider(fetchUser, { name: 'user' });
+
+    const container = new RiverContainer({
+      initialState: { user: { id: 0, name: 'Hydrated' } },
+    });
+
+    // First read: hydrated value + factory also runs
+    const first = container.read(userProvider) as AsyncValue<{ id: number; name: string }>;
+    expect(first).toEqual(asyncData({ id: 0, name: 'Hydrated' }));
+    expect(fetchUser).toHaveBeenCalledTimes(1);
+
+    await delay(10); // let factory resolve
+    // Now has fresh data from factory
+    expect(container.read(userProvider)).toEqual(asyncData({ id: 1, name: 'Fresh-1' }));
+
+    // Refresh: should re-fetch and start with loading (not hydrated value)
+    container.invalidate(userProvider);
+    await delay(10);
+
+    const afterRefresh = container.read(userProvider) as AsyncValue<{ id: number; name: string }>;
+    expect(afterRefresh).toEqual(asyncData({ id: 2, name: 'Fresh-2' }));
+    expect(fetchUser).toHaveBeenCalledTimes(2);
+  });
+
+  it('notifierProvider: refresh should re-run build(), not reuse initialState', () => {
+    class CounterNotifier extends Notifier<number> {
+      build() {
+        return 0;
+      }
+      increment() {
+        this.state = this.state + 1;
+      }
+    }
+
+    const counterProvider = notifierProvider(() => new CounterNotifier(), { name: 'counter' });
+
+    const container = new RiverContainer({
+      initialState: { counter: 42 },
+    });
+
+    // First read: hydrated
+    expect(container.read(counterProvider)).toBe(42);
+
+    // Refresh: should re-run build() which returns 0, NOT 42 from initialState
+    const refreshed = container.refresh(counterProvider);
+    expect(refreshed).toBe(0);
+  });
+
+  it('dependent provider should get fresh value after upstream refresh with initialState', () => {
+    const baseProvider = stateProvider(() => 10, { name: 'base' });
+    const derivedProvider = provider((ref) => ref.watch(baseProvider) * 2, { name: 'derived' });
+
+    const container = new RiverContainer({
+      initialState: { base: 100 },
+    });
+
+    // Hydrated
+    expect(container.read(derivedProvider)).toBe(200);
+
+    // Refresh base: should use factory value (10), not initialState (100)
+    container.invalidate(baseProvider);
+    expect(container.read(baseProvider)).toBe(10);
+    expect(container.read(derivedProvider)).toBe(20);
+  });
+});
