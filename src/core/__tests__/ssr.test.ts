@@ -198,3 +198,41 @@ describe('SSR round-trip (dehydrate → hydrate)', () => {
     expect(userValue).toEqual(asyncData({ id: 1, name: 'John' }));
   });
 });
+
+// ── Family Providers ───────────────────────────────────────────
+
+describe('familyProvider SSR', () => {
+  it('dehydrates family provider instances with formatted names', async () => {
+    const { promiseProviderFamily } = await import('../family');
+    const userFamily = promiseProviderFamily(
+      (_ref, id: number) => Promise.resolve({ id, name: `User ${id}` }),
+      { name: 'user' },
+    );
+
+    const container = new RiverContainer();
+    container.read(userFamily(123));
+    await delay(10);
+
+    const state = container.dehydrate();
+    expect(state).toEqual({
+      'user(123)': { id: 123, name: 'User 123' },
+    });
+  });
+
+  it('hydrates family provider instances using formatted names', async () => {
+    const { promiseProviderFamily } = await import('../family');
+    const userFamily = promiseProviderFamily(
+      (_ref, id: number) => Promise.resolve({ id, name: `User ${id}` }),
+      { name: 'user' },
+    );
+
+    const container = new RiverContainer({
+      initialState: {
+        'user(456)': { id: 456, name: 'Hydrated User' },
+      },
+    });
+
+    const value = container.read(userFamily(456));
+    expect(value).toEqual(asyncData({ id: 456, name: 'Hydrated User' }));
+  });
+});
