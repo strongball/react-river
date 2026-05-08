@@ -16,6 +16,7 @@ import {
   initNotifierAccessor,
 } from './initializers';
 import { createRef } from './ref_factory';
+import { validateSerializable, isSerializable } from './serialization';
 import {
   getProviderLabel,
   type ListenerCallback,
@@ -237,16 +238,35 @@ export class RiverContainer {
       if (!provider?.name) continue;
 
       const value = state.value;
+      let exportValue: unknown;
+      let isAsync = false;
 
-      // For async providers, only export resolved data values
-      if (value && typeof value === 'object' && 'status' in value) {
+      // Determine if we are dealing with an async provider based on its kind.
+      // This is safer than checking for a 'status' field which might exist in user data.
+      const isAsyncKind =
+        provider.kind === 'promiseProvider' ||
+        provider.kind === 'observableProvider' ||
+        provider.kind === 'asyncNotifierProvider';
+
+      if (isAsyncKind) {
         const asyncVal = value as import('./async_value').AsyncValue<unknown>;
         if (asyncVal.status === 'data') {
-          result[provider.name] = (asyncVal as import('./async_value').AsyncData<unknown>).data;
+          exportValue = (asyncVal as import('./async_value').AsyncData<unknown>).data;
+          isAsync = true;
+        } else {
+          // Skip loading / error states — nothing useful to hydrate
+          continue;
         }
-        // Skip loading / error states — nothing useful to hydrate
       } else {
-        result[provider.name] = value;
+        exportValue = value;
+      }
+
+      // Only export if the value is fully serializable to avoid hydration issues or crashes
+      if (isSerializable(exportValue)) {
+        result[provider.name] = exportValue;
+      } else if (process.env.NODE_ENV !== 'production') {
+        // In development, provide a detailed warning about why it was skipped
+        validateSerializable(exportValue, provider.name, isAsync ? 'data' : '');
       }
     }
 

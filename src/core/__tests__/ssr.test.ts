@@ -232,7 +232,8 @@ describe('familyProvider SSR', () => {
       },
     });
 
-    const value = container.read(userFamily(456));
-    expect(value).toEqual(asyncData({ id: 456, name: 'Hydrated User' }));
+    // User should start with hydrated data (no loading flash)
+    const userValue = container.read(userFamily(456));
+    expect(userValue).toEqual(asyncData({ id: 456, name: 'Hydrated User' }));
   });
 });
