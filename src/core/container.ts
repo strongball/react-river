@@ -16,6 +16,7 @@ import {
   initNotifierAccessor,
 } from './initializers';
 import { createRef } from './ref_factory';
+import { validateSerializable, isSerializable } from './serialization';
 import {
   getProviderLabel,
   type ListenerCallback,
@@ -41,11 +42,14 @@ export type { DevToolsProviderSnapshot, RiverContainerOptions, RiverCachePolicy 
 export class RiverContainer {
   private states = new Map<symbol, ProviderState>();
   private overrideMap = new Map<symbol, ProviderOverride>();
-  providerMap = new Map<symbol, ProviderBase>();
+  providerMap = new Map<symbol, ProviderBase<any>>();
   private initializingStack = new Set<symbol>();
   private parent: RiverContainer | undefined;
   private observers: RiverObserver[];
   public disposed = false;
+
+  /** SSR hydration state: provider name → pre-computed value. */
+  private initialState: Record<string, unknown> | undefined;
 
   /** Default auto-dispose and cache-time policy for providers in this scope. */
   private readonly cachePolicy: Required<RiverCachePolicy>;
@@ -59,11 +63,13 @@ export class RiverContainer {
       overrides?: ProviderOverride[];
       observers?: RiverObserver[];
       cachePolicy?: RiverCachePolicy;
+      initialState?: Record<string, unknown>;
     } = {},
   ) {
     this.parent = options.parent;
     this.observers = options.observers ?? [];
     this.cachePolicy = { autoDispose: true, cacheTime: 60000, ...options.cachePolicy };
+    this.initialState = options.initialState;
 
     if (options.overrides) {
       for (const override of options.overrides) {
@@ -108,7 +114,7 @@ export class RiverContainer {
    * Subscribe to snapshot changes (for useSyncExternalStore).
    * Callback receives no arguments — just a notification.
    */
-  subscribe(provider: ProviderBase, callback: () => void): Unsubscribe {
+  subscribe(provider: ProviderBase<any>, callback: () => void): Unsubscribe {
     return this.addListener(provider, callback, (s) => s.snapshotListeners);
   }
 
@@ -121,7 +127,7 @@ export class RiverContainer {
   }
 
   /** Force a provider to re-initialize. */
-  invalidate(provider: ProviderBase): void {
+  invalidate(provider: ProviderBase<any>): void {
     this.assertNotDisposed();
     const state = this.getState(provider.id);
     if (!state?.initialized) return;
@@ -207,10 +213,76 @@ export class RiverContainer {
     return snapshots;
   }
 
+  /**
+   * Export the current state of all **named** providers as a serializable object.
+   * Use this on the server after rendering to produce the hydration payload.
+   *
+   * For async providers, if the value is an `AsyncData`, the inner `data` is exported.
+   * Loading / error states are omitted.
+   *
+   * @example
+   * ```ts
+   * const container = new RiverContainer();
+   * // ... render on server, providers get initialized ...
+   * const state = container.dehydrate();
+   * // => { 'userProfile': { id: 1, name: 'John' }, 'themeMode': 'dark' }
+   * ```
+   */
+  dehydrate(): Record<string, unknown> {
+    const result: Record<string, unknown> = {};
+
+    for (const [id, state] of this.states) {
+      if (!state.initialized) continue;
+
+      const provider = this.providerMap.get(id);
+      if (!provider?.name) continue;
+
+      const { ssr, toJSON } = provider.options;
+
+      // Explicitly opted out of SSR
+      if (ssr === false) continue;
+
+      const value = state.value;
+      let exportValue: unknown;
+
+      // Determine if we are dealing with an async provider based on its kind.
+      const isAsyncKind =
+        provider.kind === 'promiseProvider' ||
+        provider.kind === 'observableProvider' ||
+        provider.kind === 'asyncNotifierProvider';
+
+      if (isAsyncKind) {
+        const asyncVal = value as import('./async_value').AsyncValue<unknown>;
+        if (asyncVal.status === 'data') {
+          exportValue = (asyncVal as import('./async_value').AsyncData<unknown>).data;
+        } else {
+          // Skip loading / error states — nothing useful to hydrate
+          continue;
+        }
+      } else {
+        exportValue = value;
+      }
+
+      // Apply custom toJSON if provided, then validate the transformed output
+      if (toJSON) {
+        exportValue = toJSON(exportValue);
+      }
+
+      // Validate and export
+      if (isSerializable(exportValue)) {
+        result[provider.name] = exportValue;
+      } else if (process.env.NODE_ENV !== 'production') {
+        validateSerializable(exportValue, provider.name);
+      }
+    }
+
+    return result;
+  }
+
   // ── Listener management ──────────────────────────────────────
 
   private addListener<TCallback>(
-    provider: ProviderBase,
+    provider: ProviderBase<any>,
     callback: TCallback,
     getSet: (state: ProviderState) => Set<TCallback>,
   ): Unsubscribe {
@@ -239,7 +311,7 @@ export class RiverContainer {
 
   // ── Initialization ───────────────────────────────────────────
 
-  private ensureInitialized(provider: ProviderBase): unknown {
+  private ensureInitialized(provider: ProviderBase<any>): unknown {
     // Register provider for reverse lookup (DevTools, dependency graph)
     this.providerMap.set(provider.id, provider);
 
@@ -285,7 +357,7 @@ export class RiverContainer {
     return current;
   }
 
-  private initializeProvider(provider: ProviderBase, override?: ProviderOverride): unknown {
+  private initializeProvider(provider: ProviderBase<any>, override?: ProviderOverride): unknown {
     // Circular dependency detection
     if (this.initializingStack.has(provider.id)) {
       throw new Error(
@@ -302,28 +374,88 @@ export class RiverContainer {
 
     const ref = createRef(this.cb, provider.id);
 
+    // Resolve hydrated value from SSR initialState (only for named providers).
+    // Once consumed, the key is deleted so re-initialization (refresh/invalidate)
+    // will use the factory instead of the stale hydrated value.
+    let hydratedValue: unknown;
+    if (provider.name && this.initialState && provider.name in this.initialState) {
+      hydratedValue = this.initialState[provider.name];
+      delete this.initialState[provider.name];
+    }
+
+    // Apply fromJSON transformation if configured
+    if (hydratedValue !== undefined && provider.options.fromJSON) {
+      hydratedValue = provider.options.fromJSON(hydratedValue);
+    }
+
     try {
       switch (provider.kind) {
         case 'provider':
-          initSimpleProvider(this.cb, provider, ref, state, override);
+          initSimpleProvider({
+            cb: this.cb,
+            provider,
+            ref,
+            state,
+            override,
+            hydratedValue,
+          });
           break;
         case 'stateProvider':
-          initStateProvider(this.cb, provider as StateProvider<unknown>, ref, state, override);
+          initStateProvider({
+            cb: this.cb,
+            provider: provider as StateProvider<unknown>,
+            ref,
+            state,
+            override,
+            hydratedValue,
+          });
           break;
         case 'promiseProvider':
-          initPromiseProvider(this.cb, provider as PromiseProvider<unknown>, ref, state, override);
+          initPromiseProvider({
+            cb: this.cb,
+            provider: provider as PromiseProvider<unknown>,
+            ref,
+            state,
+            override,
+            hydratedValue,
+          });
           break;
         case 'observableProvider':
-          initObservableProvider(this.cb, provider as ObservableProvider<unknown>, ref, state, override);
+          initObservableProvider({
+            cb: this.cb,
+            provider: provider as ObservableProvider<unknown>,
+            ref,
+            state,
+            override,
+            hydratedValue,
+          });
           break;
         case 'notifierProvider':
-          initNotifierProvider(this.cb, provider, ref, state, override);
+          initNotifierProvider({
+            cb: this.cb,
+            provider,
+            ref,
+            state,
+            override,
+            hydratedValue,
+          });
           break;
         case 'asyncNotifierProvider':
-          initAsyncNotifierProvider(this.cb, provider, ref, state, override);
+          initAsyncNotifierProvider({
+            cb: this.cb,
+            provider,
+            ref,
+            state,
+            override,
+            hydratedValue,
+          });
           break;
         case 'notifierAccessor':
-          initNotifierAccessor(this.cb, provider as unknown as NotifierAccessor<unknown>, state);
+          initNotifierAccessor({
+            cb: this.cb,
+            accessor: provider as unknown as NotifierAccessor<unknown>,
+            state,
+          });
           break;
         // promiseAccessor is handled in ensureInitialized/resolvePromiseAccessor
         // and never reaches initializeProvider.
@@ -423,7 +555,7 @@ export class RiverContainer {
 
   // ── Re-initialization ────────────────────────────────────────
 
-  private reinitialize(provider: ProviderBase): void {
+  private reinitialize(provider: ProviderBase<any>): void {
     const state = this.getState(provider.id);
     if (!state?.initialized) return;
 
@@ -466,7 +598,7 @@ export class RiverContainer {
 
   // ── Auto-dispose ─────────────────────────────────────────────
 
-  private checkAutoDispose(provider: ProviderBase): void {
+  private checkAutoDispose(provider: ProviderBase<any>): void {
     const state = this.getState(provider.id);
     if (!state || !state.initialized) return;
 
@@ -493,7 +625,7 @@ export class RiverContainer {
     }
   }
 
-  private disposeProvider(provider: ProviderBase): void {
+  private disposeProvider(provider: ProviderBase<any>): void {
     const state = this.getOwnState(provider.id);
     if (!state || !state.initialized) return;
 
@@ -552,15 +684,15 @@ export class RiverContainer {
 
   // ── Observer notifications ───────────────────────────────────
 
-  private notifyObservers(event: 'create' | 'dispose' | 'error', provider: ProviderBase, ...args: unknown[]): void;
+  private notifyObservers(event: 'create' | 'dispose' | 'error', provider: ProviderBase<any>, ...args: unknown[]): void;
   private notifyObservers(
     event: 'update',
-    provider: ProviderBase,
+    provider: ProviderBase<any>,
     payload: { oldValue: unknown; newValue: unknown },
   ): void;
   private notifyObservers(
     event: 'create' | 'update' | 'dispose' | 'error',
-    provider: ProviderBase,
+    provider: ProviderBase<any>,
     ...args: any[]
   ): void {
     for (const observer of this.observers) {

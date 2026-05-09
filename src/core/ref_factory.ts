@@ -12,7 +12,7 @@ import type { ListenerCallback, PromiseAccessor, ProviderBase, Ref, Unsubscribe 
 // ── Return type for watch helpers ──────────────────────────────
 
 interface WatchResult {
-  trackTarget: ProviderBase;
+  trackTarget: ProviderBase<any>;
   effectiveSelector: ((val: unknown) => unknown) | undefined;
   selectedValue: unknown;
   returnValue: unknown;
@@ -111,7 +111,7 @@ function watchPromiseAccessor(
     trackTarget,
     effectiveSelector: undefined,
     selectedValue: undefined,
-    returnValue: cb.read(accessor as unknown as ProviderBase),
+    returnValue: cb.read(accessor as unknown as ProviderBase<any>),
   };
 }
 
@@ -120,7 +120,7 @@ function watchPromiseAccessor(
 /** Handle ref.watch for regular (non-promiseAccessor) providers. */
 function watchRegularProvider(
   cb: ContainerCallbacks,
-  provider: ProviderBase,
+  provider: ProviderBase<any>,
   select?: (value: unknown) => unknown,
 ): WatchResult {
   const rawValue = cb.ensureInitialized(provider);
@@ -139,7 +139,7 @@ function watchRegularProvider(
 function trackDependency(
   cb: ContainerCallbacks,
   ownerId: symbol,
-  trackTarget: ProviderBase,
+  trackTarget: ProviderBase<any>,
   effectiveSelector: ((val: unknown) => unknown) | undefined,
   selectedValue: unknown,
 ): void {
@@ -181,7 +181,7 @@ function trackDependency(
 function trackListenDependency(
   cb: ContainerCallbacks,
   ownerId: symbol,
-  target: ProviderBase,
+  target: ProviderBase<any>,
 ): void {
   const ownerState = cb.getState(ownerId);
   if (ownerState) {

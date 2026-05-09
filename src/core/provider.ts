@@ -23,13 +23,12 @@ import type { AsyncValue } from './async_value';
 
 // ── Internal ID counter for debugging ──────────────────────────
 
-let providerCount = 0;
-function nextId(name?: string): symbol {
+function nextId(name: string): symbol {
   // Use Symbol.for() for named providers so the same name always yields the
   // same Symbol identity.  This is critical for HMR: when a module re-executes,
   // the provider object is recreated but its Symbol id stays identical, so
   // container overrides (keyed by Symbol) remain valid.
-  return name ? Symbol.for(`river:${name}`) : Symbol(`provider_${++providerCount}`);
+  return Symbol.for(`river:${name}`);
 }
 
 
@@ -38,13 +37,14 @@ function nextId(name?: string): symbol {
 
 function createNotifierAccessor<N>(
   parentId: symbol,
-  options: ProviderOptions,
+  options: ProviderOptions<any>,
 ): NotifierAccessor<N> {
+  const name = `${options.name}.notifier`;
   return {
-    id: Symbol(`${options.name ?? parentId.description}.notifier`),
+    id: Symbol.for(`river:${name}`),
     kind: 'notifierAccessor',
-    name: options.name ? `${options.name}.notifier` : undefined,
-    options,
+    name,
+    options: { ...options, name } as ProviderOptions<N>,
     _parentId: parentId,
   } as NotifierAccessor<N>;
 }
@@ -52,14 +52,14 @@ function createNotifierAccessor<N>(
 function createPromiseAccessor<T>(
   parentId: symbol,
   parentProvider: ProviderBase<AsyncValue<T>>,
-  options: ProviderOptions,
-  fallbackLabel: string,
+  options: ProviderOptions<T>,
 ): PromiseAccessor<T> {
+  const name = `${options.name}.promise`;
   return {
-    id: Symbol(`${options.name ?? fallbackLabel}.promise`),
+    id: Symbol.for(`river:${name}`),
     kind: 'promiseAccessor',
-    name: options.name ? `${options.name}.promise` : undefined,
-    options,
+    name,
+    options: { ...options, name } as ProviderOptions<Promise<T>>,
     _parentId: parentId,
     _parentProvider: parentProvider,
   } as PromiseAccessor<T>;
@@ -67,7 +67,7 @@ function createPromiseAccessor<T>(
 
 // ── provider() — Read-only computed value ──────────────────────
 
-export function provider<T>(create: (ref: Ref) => T, options: ProviderOptions = {}): Provider<T> {
+export function provider<T>(create: (ref: Ref) => T, options: ProviderOptions<T>): Provider<T> {
   return {
     id: nextId(options.name),
     kind: 'provider',
@@ -79,7 +79,7 @@ export function provider<T>(create: (ref: Ref) => T, options: ProviderOptions = 
 
 // ── stateProvider() — Simple mutable state ─────────────────────
 
-export function stateProvider<T>(create: (ref: Ref) => T, options: ProviderOptions = {}): StateProvider<T> {
+export function stateProvider<T>(create: (ref: Ref) => T, options: ProviderOptions<T>): StateProvider<T> {
   const id = nextId(options.name);
 
   const notifier = createNotifierAccessor<StateController<T>>(id, options);
@@ -100,7 +100,7 @@ export function stateProvider<T>(create: (ref: Ref) => T, options: ProviderOptio
 
 export function promiseProvider<T>(
   create: (ref: Ref) => Promise<T>,
-  options: ProviderOptions = {},
+  options: ProviderOptions<T>,
 ): PromiseProvider<T> {
   const id = nextId(options.name);
 
@@ -110,9 +110,9 @@ export function promiseProvider<T>(
     name: options.name,
     options,
     _create: create,
-  } as PromiseProvider<T>;
+  } as unknown as PromiseProvider<T>;
 
-  (promiseP as any).promise = createPromiseAccessor(id, promiseP, options, 'promiseProvider');
+  (promiseP as any).promise = createPromiseAccessor(id, promiseP, options);
   return promiseP;
 }
 
@@ -120,7 +120,7 @@ export function promiseProvider<T>(
 
 export function observableProvider<T>(
   create: (ref: Ref) => ObservableLike<T> | Promise<ObservableLike<T>>,
-  options: ProviderOptions = {},
+  options: ProviderOptions<T>,
 ): ObservableProvider<T> {
   const id = nextId(options.name);
 
@@ -130,9 +130,9 @@ export function observableProvider<T>(
     name: options.name,
     options,
     _create: create,
-  } as ObservableProvider<T>;
+  } as unknown as ObservableProvider<T>;
 
-  (obsP as any).promise = createPromiseAccessor(id, obsP, options, 'observableProvider');
+  (obsP as any).promise = createPromiseAccessor(id, obsP, options);
   return obsP;
 }
 
@@ -140,7 +140,7 @@ export function observableProvider<T>(
 
 export function notifierProvider<N extends Notifier<any>>(
   createNotifier: () => N,
-  options: ProviderOptions = {},
+  options: ProviderOptions<N extends Notifier<infer T> ? T : unknown>,
 ): NotifierProvider<N, N extends Notifier<infer T> ? T : unknown> {
   const id = nextId(options.name);
 
@@ -162,7 +162,7 @@ export function notifierProvider<N extends Notifier<any>>(
 
 export function asyncNotifierProvider<N extends AsyncNotifier<any>>(
   createNotifier: () => N,
-  options: ProviderOptions = {},
+  options: ProviderOptions<N extends AsyncNotifier<infer T> ? T : unknown>,
 ): AsyncNotifierProvider<N, N extends AsyncNotifier<infer T> ? T : unknown> {
   const id = nextId(options.name);
 
@@ -175,9 +175,9 @@ export function asyncNotifierProvider<N extends AsyncNotifier<any>>(
     options,
     _createNotifier: createNotifier,
     notifier,
-  } as AsyncNotifierProvider<N, any>;
+  } as unknown as AsyncNotifierProvider<N, any>;
 
-  (asyncP as any).promise = createPromiseAccessor(id, asyncP, options, id.description!);
+  (asyncP as any).promise = createPromiseAccessor(id, asyncP, options);
   (notifier as any)._parentProvider = asyncP;
   return asyncP;
 }

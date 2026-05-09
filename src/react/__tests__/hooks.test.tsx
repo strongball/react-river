@@ -8,7 +8,7 @@ import { stateProvider } from '../../core/provider';
 import { useRiverWatch, useRiverRef, useRiverListen } from '../hooks';
 import { RiverScope, useRiverContainer } from '../scope';
 
-const counterProvider = stateProvider(() => 0);
+const counterProvider = stateProvider(() => 0, { name: 'test_stateProvider_400' });
 
 describe('React Hooks', () => {
   it('useRiverWatch should track state changes', () => {
@@ -39,7 +39,7 @@ describe('React Hooks', () => {
   });
 
   it('useRiverWatch should support selectors', () => {
-    const userProvider = stateProvider(() => ({ name: 'John', age: 30 }));
+    const userProvider = stateProvider(() => ({ name: 'John', age: 30 }), { name: 'test_stateProvider_1244' });
 
     const wrapper = ({ children }: { children: React.ReactNode }) => <RiverScope>{children}</RiverScope>;
 
@@ -89,7 +89,7 @@ describe('React Hooks', () => {
 
   it('useRiverRef should provide access to refresh and invalidate', () => {
     let count = 0;
-    const p = stateProvider(() => ++count);
+    const p = stateProvider(() => ++count, { name: 'test_stateProvider_2630' });
 
     const wrapper = ({ children }: { children: React.ReactNode }) => <RiverScope>{children}</RiverScope>;
 
@@ -111,7 +111,7 @@ describe('React Hooks', () => {
   });
 
   it('useRiverWatch should handle cache optimization branches', () => {
-    const objProvider = stateProvider(() => ({ meta: { updated: false }, data: 1 }));
+    const objProvider = stateProvider(() => ({ meta: { updated: false }, data: 1 }), { name: 'test_stateProvider_3285' });
     const wrapper = ({ children }: { children: React.ReactNode }) => <RiverScope>{children}</RiverScope>;
 
     const { result } = renderHook(
@@ -134,9 +134,9 @@ describe('React Hooks', () => {
 
   it('RiverScope - behavior of global vs local providers across nested scopes', () => {
     // Global provider: should inherit/share state via root container
-    const globalP = stateProvider(() => 1, { global: true });
+    const globalP = stateProvider(() => 1, { name: 'test_stateProvider_4153',  global: true });
     // Local provider: should be isolated in each scope by default
-    const localP = stateProvider(() => 2);
+    const localP = stateProvider(() => 2, { name: 'test_stateProvider_4281' });
 
     const { result } = renderHook(
       () => {

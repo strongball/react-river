@@ -19,7 +19,7 @@ export interface ProviderState {
   valueListeners: Set<ListenerCallback<unknown>>;
 
   /** Providers this one depends on (via ref.watch) */
-  dependencies: Set<ProviderBase>;
+  dependencies: Set<ProviderBase<any>>;
   /** Providers that depend on this one */
   dependents: Set<symbol>;
   /** Selectors used by dependents. A value of null means unconditional dependency. */
@@ -99,6 +99,18 @@ export interface RiverContainerOptions {
   observers?: RiverObserver[];
   /** Default auto-dispose and cache-time policy for providers in this scope. */
   cachePolicy?: RiverCachePolicy;
+  /**
+   * Pre-computed state from server-side rendering (SSR).
+   * Keys are provider `name` strings; values are the serialized state.
+   *
+   * For async providers (`promiseProvider`, `observableProvider`, `asyncNotifierProvider`),
+   * the hydrated value is wrapped in `asyncData()` as the initial state instead of
+   * `asyncLoading()`, avoiding a loading flash. The client-side factory still executes
+   * and will update the value when fresh data arrives.
+   *
+   * Only providers with a `name` option can be hydrated.
+   */
+  initialState?: Record<string, unknown>;
 }
 
 // ── Container Callbacks (for extracted modules) ────────────────
@@ -112,15 +124,15 @@ export interface ContainerCallbacks {
   updateValue(providerId: symbol, newValue: unknown): void;
   notifyObservers(
     event: 'create' | 'update' | 'dispose' | 'error',
-    provider: ProviderBase,
+    provider: ProviderBase<any>,
     ...args: unknown[]
   ): void;
   getState(id: symbol): ProviderState | undefined;
-  ensureInitialized(provider: ProviderBase): unknown;
+  ensureInitialized(provider: ProviderBase<any>): unknown;
   listen<T>(provider: ProviderBase<T>, callback: ListenerCallback<T>): Unsubscribe;
   read<T>(provider: ProviderBase<T>): T;
-  invalidate(provider: ProviderBase): void;
-  providerMap: Map<symbol, ProviderBase>;
+  invalidate(provider: ProviderBase<any>): void;
+  providerMap: Map<symbol, ProviderBase<any>>;
 }
 
 // ── Factory ────────────────────────────────────────────────────

@@ -14,7 +14,7 @@ import { Notifier, AsyncNotifier } from '../notifier';
 describe('Provider Families', () => {
   it('providerFamily should create parameterized providers', () => {
     const container = new RiverContainer();
-    const greet = providerFamily<string, string>((ref, name) => `Hello ${name}`);
+    const greet = providerFamily<string, string>((ref, name) => `Hello ${name}`, { name: 'greet' });
 
     expect(container.read(greet('Alice'))).toBe('Hello Alice');
     expect(container.read(greet('Bob'))).toBe('Hello Bob');
@@ -24,7 +24,7 @@ describe('Provider Families', () => {
 
   it('stateProviderFamily should create parameterized state providers', () => {
     const container = new RiverContainer();
-    const counter = stateProviderFamily<number, string>((ref, id) => 0);
+    const counter = stateProviderFamily<number, string>((ref, id) => 0, { name: 'counter' });
 
     container.set(counter('a'), 1);
     container.set(counter('b'), 2);
@@ -35,9 +35,12 @@ describe('Provider Families', () => {
 
   it('promiseProviderFamily should create parameterized promise providers', async () => {
     const container = new RiverContainer();
-    const fetchUser = promiseProviderFamily<{ name: string }, number>(async (ref, id) => {
-      return { name: `User ${id}` };
-    });
+    const fetchUser = promiseProviderFamily<{ name: string }, number>(
+      async (ref, id) => {
+        return { name: `User ${id}` };
+      },
+      { name: 'fetchUser' },
+    );
 
     const user1 = await container.read(fetchUser(1).promise);
     expect(user1.name).toBe('User 1');
@@ -48,16 +51,19 @@ describe('Provider Families', () => {
 
   it('observableProviderFamily should create parameterized observable providers', () => {
     const container = new RiverContainer();
-    const stream = observableProviderFamily<number, number>((ref, start) => {
-      const current = start;
-      return {
-        subscribe: (cb: any) => {
-          const next = typeof cb === 'function' ? cb : cb.next;
-          next(current);
-          return { unsubscribe: () => {} };
-        },
-      };
-    });
+    const stream = observableProviderFamily<number, number>(
+      (ref, start) => {
+        const current = start;
+        return {
+          subscribe: (cb: any) => {
+            const next = typeof cb === 'function' ? cb : cb.next;
+            next(current);
+            return { unsubscribe: () => {} };
+          },
+        };
+      },
+      { name: 'stream' },
+    );
 
     expect(container.read(stream(10)).data).toBe(10);
     expect(container.read(stream(20)).data).toBe(20);
@@ -76,7 +82,7 @@ describe('Provider Families', () => {
       }
     }
 
-    const myFamily = notifierProviderFamily((initial: number) => new MyNotifier(initial));
+    const myFamily = notifierProviderFamily((initial: number) => new MyNotifier(initial), { name: 'myFamily' });
 
     expect(container.read(myFamily(10))).toBe(10);
     expect(container.read(myFamily(20))).toBe(20);
@@ -95,7 +101,9 @@ describe('Provider Families', () => {
       }
     }
 
-    const myFamily = asyncNotifierProviderFamily((initial: number) => new MyAsyncNotifier(initial));
+    const myFamily = asyncNotifierProviderFamily((initial: number) => new MyAsyncNotifier(initial), {
+      name: 'myFamily',
+    });
 
     expect(await container.read(myFamily(10).promise)).toBe(10);
     expect(await container.read(myFamily(20).promise)).toBe(20);
@@ -103,7 +111,7 @@ describe('Provider Families', () => {
 
   it('should support object arguments via serialization', () => {
     const container = new RiverContainer();
-    const p = providerFamily<string, { id: number }>((ref, arg) => `ID: ${arg.id}`);
+    const p = providerFamily<string, { id: number }>((ref, arg) => `ID: ${arg.id}`, { name: 'p' });
 
     expect(container.read(p({ id: 1 }))).toBe('ID: 1');
     expect(p({ id: 1 })).toBe(p({ id: 1 }));
@@ -111,7 +119,7 @@ describe('Provider Families', () => {
   });
 
   it('family.clear() should clear the cache', () => {
-    const p = providerFamily((ref, id) => id);
+    const p = providerFamily((ref, id) => id, { name: 'clear' });
     const instance1 = p(1);
     p.clear();
     const instance2 = p(1);
@@ -150,32 +158,8 @@ describe('Provider Families', () => {
     expect(anp(1).name).toBe('anp(1)');
   });
 
-  it('should work without custom names', () => {
-    expect(providerFamily((ref, id) => id)(1).name).toBeUndefined();
-    expect(stateProviderFamily((ref, id) => id)(1).name).toBeUndefined();
-    expect(promiseProviderFamily(async (ref, id) => id)(1).name).toBeUndefined();
-    expect(
-      observableProviderFamily((ref, id) => ({ subscribe: () => ({ unsubscribe: () => {} }) }))(1).name,
-    ).toBeUndefined();
-
-    class MyNotifier extends Notifier<number> {
-      build() {
-        return 0;
-      }
-    }
-    expect(notifierProviderFamily((id: number) => new MyNotifier())(1).name).toBeUndefined();
-
-    class MyAsyncNotifier extends AsyncNotifier<number> {
-      async build() {
-        return 0;
-      }
-    }
-    expect(asyncNotifierProviderFamily((id: number) => new MyAsyncNotifier())(1).name).toBeUndefined();
-  });
-
   it('serializeArg should handle boolean and numbers', () => {
-    const p = providerFamily((ref, arg) => arg);
-    expect(p(true).name).toBeUndefined(); // options.name is not set
+    const p = providerFamily((ref, arg) => arg, { name: 'myProvider' });
     // Check key internal via cache if we could, but we can just check if they are distinct
     expect(p(true)).not.toBe(p(false));
     expect(p(1)).not.toBe(p(2));

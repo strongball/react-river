@@ -23,29 +23,39 @@ import type {
 
 // ── Simple Provider ────────────────────────────────────────────
 
-export function initSimpleProvider(
-  _cb: ContainerCallbacks,
-  provider: ProviderBase,
-  ref: Ref,
-  state: ProviderState,
-  override?: ProviderOverride,
-): void {
-  const p = provider as unknown as { _create: (ref: Ref) => unknown };
+export function initSimpleProvider(options: {
+  cb: ContainerCallbacks;
+  provider: ProviderBase<any>;
+  ref: Ref;
+  state: ProviderState;
+  override?: ProviderOverride;
+  hydratedValue?: unknown;
+}): void {
+  const { provider, ref, state, override, hydratedValue } = options;
+  const p = provider as any;
   const createFn = override ? override.create : p._create;
-  state.value = createFn(ref);
+  // ALWAYS execute the factory to build dependencies (e.g. ref.watch)
+  const initialValue = createFn(ref);
+  // OVERRIDE with hydrated value if it exists
+  state.value = hydratedValue !== undefined ? hydratedValue : initialValue;
 }
 
 // ── State Provider ─────────────────────────────────────────────
 
-export function initStateProvider(
-  cb: ContainerCallbacks,
-  provider: StateProvider<unknown>,
-  ref: Ref,
-  state: ProviderState,
-  override?: ProviderOverride,
-): void {
+export function initStateProvider(options: {
+  cb: ContainerCallbacks;
+  provider: StateProvider<unknown>;
+  ref: Ref;
+  state: ProviderState;
+  override?: ProviderOverride;
+  hydratedValue?: unknown;
+}): void {
+  const { cb, provider, ref, state, override, hydratedValue } = options;
   const createFn = override ? override.create : provider._create;
-  state.value = createFn(ref);
+  // ALWAYS execute the factory to build dependencies (e.g. ref.watch)
+  const initialValue = createFn(ref);
+  // OVERRIDE with hydrated value if it exists
+  state.value = hydratedValue !== undefined ? hydratedValue : initialValue;
 
   // Create StateController
   const controller: StateController<unknown> = {
@@ -65,14 +75,18 @@ export function initStateProvider(
 
 // ── Promise Provider ───────────────────────────────────────────
 
-export function initPromiseProvider(
-  cb: ContainerCallbacks,
-  provider: PromiseProvider<unknown>,
-  ref: Ref,
-  state: ProviderState,
-  override?: ProviderOverride,
-): void {
-  state.value = asyncLoading();
+export function initPromiseProvider(options: {
+  cb: ContainerCallbacks;
+  provider: PromiseProvider<unknown>;
+  ref: Ref;
+  state: ProviderState;
+  override?: ProviderOverride;
+  hydratedValue?: unknown;
+}): void {
+  const { cb, provider, ref, state, override, hydratedValue } = options;
+  // Use hydrated value (wrapped in asyncData) instead of asyncLoading when available.
+  // The client-side factory still executes and will update the value when fresh data arrives.
+  state.value = hydratedValue !== undefined ? asyncData(hydratedValue) : asyncLoading();
 
   const abortController = new AbortController();
   state.abortController = abortController;
@@ -94,14 +108,17 @@ export function initPromiseProvider(
 
 // ── Observable Provider ────────────────────────────────────────
 
-export function initObservableProvider(
-  cb: ContainerCallbacks,
-  provider: ObservableProvider<unknown>,
-  ref: Ref,
-  state: ProviderState,
-  override?: ProviderOverride,
-): void {
-  state.value = asyncLoading();
+export function initObservableProvider(options: {
+  cb: ContainerCallbacks;
+  provider: ObservableProvider<unknown>;
+  ref: Ref;
+  state: ProviderState;
+  override?: ProviderOverride;
+  hydratedValue?: unknown;
+}): void {
+  const { cb, provider, ref, state, override, hydratedValue } = options;
+  // Use hydrated value (wrapped in asyncData) instead of asyncLoading when available.
+  state.value = hydratedValue !== undefined ? asyncData(hydratedValue) : asyncLoading();
 
   const abortController = new AbortController();
   state.abortController = abortController;
@@ -145,15 +162,18 @@ export function initObservableProvider(
 
 // ── Notifier Provider ──────────────────────────────────────────
 
-export function initNotifierProvider(
-  cb: ContainerCallbacks,
-  provider: ProviderBase,
-  ref: Ref,
-  state: ProviderState,
-  override?: ProviderOverride,
-): void {
+export function initNotifierProvider(options: {
+  cb: ContainerCallbacks;
+  provider: ProviderBase<any>;
+  ref: Ref;
+  state: ProviderState;
+  override?: ProviderOverride;
+  hydratedValue?: unknown;
+}): void {
+  const { cb, provider, ref, state, override, hydratedValue } = options;
   if (override) {
-    state.value = override.create(ref);
+    const initialValue = override.create(ref);
+    state.value = hydratedValue !== undefined ? hydratedValue : initialValue;
     return;
   }
 
@@ -168,21 +188,27 @@ export function initNotifierProvider(
   };
 
   const initialValue = notifier.build();
-  notifier._state = initialValue;
-  state.value = initialValue;
+  // Use hydrated value as the initial state if available, otherwise use build() result.
+  // The notifier instance is still created so client-side mutations work.
+  const effectiveValue = hydratedValue !== undefined ? hydratedValue : initialValue;
+  notifier._state = effectiveValue;
+  state.value = effectiveValue;
   state.notifierInstance = notifier;
 }
 
 // ── Async Notifier Provider ────────────────────────────────────
 
-export function initAsyncNotifierProvider(
-  cb: ContainerCallbacks,
-  provider: ProviderBase,
-  ref: Ref,
-  state: ProviderState,
-  override?: ProviderOverride,
-): void {
-  state.value = asyncLoading();
+export function initAsyncNotifierProvider(options: {
+  cb: ContainerCallbacks;
+  provider: ProviderBase<any>;
+  ref: Ref;
+  state: ProviderState;
+  override?: ProviderOverride;
+  hydratedValue?: unknown;
+}): void {
+  const { cb, provider, ref, state, override, hydratedValue } = options;
+  // Use hydrated value (wrapped in asyncData) instead of asyncLoading when available.
+  state.value = hydratedValue !== undefined ? asyncData(hydratedValue) : asyncLoading();
 
   const abortController = new AbortController();
   state.abortController = abortController;
@@ -235,11 +261,12 @@ export function initAsyncNotifierProvider(
 
 // ── Notifier Accessor ──────────────────────────────────────────
 
-export function initNotifierAccessor(
-  cb: ContainerCallbacks,
-  accessor: NotifierAccessor<unknown>,
-  state: ProviderState,
-): void {
+export function initNotifierAccessor(options: {
+  cb: ContainerCallbacks;
+  accessor: NotifierAccessor<unknown>;
+  state: ProviderState;
+}): void {
+  const { cb, accessor, state } = options;
   const parentId = accessor._parentId;
   let parentProvider = cb.providerMap.get(parentId);
 

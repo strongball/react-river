@@ -15,7 +15,7 @@ describe('Initializers', () => {
         pushErr = o.error;
         return { unsubscribe: () => {} };
       },
-    }));
+    }), { name: 'test_observable_op1' });
     container1.read(op1);
     container1.dispose();
     push(1); // Hits line 117
@@ -30,6 +30,7 @@ describe('Initializers', () => {
           resolveP = res;
           rejectP = rej;
         }),
+      { name: 'test_promise_pp' },
     );
     container2.read(pp);
     container2.dispose();
@@ -39,7 +40,7 @@ describe('Initializers', () => {
     // 3. Async creation success after abort (Observable)
     const container3 = new RiverContainer();
     let resolveObs: any;
-    const op2 = observableProvider(() => new Promise<any>((r) => (resolveObs = r)));
+    const op2 = observableProvider(() => new Promise<any>((r) => (resolveObs = r)), { name: 'test_observable_op2' });
     container3.read(op2);
     container3.dispose();
     resolveObs({ subscribe: () => ({ unsubscribe: () => {} }) }); // Hits line 133 (if statement)
@@ -55,7 +56,7 @@ describe('Initializers', () => {
         });
       }
     }
-    container4.read(asyncNotifierProvider(() => new AN()));
+    container4.read(asyncNotifierProvider(() => new AN(), { name: 'test_asyncNotifier_AN' }));
     container4.dispose();
     resolveN(1); // Hits line 197
     rejectN(new Error('err')); // Hits line 203
@@ -71,7 +72,7 @@ describe('Initializers', () => {
         triggerError = typeof o === 'function' ? null : o.error;
         return { unsubscribe: () => {} };
       },
-    }));
+    }), { name: 'test_observable_p1' });
     container.read(p1);
     triggerError('stream-fail');
     expect((container.read(p1) as any).error).toBe('stream-fail');
@@ -79,7 +80,7 @@ describe('Initializers', () => {
     // 2. Async creation failure
     const p2 = observableProvider(async () => {
       throw 'creation-fail';
-    });
+    }, { name: 'test_observable_p2' });
     container.read(p2);
     await new Promise((r) => setTimeout(r, 0));
     expect((container.read(p2) as any).error).toBe('creation-fail');
@@ -90,14 +91,14 @@ describe('Initializers', () => {
         o.next('async-ok');
         return { unsubscribe: () => {} };
       },
-    }));
+    }), { name: 'test_observable_p3' });
     container.read(p3);
     await new Promise((r) => setTimeout(r, 0));
     expect((container.read(p3) as any).data).toBe('async-ok');
   });
 
   it('notifierAccessor and stateProvider controller branches', () => {
-    const base = stateProvider(() => 1);
+    const base = stateProvider(() => 1, { name: 'test_state_base' });
     const container = new RiverContainer();
 
     // stateProvider controller (Notifier)
@@ -131,14 +132,14 @@ describe('Initializers', () => {
   });
 
   it('initialization overrides', () => {
-    const p = provider(() => 1);
-    const sp = stateProvider(() => 10);
+    const p = provider(() => 1, { name: 'test_provider_p' });
+    const sp = stateProvider(() => 10, { name: 'test_state_sp' });
     const op = observableProvider(() => ({
       subscribe: (o: any) => {
         o.next(100);
         return { unsubscribe: () => {} };
       },
-    }));
+    }), { name: 'test_observable_op' });
 
     const container = new RiverContainer({
       overrides: [
