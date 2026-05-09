@@ -1,3 +1,11 @@
+## [1.0.31](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.30...v1.0.31) (2026-05-09)
+
+
+### Features
+
+* ensure provider factories execute during hydration to correctly establish dependency graphs ([e9f7d90](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/commit/e9f7d90f8dbbd9243abd7d2f671487863fd3ad57))
+* **SSR:** support ssr ([a6356c3](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/commit/a6356c3f1631e6cf69edd3768c0554b0c0e9334b))
+
 ## [1.0.30](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.29...v1.0.30) (2026-05-07)
 
 ## [1.0.29](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.28...v1.0.29) (2026-05-05)
