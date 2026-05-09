@@ -34,7 +34,10 @@ export function initSimpleProvider(options: {
   const { provider, ref, state, override, hydratedValue } = options;
   const p = provider as any;
   const createFn = override ? override.create : p._create;
-  state.value = hydratedValue !== undefined ? hydratedValue : createFn(ref);
+  // ALWAYS execute the factory to build dependencies (e.g. ref.watch)
+  const initialValue = createFn(ref);
+  // OVERRIDE with hydrated value if it exists
+  state.value = hydratedValue !== undefined ? hydratedValue : initialValue;
 }
 
 // ── State Provider ─────────────────────────────────────────────
@@ -49,8 +52,10 @@ export function initStateProvider(options: {
 }): void {
   const { cb, provider, ref, state, override, hydratedValue } = options;
   const createFn = override ? override.create : provider._create;
-  // Use hydrated value if available, otherwise run the factory
-  state.value = hydratedValue !== undefined ? hydratedValue : createFn(ref);
+  // ALWAYS execute the factory to build dependencies (e.g. ref.watch)
+  const initialValue = createFn(ref);
+  // OVERRIDE with hydrated value if it exists
+  state.value = hydratedValue !== undefined ? hydratedValue : initialValue;
 
   // Create StateController
   const controller: StateController<unknown> = {
@@ -167,7 +172,8 @@ export function initNotifierProvider(options: {
 }): void {
   const { cb, provider, ref, state, override, hydratedValue } = options;
   if (override) {
-    state.value = override.create(ref);
+    const initialValue = override.create(ref);
+    state.value = hydratedValue !== undefined ? hydratedValue : initialValue;
     return;
   }
 

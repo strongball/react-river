@@ -140,6 +140,52 @@ describe('hydration via initialState', () => {
     const value = container.read(otherProvider);
     expect(value).toBe('default');
   });
+
+  it('sync providers with initialState still run factory to establish dependencies', () => {
+    let watchCount = 0;
+    const baseProvider = stateProvider(() => 10, { name: 'base' });
+    const derivedProvider = provider((ref) => {
+      watchCount++;
+      return ref.watch(baseProvider) * 2;
+    }, { name: 'derived' });
+
+    const container = new RiverContainer({
+      initialState: { derived: 42, base: 10 },
+    });
+
+    // We expect the state.value of derived to be 42 initially
+    expect(container.read(derivedProvider)).toBe(42);
+    
+    // But we expect the factory to have been called to establish `ref.watch`!
+    expect(watchCount).toBe(1);
+
+    // If we update the base, derived should re-evaluate because its watch was established
+    container.set(baseProvider, 20);
+    expect(container.read(derivedProvider)).toBe(40);
+  });
+
+  it('stateProvider with initialState still runs factory to establish dependencies', () => {
+    const baseProvider = stateProvider(() => 'A', { name: 'base' });
+    let factoryCalled = false;
+    const testStateProvider = stateProvider((ref) => {
+      factoryCalled = true;
+      ref.watch(baseProvider);
+      return 'default';
+    }, { name: 'testState' });
+
+    const container = new RiverContainer({
+      initialState: { testState: 'hydrated' },
+    });
+
+    // State is hydrated
+    expect(container.read(testStateProvider)).toBe('hydrated');
+    // Factory was called for deps
+    expect(factoryCalled).toBe(true);
+
+    // Because watch was established, modifying base should cause testState to re-evaluate
+    container.set(baseProvider, 'B');
+    expect(container.read(testStateProvider)).toBe('default');
+  });
 });
 
 // ── Full SSR round-trip ────────────────────────────────────────
@@ -416,13 +462,13 @@ describe('initialState should NOT be re-applied on refresh/invalidate', () => {
 
     // First read: should use hydrated value
     expect(container.read(themeProvider)).toBe('hydrated-dark');
-    expect(callCount).toBe(0); // factory was NOT called because hydrated value was used
+    expect(callCount).toBe(1); // factory WAS called because we run it to build dependencies
 
     // Refresh: should re-run factory, NOT reuse initialState
     const refreshed = container.refresh(themeProvider);
-    expect(callCount).toBe(1);
-    expect(refreshed).toBe('factory-1');
-    expect(container.read(themeProvider)).toBe('factory-1');
+    expect(callCount).toBe(2);
+    expect(refreshed).toBe('factory-2');
+    expect(container.read(themeProvider)).toBe('factory-2');
   });
 
   it('stateProvider: set then invalidate should re-run factory, not reuse initialState', () => {
@@ -456,11 +502,11 @@ describe('initialState should NOT be re-applied on refresh/invalidate', () => {
     });
 
     expect(container.read(computedProvider)).toBe('hydrated-42');
-    expect(callCount).toBe(0);
+    expect(callCount).toBe(1); // factory WAS called because we run it to build dependencies
 
     const refreshed = container.refresh(computedProvider);
-    expect(callCount).toBe(1);
-    expect(refreshed).toBe('computed-1');
+    expect(callCount).toBe(2);
+    expect(refreshed).toBe('computed-2');
   });
 
   it('promiseProvider: refresh should re-fetch, not reuse initialState', async () => {

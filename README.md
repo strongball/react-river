@@ -13,6 +13,7 @@
 - **🔗 Dependency Injection**: Easily compose providers that depend on other providers.
 - **⚡ Performance Optimized**: Fine-grained subscriptions with `select` selectors to prevent unnecessary re-renders.
 - **🛠️ First-class Async Support**: Built-in `promiseProvider` and `observableProvider` with loading/error/data states.
+- **🌐 SSR Ready**: Built-in `dehydrate()` / `initialState` support for seamless Server-Side Rendering hydration with zero loading flash.
 - **🔍 DevTools**: Built-in interactive DevTools and logging for debugging state transitions and dependency graphs.
 - **📦 Type Safe**: Written in TypeScript with deep inference for your state and notifiers.
 - **🧹 Auto Disposal**: Automatically cleans up unused state and resources (configurable via `cacheTime`).
@@ -224,6 +225,88 @@ const appOverrides = [
   <App />
 </RiverScope>;
 ```
+
+---
+
+## 🌐 Server-Side Rendering (SSR)
+
+React River has built-in support for SSR hydration. The workflow uses two APIs:
+
+- `container.dehydrate()` — serializes provider state on the **server**
+- `<RiverScope initialState={...}>` — restores state on the **client**
+
+### Step 1: Name your providers
+
+A `name` is **required** for any provider to participate in SSR. This name is used as the key in the dehydrated state object.
+
+```ts
+export const userProvider = promiseProvider(
+  async () => fetchUser(),
+  { name: 'user' }, // ← required for SSR
+);
+```
+
+### Step 2: Dehydrate on the server
+
+```ts
+// e.g. Next.js getServerSideProps
+const container = new RiverContainer();
+
+// Read and await async providers
+await container.read(userProvider.promise);
+
+// Serialize all provider states
+const initialRiverState = container.dehydrate();
+// => { "user": { id: 1, name: "John" } }
+```
+
+### Step 3: Hydrate on the client
+
+```tsx
+// pages/_app.tsx (Next.js) or your root layout
+import { RiverScope } from '@zerologix/react-river';
+
+function App({ pageProps }) {
+  return (
+    <RiverScope initialState={pageProps.initialRiverState}>
+      <Component {...pageProps} />
+    </RiverScope>
+  );
+}
+```
+
+### How it works
+
+When a provider is first read on the client and there is a matching key in `initialState`:
+
+| Provider type | Client initial state | Background factory |
+| :--- | :--- | :--- |
+| `stateProvider` / `provider` | Uses hydrated value directly | Runs (to rebuild `ref.watch` deps) |
+| `notifierProvider` | Uses hydrated value, Notifier instance created | Runs `build()` (to rebuild deps) |
+| `promiseProvider` / `observableProvider` / `asyncNotifierProvider` | `asyncData(hydratedValue)` — **no loading flash** | Runs — Stale-while-revalidate |
+
+> **Stale-while-revalidate**: For async providers, the UI renders immediately with the hydrated data (no loading spinner), while the factory re-fetches silently in the background. When fresh data arrives, the UI updates automatically.
+
+> **One-time consumption**: Each `initialState` key is deleted after first use. `refresh()` and `invalidate()` always re-run the factory — they never re-use stale hydrated data.
+
+### SSR Options
+
+| Option | Description |
+| :--- | :--- |
+| `name` | **Required** for SSR. Used as the key in the dehydrated state object. |
+| `ssr: false` | Opt-out of SSR for this provider (e.g., sensitive tokens). Named providers participate by default. |
+| `toJSON` | Custom serialization: transform the value before it is written to the dehydrated payload. |
+| `fromJSON` | Custom deserialization: transform the raw JSON back into your model class on the client. |
+
+```ts
+export const userProvider = stateProvider(() => new User(0, 'Guest'), {
+  name: 'user',
+  toJSON: (user) => ({ id: user.id, name: user.name }),    // server: Class → plain object
+  fromJSON: (json) => new User(json.id, json.name),        // client: plain object → Class
+});
+```
+
+For a complete Next.js example, see [SSR_NEXTJS_EXAMPLE.md](./SSR_NEXTJS_EXAMPLE.md).
 
 ---
 
