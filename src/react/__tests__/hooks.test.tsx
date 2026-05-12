@@ -301,4 +301,88 @@ describe('React Hooks', () => {
     // Should now be 10 * 3 = 30, not the stale 20
     expect(result.current.computed).toBe(30);
   });
+
+  it('useRiverWatch should support selector within options object', () => {
+    const userProvider = stateProvider(() => ({ name: 'John', age: 30 }), { name: 'test_stateProvider_opts_selector' });
+    const wrapper = ({ children }: { children: React.ReactNode }) => <RiverScope>{children}</RiverScope>;
+
+    const { result } = renderHook(
+      () => {
+        const name = useRiverWatch(userProvider, { selector: (u) => u.name });
+        const ref = useRiverRef();
+        return { name, ref };
+      },
+      { wrapper },
+    );
+
+    expect(result.current.name).toBe('John');
+
+    act(() => {
+      result.current.ref.set(userProvider, { name: 'Doe', age: 30 });
+    });
+
+    expect(result.current.name).toBe('Doe');
+  });
+
+  it('useRiverWatch should support enabled: false and not subscribe or read initially', () => {
+    let buildCount = 0;
+    const lazyProvider = stateProvider(() => {
+      buildCount++;
+      return 'lazy';
+    }, { name: 'test_stateProvider_lazy' });
+
+    const wrapper = ({ children }: { children: React.ReactNode }) => <RiverScope>{children}</RiverScope>;
+
+    const { result } = renderHook(
+      () => {
+        const [enabled, setEnabled] = useState(false);
+        const value = useRiverWatch(lazyProvider, { enabled });
+        const ref = useRiverRef();
+        return { value, setEnabled, ref };
+      },
+      { wrapper },
+    );
+
+    // Should not initialize provider if disabled
+    expect(buildCount).toBe(0);
+    expect(result.current.value).toBeUndefined();
+
+    // Enable it
+    act(() => {
+      result.current.setEnabled(true);
+    });
+
+    // Now it should initialize and return the value
+    expect(buildCount).toBe(1);
+    expect(result.current.value).toBe('lazy');
+
+    // Update value while enabled
+    act(() => {
+      result.current.ref.set(lazyProvider, 'updated');
+    });
+    expect(result.current.value).toBe('updated');
+
+    // Disable it again
+    act(() => {
+      result.current.setEnabled(false);
+    });
+
+    // Should keep returning the last cached value (stale-while-disabled)
+    expect(result.current.value).toBe('updated');
+
+    // Update value while disabled
+    act(() => {
+      result.current.ref.set(lazyProvider, 'ignored');
+    });
+
+    // Should NOT have received the update
+    expect(result.current.value).toBe('updated');
+
+    // Enable again — should receive the latest value
+    act(() => {
+      result.current.setEnabled(true);
+    });
+    expect(result.current.value).toBe('ignored');
+  });
 });
+

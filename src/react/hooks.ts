@@ -22,14 +22,59 @@ import type { ListenerCallback, ProviderBase, RiverRef, StateProvider } from '..
  * const name = useRiverWatch(userProvider, (user) => user.name)
  * ```
  */
+export interface UseRiverWatchOptions<T, S = T> {
+  selector?: (value: T) => S;
+  enabled?: boolean;
+}
+
+/**
+ * Subscribe to a provider's value. Re-renders the component when
+ * the value changes. Analogous to `ref.watch()` in Riverpod.
+ *
+ * With optional selector or options for fine-grained subscriptions and conditional watching:
+ * ```ts
+ * const name = useRiverWatch(userProvider, (user) => user.name)
+ * const nameOpt = useRiverWatch(userProvider, { selector: (user) => user.name, enabled: true })
+ * ```
+ */
 export function useRiverWatch<T>(provider: ProviderBase<T>): T;
 export function useRiverWatch<T, S>(provider: ProviderBase<T>, selector: (value: T) => S): S;
-export function useRiverWatch<T, S>(provider: ProviderBase<T>, selector?: (value: T) => S): T | S {
+export function useRiverWatch<T, S = T>(
+  provider: ProviderBase<T>,
+  options: UseRiverWatchOptions<T, S> & { enabled: false },
+): S | undefined;
+export function useRiverWatch<T, S = T>(
+  provider: ProviderBase<T>,
+  options: UseRiverWatchOptions<T, S> & { enabled?: true },
+): S;
+export function useRiverWatch<T, S = T>(
+  provider: ProviderBase<T>,
+  options: UseRiverWatchOptions<T, S>,
+): S | undefined;
+export function useRiverWatch<T, S = T>(
+  provider: ProviderBase<T>,
+  optionsOrSelector?: ((value: T) => S) | UseRiverWatchOptions<T, S>,
+): T | S | undefined {
   const container = useRiverContainer();
 
-  // Always keep the latest selector reference accessible inside getSnapshot.
+  let selector: ((value: T) => S) | undefined = undefined;
+  let enabled = true;
+
+  if (typeof optionsOrSelector === 'function') {
+    selector = optionsOrSelector;
+  } else if (optionsOrSelector && typeof optionsOrSelector === 'object') {
+    selector = optionsOrSelector.selector;
+    if (optionsOrSelector.enabled !== undefined) {
+      enabled = optionsOrSelector.enabled;
+    }
+  }
+
+  // Always keep the latest selector & enabled reference accessible inside getSnapshot.
   const selectorRef = useRef(selector);
   selectorRef.current = selector;
+
+  const enabledRef = useRef(enabled);
+  enabledRef.current = enabled;
 
   // Cache keyed by both rawValue AND selector reference.
   //
@@ -53,30 +98,36 @@ export function useRiverWatch<T, S>(provider: ProviderBase<T>, selector?: (value
 
   const subscribe = useCallback(
     (onStoreChange: () => void) => {
+      if (!enabled) return () => {};
       return container.subscribe(provider, onStoreChange);
     },
     // oxlint-disable-next-line eslint-plugin-react-hooks/exhaustive-deps
-    [container, provider.id],
+    [container, provider.id, enabled],
   );
 
-  const getSnapshot = useCallback((): T | S => {
+  const getSnapshot = useCallback((): T | S | undefined => {
+    const isEnabled = enabledRef.current;
+
+    if (!isEnabled) {
+      if (cacheRef.current) {
+        return cacheRef.current.selectedValue as S;
+      }
+      return undefined;
+    }
+
     const rawValue = container.read(provider) as T;
     const sel = selectorRef.current;
 
-    if (!sel) return rawValue;
-
     const cache = cacheRef.current;
-    const selAsOpaque = sel as unknown as SelectorFn;
+    const selAsOpaque = sel as unknown as SelectorFn | undefined;
 
-    // Cache hit: rawValue unchanged AND it's the same selector reference
-    // (same closure = same external state captured).
+    // Cache hit: rawValue unchanged AND it's the same selector reference/no selector
     if (cache && Object.is(cache.rawValue, rawValue) && cache.lastSelector === selAsOpaque) {
       return cache.selectedValue as S;
     }
 
-    // Either rawValue changed or the selector is a new closure (external state
-    // may have changed) — recompute.
-    const selectedValue = sel(rawValue);
+    // Compute new selected value
+    const selectedValue = sel ? sel(rawValue) : (rawValue as unknown as S);
 
     // Preserve referential stability: if the new result is equal to the cached
     // one, return the old reference so React skips the re-render.
