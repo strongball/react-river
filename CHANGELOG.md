@@ -1,3 +1,15 @@
+## [1.0.32](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.31...v1.0.32) (2026-05-12)
+
+
+### Bug Fixes
+
+* update useRiverWatch selector cache to include selector reference for stale state resolution ([1d77913](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/commit/1d77913ef3eaebfc92e680b7b97d409327cd7dbc))
+
+
+### Features
+
+* add support for optional selector and conditional enabled state to useRiverWatch hook ([1b0c451](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/commit/1b0c4514c2db3e9b2b36b02986b336ee9e207079))
+
 ## [1.0.31](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.30...v1.0.31) (2026-05-09)
 
 
