@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
@@ -198,5 +198,107 @@ describe('React Hooks', () => {
     vi.advanceTimersByTime(200);
     expect(container.disposed).toBe(false);
     vi.useRealTimers();
+  });
+
+  // ── Stale external state in selector ──────────────────────────
+
+  /**
+   * Bug: When a selector closes over an external React state value,
+   * updating that external state should cause the hook to return a new
+   * selected value — even if the provider's raw value hasn't changed.
+   *
+   * Without the fix, the rawValue cache hits and returns the stale selected
+   * value because `cacheRef.rawValue === rawValue` still holds.
+   */
+  it('useRiverWatch selector should reflect updated external React state (no provider change)', () => {
+    const itemsProvider = stateProvider(
+      () => [
+        { id: 1, status: 'active' },
+        { id: 2, status: 'inactive' },
+      ],
+      { name: 'test_stateProvider_selector_external_1' },
+    );
+
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <RiverScope>{children}</RiverScope>
+    );
+
+    const { result } = renderHook(
+      () => {
+        const [filter, setFilter] = useState<'active' | 'inactive' | 'all'>('all');
+
+        // Selector closes over the external `filter` React state
+        const filtered = useRiverWatch(
+          itemsProvider,
+          (items) => items.filter((i) => filter === 'all' || i.status === filter),
+        );
+
+        return { filtered, setFilter };
+      },
+      { wrapper },
+    );
+
+    // Initially, all items visible
+    expect(result.current.filtered).toHaveLength(2);
+
+    // Change external filter state — provider value does NOT change
+    act(() => {
+      result.current.setFilter('active');
+    });
+
+    // Should now only return the active item
+    expect(result.current.filtered).toHaveLength(1);
+    expect(result.current.filtered[0].id).toBe(1);
+
+    // Change filter again
+    act(() => {
+      result.current.setFilter('inactive');
+    });
+
+    expect(result.current.filtered).toHaveLength(1);
+    expect(result.current.filtered[0].id).toBe(2);
+  });
+
+  /**
+   * Ensures the cache doesn't return the stale selectedValue when the selector's
+   * semantic changes (due to external state), even though rawValue is identical.
+   *
+   * This is the cache bail-out scenario: rawValue unchanged, but selector changed.
+   */
+  it('useRiverWatch cache should not return stale value when selector semantics change', () => {
+    const multiplierProvider = stateProvider(() => 10, {
+      name: 'test_stateProvider_selector_external_2',
+    });
+
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <RiverScope>{children}</RiverScope>
+    );
+
+    const { result } = renderHook(
+      () => {
+        const [multiplier, setMultiplier] = useState(2);
+
+        // selector closes over `multiplier`; if cache isn't invalidated
+        // when `multiplier` changes, this will return stale results.
+        const computed = useRiverWatch(
+          multiplierProvider,
+          (value) => value * multiplier,
+        );
+
+        return { computed, setMultiplier };
+      },
+      { wrapper },
+    );
+
+    // 10 * 2 = 20
+    expect(result.current.computed).toBe(20);
+
+    // Change multiplier — multiplierProvider raw value stays at 10
+    act(() => {
+      result.current.setMultiplier(3);
+    });
+
+    // Should now be 10 * 3 = 30, not the stale 20
+    expect(result.current.computed).toBe(30);
   });
 });

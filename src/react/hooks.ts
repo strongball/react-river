@@ -27,14 +27,28 @@ export function useRiverWatch<T, S>(provider: ProviderBase<T>, selector: (value:
 export function useRiverWatch<T, S>(provider: ProviderBase<T>, selector?: (value: T) => S): T | S {
   const container = useRiverContainer();
 
-  // Keep selector ref stable for getSnapshot closure
+  // Always keep the latest selector reference accessible inside getSnapshot.
   const selectorRef = useRef(selector);
   selectorRef.current = selector;
 
-  // Cache for selector mode — prevents unnecessary re-renders
+  // Cache keyed by both rawValue AND selector reference.
+  //
+  // Why rawValue is still needed:
+  //   useSyncExternalStore calls getSnapshot after every commit as a tearing
+  //   check. If the selector returns a new object each time (e.g. Array.filter),
+  //   Object.is on selectedValue will always fail, causing React to force
+  //   another render → infinite loop. Caching on rawValue breaks that cycle.
+  //
+  // Why we also key on selector (lastSelector):
+  //   When the selector closes over external React state and that state changes,
+  //   the selector reference changes on re-render. We detect that change and
+  //   recompute even when rawValue hasn't changed, so external state is never
+  //   stale in the result.
+  type SelectorFn = (value: unknown) => unknown;
   const cacheRef = useRef<{
     rawValue: unknown;
     selectedValue: unknown;
+    lastSelector: SelectorFn | undefined;
   } | null>(null);
 
   const subscribe = useCallback(
@@ -52,27 +66,33 @@ export function useRiverWatch<T, S>(provider: ProviderBase<T>, selector?: (value
     if (!sel) return rawValue;
 
     const cache = cacheRef.current;
+    const selAsOpaque = sel as unknown as SelectorFn;
 
-    // If raw value hasn't changed, return cached selected value
-    if (cache && Object.is(cache.rawValue, rawValue)) {
+    // Cache hit: rawValue unchanged AND it's the same selector reference
+    // (same closure = same external state captured).
+    if (cache && Object.is(cache.rawValue, rawValue) && cache.lastSelector === selAsOpaque) {
       return cache.selectedValue as S;
     }
 
+    // Either rawValue changed or the selector is a new closure (external state
+    // may have changed) — recompute.
     const selectedValue = sel(rawValue);
 
-    // If selected value hasn't changed, return cached reference
+    // Preserve referential stability: if the new result is equal to the cached
+    // one, return the old reference so React skips the re-render.
     if (cache && Object.is(cache.selectedValue, selectedValue)) {
-      cacheRef.current = { rawValue, selectedValue: cache.selectedValue };
+      cacheRef.current = { rawValue, selectedValue: cache.selectedValue, lastSelector: selAsOpaque };
       return cache.selectedValue as S;
     }
 
-    cacheRef.current = { rawValue, selectedValue };
+    cacheRef.current = { rawValue, selectedValue, lastSelector: selAsOpaque };
     return selectedValue;
     // oxlint-disable-next-line eslint-plugin-react-hooks/exhaustive-deps
   }, [container, provider.id]);
 
   return useSyncExternalStore(subscribe, getSnapshot);
 }
+
 
 // ── useRiverRef — imperative access to the container ───────────
 
