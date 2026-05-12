@@ -12,16 +12,6 @@ import { asyncData, asyncError, asyncLoading } from '../core/async_value';
 import type { ListenerCallback, ProviderBase, RiverRef, StateProvider } from '../core/types';
 
 // ── useRiverWatch — subscribe to a provider (triggers re-render) ────
-
-/**
- * Subscribe to a provider's value. Re-renders the component when
- * the value changes. Analogous to `ref.watch()` in Riverpod.
- *
- * With optional selector for fine-grained subscriptions:
- * ```ts
- * const name = useRiverWatch(userProvider, (user) => user.name)
- * ```
- */
 export interface UseRiverWatchOptions<T, S = T> {
   selector?: (value: T) => S;
   enabled?: boolean;
@@ -31,10 +21,45 @@ export interface UseRiverWatchOptions<T, S = T> {
  * Subscribe to a provider's value. Re-renders the component when
  * the value changes. Analogous to `ref.watch()` in Riverpod.
  *
- * With optional selector or options for fine-grained subscriptions and conditional watching:
+ * With optional selector for fine-grained subscriptions:
  * ```ts
  * const name = useRiverWatch(userProvider, (user) => user.name)
- * const nameOpt = useRiverWatch(userProvider, { selector: (user) => user.name, enabled: true })
+ * ```
+ *
+ * With options object for selector + conditional watching:
+ * ```ts
+ * const name = useRiverWatch(userProvider, { selector: (u) => u.name, enabled: isLoggedIn })
+ * ```
+ *
+ * ---
+ *
+ * ### ⚠️ Selector stability
+ *
+ * The cache is keyed on the selector's **function reference**.
+ * An inline arrow function creates a new reference on every render, which bypasses
+ * the cache and forces the selector to run unconditionally.
+ *
+ * | Scenario | Without `useCallback` | With `useCallback` |
+ * |---|---|---|
+ * | Selector returns a primitive (`string`, `number`) | ✅ Safe — primitives compare by value | ✅ Safe |
+ * | Selector returns object/array (`filter`, `map`, spread) | ⚠️ Safe from infinite loops (tearing check hits cache), but selector reruns on **every render** — O(n) wasted work | ✅ Cache hits when deps unchanged; selector only reruns when rawValue or deps change |
+ * | Selector closes over external React state | ⚠️ Always reruns (new closure) but reflects latest state | ✅ Only reruns when listed deps change |
+ * | Large dataset (e.g. 10,000 items) | ❌ Selector runs on **every render** regardless of data change — performance hazard | ✅ Selector only runs when rawValue or deps change |
+ *
+ * Stabilize with `useCallback` whenever the selector:
+ * - closes over external React state, **or**
+ * - returns a derived object / array and the dataset is large
+ *
+ * ```ts
+ * // ✅ stable — selector reference only changes when `filter` changes
+ * const selector = useCallback(
+ *   (items: Item[]) => items.filter(i => i.status === filter),
+ *   [filter],
+ * );
+ * const filtered = useRiverWatch(itemsProvider, selector);
+ *
+ * // ⚠️ unstable — new function every render → selector always reruns (wasted work)
+ * const filtered = useRiverWatch(itemsProvider, (items) => items.filter(...));
  * ```
  */
 export function useRiverWatch<T>(provider: ProviderBase<T>): T;

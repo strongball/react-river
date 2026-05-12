@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
@@ -386,3 +386,83 @@ describe('React Hooks', () => {
   });
 });
 
+// ── Selector stability ───────────────────────────────────────────
+
+describe('useRiverWatch selector stability', () => {
+  /**
+   * Inline selector returning an array does NOT cause an infinite re-render loop
+   * with the current (rawValue + lastSelector) cache design.
+   *
+   * Why no loop:
+   *   The tearing check fired by useSyncExternalStore happens after commit but
+   *   before the next render. At that point selectorRef.current is still the
+   *   same function reference from the current render, so the cache HITS and
+   *   Object.is passes — React does not schedule another re-render.
+   *
+   * The real cost of an unstable (inline) selector is *performance*:
+   *   - Every unrelated re-render bypasses the cache (new fn reference)
+   *   - The selector runs unconditionally — O(n) work even when data is unchanged
+   *   - Useful optimisation: wrap with useCallback so cache hits when deps are stable
+   */
+
+  /**
+   * Shows that wrapping the selector in useCallback stabilises the reference:
+   * the cache hits on the tearing check, breaking the loop.
+   */
+  it('✅ useCallback-stabilized selector avoids infinite re-render loop', () => {
+    const itemsProvider = stateProvider(
+      () => [
+        { id: 1, status: 'active' },
+        { id: 2, status: 'inactive' },
+      ],
+      { name: 'test_selector_stability_stable' },
+    );
+
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <RiverScope>{children}</RiverScope>
+    );
+
+    const { result } = renderHook(
+      () => {
+        // ✅ Stable reference — only recreated when deps change (none here)
+        const selector = useCallback(
+          (items: Array<{ id: number; status: string }>) =>
+            items.filter((i) => i.status === 'active'),
+          [],
+        );
+        return useRiverWatch(itemsProvider, selector);
+      },
+      { wrapper },
+    );
+
+    expect(result.current).toHaveLength(1);
+    expect(result.current[0].id).toBe(1);
+  });
+
+  /**
+   * Inline selector returning a PRIMITIVE is safe — primitives compare by value,
+   * so useSyncExternalStore's Object.is tearing check always passes.
+   * However the selector still runs on every render (wasted work if dataset is large).
+   */
+  it('✅ inline selector returning primitive is safe (no infinite loop)', () => {
+    const itemsProvider = stateProvider(
+      () => [
+        { id: 1, status: 'active' },
+        { id: 2, status: 'inactive' },
+      ],
+      { name: 'test_selector_stability_primitive' },
+    );
+
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <RiverScope>{children}</RiverScope>
+    );
+
+    const { result } = renderHook(
+      // ✅ Returns a number — same value → Object.is passes → no tearing loop
+      () => useRiverWatch(itemsProvider, (items) => items.length),
+      { wrapper },
+    );
+
+    expect(result.current).toBe(2);
+  });
+});
