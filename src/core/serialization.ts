@@ -36,8 +36,6 @@ export function isSerializable(value: unknown): boolean {
   return check(value);
 }
 
-const warnedProviders = new Set<string>();
-
 /**
  * Development helper to check if a value is safe for SSR dehydration.
  * Issues console warnings with detailed paths for non-serializable parts.
@@ -45,12 +43,11 @@ const warnedProviders = new Set<string>();
  * @internal
  */
 export function validateSerializable(value: unknown, providerName: string, path = ''): void {
-  if (warnedProviders.has(providerName)) return;
-
   const seen = new Set<unknown>();
+  let hasWarned = false;
 
   function check(val: unknown, currentPath: string): void {
-    if (warnedProviders.has(providerName)) return;
+    if (hasWarned) return;
 
     if (val === null || typeof val !== 'object') {
       if (typeof val === 'function' || typeof val === 'symbol') {
@@ -59,7 +56,7 @@ export function validateSerializable(value: unknown, providerName: string, path 
             currentPath || '(root)'
           }". This will be lost during dehydration.`,
         );
-        warnedProviders.add(providerName);
+        hasWarned = true;
       }
       return;
     }
@@ -70,7 +67,7 @@ export function validateSerializable(value: unknown, providerName: string, path 
           currentPath || '(root)'
         }". Dehydration might fail.`,
       );
-      warnedProviders.add(providerName);
+      hasWarned = true;
       return;
     }
     seen.add(val);
@@ -82,21 +79,21 @@ export function validateSerializable(value: unknown, providerName: string, path 
           proto?.constructor?.name ?? 'unknown'
         }) at path "${currentPath || '(root)'}". Methods and prototype will be lost after hydration.`,
       );
-      warnedProviders.add(providerName);
+      hasWarned = true;
     }
 
-    if (warnedProviders.has(providerName)) return;
+    if (hasWarned) return;
 
     if (Array.isArray(val)) {
       for (let i = 0; i < val.length; i++) {
         check(val[i], `${currentPath}[${i}]`);
-        if (warnedProviders.has(providerName)) return;
+        if (hasWarned) return;
       }
     } else {
       for (const key in val) {
         if (Object.prototype.hasOwnProperty.call(val, key)) {
           check((val as any)[key], currentPath ? `${currentPath}.${key}` : key);
-          if (warnedProviders.has(providerName)) return;
+          if (hasWarned) return;
         }
       }
     }
