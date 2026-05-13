@@ -1,3 +1,10 @@
+## [1.0.34](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.33...v1.0.34) (2026-05-13)
+
+
+### Performance Improvements
+
+* suppress redundant serialization warnings for individual providers using a memoization set ([f7f81b3](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/commit/f7f81b37d6e741fa397a3e9e937c573967fdb2f1))
+
 ## [1.0.33](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.32...v1.0.33) (2026-05-12)
 
 ## [1.0.32](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.31...v1.0.32) (2026-05-12)
