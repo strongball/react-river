@@ -166,7 +166,7 @@ export function useRiverWatch<T, S = T>(
     // oxlint-disable-next-line eslint-plugin-react-hooks/exhaustive-deps
   }, [container, provider.id]);
 
-  return useSyncExternalStore(subscribe, getSnapshot);
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
 
 

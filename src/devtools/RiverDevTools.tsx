@@ -58,7 +58,7 @@ export function RiverDevTools({ defaultPosition, defaultOpen = false }: RiverDev
   const stableGetSnapshot = useCallback(() => pinnedDevtools.current.getSnapshot(), []);
 
   // This re-renders whenever the pinned observer fires (any provider event)
-  useSyncExternalStore(stableSubscribe, stableGetSnapshot);
+  useSyncExternalStore(stableSubscribe, stableGetSnapshot, stableGetSnapshot);
 
   const [open, setOpen] = useState(defaultOpen);
   const [tab, setTab] = useState<Tab>('providers');
