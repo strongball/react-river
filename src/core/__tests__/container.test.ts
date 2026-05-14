@@ -311,6 +311,85 @@ describe('RiverContainer', () => {
     expect(container.read(p)).toBe(2);
   });
 
+  describe('Custom Equality', () => {
+    it('stateProvider should bail out when custom equals returns true', () => {
+      const p = stateProvider(() => ({ count: 0 }), {
+        name: 'test_equality',
+        equals: (prev, next) => prev.count === next.count,
+      });
+      const container = new RiverContainer();
+      const listener = vi.fn();
+      container.listen(p, listener);
+
+      // Initial state
+      expect(container.read(p)).toEqual({ count: 0 });
+
+      // Update with same count - should bail out
+      container.set(p, { count: 0 });
+      expect(listener).not.toHaveBeenCalled();
+
+      // Update with different count - should trigger
+      container.set(p, { count: 1 });
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(container.read(p)).toEqual({ count: 1 });
+    });
+
+    it('stateProvider should use default Object.is when equals is not provided', () => {
+      const p = stateProvider(() => ({ count: 0 }), { name: 'test_no_equality' });
+      const container = new RiverContainer();
+      const listener = vi.fn();
+      container.listen(p, listener);
+
+      // Update with same content but different object reference
+      container.set(p, { count: 0 });
+      expect(listener).toHaveBeenCalledTimes(1);
+    });
+
+    it('should work with functional updates', () => {
+      const p = stateProvider(() => ({ count: 0, meta: 'foo' }), {
+        name: 'test_functional_equality',
+        equals: (prev, next) => prev.count === next.count,
+      });
+      const container = new RiverContainer();
+      const listener = vi.fn();
+      container.listen(p, listener);
+
+      // Update meta only - count stays same - should bail out
+      container.set(p, (prev) => ({ ...prev, meta: 'bar' }));
+      expect(listener).not.toHaveBeenCalled();
+
+      // Update count - should trigger
+      container.set(p, (prev) => ({ ...prev, count: 1 }));
+      expect(listener).toHaveBeenCalledTimes(1);
+    });
+
+    it('should respect custom equality during reinitialize (invalidate)', () => {
+      let count = 0;
+      const p = stateProvider(() => ({ val: ++count }), {
+        name: 'test_reinit_equality',
+        equals: (prev, next) => prev.val === next.val,
+      });
+      const container = new RiverContainer();
+      const listener = vi.fn();
+      container.listen(p, listener);
+
+      expect(container.read(p)).toEqual({ val: 1 });
+
+      // Invalidate but factory returns same value (if we mocked it, but here it increments)
+      // So let's force it to return same value by controlling count
+      count = 0; // next call to factory will return { val: 1 }
+      container.invalidate(p);
+      expect(container.read(p)).toEqual({ val: 1 });
+      expect(listener).not.toHaveBeenCalled();
+
+      // Invalidate and factory returns different value
+      count = 1; // next call returns { val: 2 }
+      container.invalidate(p);
+      expect(container.read(p)).toEqual({ val: 2 });
+      expect(listener).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('Asynchronous Providers', () => {
     it('promiseProvider should handle basic promise resolution', async () => {
       const container = new RiverContainer();

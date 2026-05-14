@@ -483,15 +483,14 @@ export class RiverContainer {
 
     const oldValue = state.value;
 
-    // Skip if value hasn't changed
-    if (this.valuesEqual(oldValue, newValue)) return;
+    const provider = this.providerMap.get(providerId);
+    if (this.valuesEqual(oldValue, newValue, provider)) return;
 
     state.previousValue = oldValue;
     state.value = newValue;
     state.version++;
 
     // Notify observers
-    const provider = this.providerMap.get(providerId);
     if (provider) {
       this.notifyObservers('update', provider, { oldValue, newValue });
     }
@@ -510,7 +509,10 @@ export class RiverContainer {
     this.propagateToDependents(providerId);
   }
 
-  private valuesEqual(a: unknown, b: unknown): boolean {
+  private valuesEqual(a: unknown, b: unknown, provider?: ProviderBase<any>): boolean {
+    if (provider?.options.equals) {
+      return provider.options.equals(a, b);
+    }
     if (a && b && typeof a === 'object' && typeof b === 'object' && 'status' in a && 'status' in b) {
       return asyncValueEquals(a as AsyncValue<unknown>, b as AsyncValue<unknown>);
     }
@@ -579,7 +581,7 @@ export class RiverContainer {
     newState.watchSelectors = state.watchSelectors;
 
     // Check if value actually changed
-    if (!this.valuesEqual(oldValue, newState.value)) {
+    if (!this.valuesEqual(oldValue, newState.value, provider)) {
       newState.previousValue = oldValue;
       newState.version++;
 

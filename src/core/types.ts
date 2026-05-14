@@ -71,6 +71,12 @@ export interface ProviderOptions<T = any> {
    * ```
    */
   fromJSON?: (json: unknown) => T;
+  /**
+   * Custom equality function to determine if the state has changed.
+   * If it returns true, the state is considered equal and no update is triggered.
+   * Default is Object.is (plus AsyncValue comparison for async providers).
+   */
+  equals?: (prev: T, next: T) => boolean;
 }
 
 // ── Ref (used inside provider create functions) ────────────────
