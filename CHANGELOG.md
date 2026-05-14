@@ -1,3 +1,10 @@
+## [1.0.35](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.34...v1.0.35) (2026-05-14)
+
+
+### Features
+
+* add optional custom equality check to stateProvider for change tracking optimization ([db0aee2](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/commit/db0aee2e82e3cdcf8065d1c74d64b67f5a78d78e))
+
 ## [1.0.34](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.33...v1.0.34) (2026-05-13)
 
 
