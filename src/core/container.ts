@@ -697,6 +697,9 @@ export class RiverContainer {
     provider: ProviderBase<any>,
     ...args: any[]
   ): void {
+    if (event === 'error') {
+      console.error(`[react-river] Error in provider "${getProviderLabel(provider)}":`, args[0]);
+    }
     for (const observer of this.observers) {
       try {
         switch (event) {

@@ -619,6 +619,45 @@ describe('RiverContainer', () => {
       expect(observer.onProviderError).toHaveBeenCalledWith(p, 'error');
     });
 
+    it('should log provider error to console.error', () => {
+      const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const container = new RiverContainer();
+      const p = provider(
+        () => {
+          throw new Error('sync fail');
+        },
+        { name: 'test_provider_sync_fail' },
+      );
+
+      try {
+        container.read(p);
+      } catch {}
+
+      expect(spy).toHaveBeenCalled();
+      const errorArg = spy.mock.calls[0][0];
+      expect(errorArg).toContain('[react-river] Error in provider "test_provider_sync_fail"');
+      spy.mockRestore();
+    });
+
+    it('should log async provider error to console.error', async () => {
+      const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const container = new RiverContainer();
+      const p = promiseProvider(
+        async () => {
+          throw new Error('async fail');
+        },
+        { name: 'test_provider_async_fail' },
+      );
+
+      container.read(p);
+      await expect(container.read(p.promise)).rejects.toThrow('async fail');
+
+      expect(spy).toHaveBeenCalled();
+      const errorArg = spy.mock.calls[0][0];
+      expect(errorArg).toContain('[react-river] Error in provider "test_provider_async_fail"');
+      spy.mockRestore();
+    });
+
     it('selector error during propagation', () => {
       const container = new RiverContainer();
       const base = stateProvider(() => 1, { name: 'test_stateProvider_17002' });
