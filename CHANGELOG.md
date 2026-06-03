@@ -1,3 +1,10 @@
+## [1.0.36](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.35...v1.0.36) (2026-06-03)
+
+
+### Features
+
+* add console.error logging for provider exceptions and suppress logs in test environment ([188133c](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/commit/188133c167ddd467199ca8f2f4057a36d8685134))
+
 ## [1.0.35](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.34...v1.0.35) (2026-05-14)
 
 
