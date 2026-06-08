@@ -1,3 +1,10 @@
+## [1.0.37](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.36...v1.0.37) (2026-06-08)
+
+
+### Features
+
+* maintain previous data in loading state during provider refreshes ([a4bda0f](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/commit/a4bda0fd2e91b25e8f2d17b7228d2d13d090ef67))
+
 ## [1.0.36](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.35...v1.0.36) (2026-06-03)
 
 
