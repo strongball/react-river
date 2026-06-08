@@ -450,6 +450,115 @@ describe('RiverContainer', () => {
       const name = await namePromise;
       expect(name).toBe('TEST');
     });
+
+    it('promiseProvider refresh should transition to loading with previous data', async () => {
+      const container = new RiverContainer();
+      let count = 0;
+      const p = promiseProvider(async () => {
+        count++;
+        return `val-${count}`;
+      }, { name: 'refresh_test_promise' });
+
+      // Initial read - transitions to loading
+      expect(container.read(p).status).toBe('loading');
+      expect(container.read(p).data).toBeUndefined();
+
+      // Wait for resolve
+      await container.read(p.promise);
+      expect(container.read(p).status).toBe('data');
+      expect(container.read(p).data).toBe('val-1');
+
+      // Refresh
+      container.invalidate(p);
+
+      // Value should be loading but retain previous data 'val-1'
+      const loadingVal = container.read(p);
+      expect(loadingVal.status).toBe('loading');
+      expect(loadingVal.data).toBe('val-1');
+      expect(loadingVal.hasData).toBe(true);
+
+      // Wait for second resolve
+      await container.read(p.promise);
+      expect(container.read(p).status).toBe('data');
+      expect(container.read(p).data).toBe('val-2');
+    });
+
+    it('observableProvider refresh should transition to loading with previous data', async () => {
+      const container = new RiverContainer();
+      let nextCb: (v: string) => void;
+      let subscribeCount = 0;
+      const p = observableProvider(
+        () => {
+          subscribeCount++;
+          return {
+            subscribe: (callbacks: any) => {
+              nextCb = typeof callbacks === 'function' ? callbacks : callbacks.next;
+              return { unsubscribe: () => {} };
+            },
+          };
+        },
+        { name: 'refresh_test_obs' },
+      );
+
+      // Initial read - loading
+      expect(container.read(p).status).toBe('loading');
+      expect(container.read(p).data).toBeUndefined();
+
+      // Emit first value
+      nextCb!('val-1');
+      expect(container.read(p).status).toBe('data');
+      expect(container.read(p).data).toBe('val-1');
+
+      // Refresh
+      container.invalidate(p);
+
+      // Should be loading but retain previous data
+      const loadingVal = container.read(p);
+      expect(loadingVal.status).toBe('loading');
+      expect(loadingVal.data).toBe('val-1');
+      expect(loadingVal.hasData).toBe(true);
+
+      // Emit second value
+      nextCb!('val-2');
+      expect(container.read(p).status).toBe('data');
+      expect(container.read(p).data).toBe('val-2');
+    });
+
+    it('asyncNotifierProvider refresh should transition to loading with previous data', async () => {
+      const container = new RiverContainer();
+      let count = 0;
+      class TestAsyncNotifier extends AsyncNotifier<string> {
+        async build() {
+          count++;
+          return `val-${count}`;
+        }
+      }
+
+      const p = asyncNotifierProvider(() => new TestAsyncNotifier(), { name: 'refresh_test_notifier' });
+
+      // Initial read - loading
+      expect(container.read(p).status).toBe('loading');
+      expect(container.read(p).data).toBeUndefined();
+
+      // Wait for resolve
+      await container.read(p.promise);
+      expect(container.read(p).status).toBe('data');
+      expect(container.read(p).data).toBe('val-1');
+
+      // Refresh
+      container.invalidate(p);
+
+      // Should be loading but retain previous data
+      const loadingVal = container.read(p);
+      expect(loadingVal.status).toBe('loading');
+      expect(loadingVal.data).toBe('val-1');
+      expect(loadingVal.hasData).toBe(true);
+
+      // Wait for second resolve
+      await container.read(p.promise);
+      expect(container.read(p).status).toBe('data');
+      expect(container.read(p).data).toBe('val-2');
+    });
   });
 
   it('should handle onCancel and onResume', async () => {

@@ -82,11 +82,16 @@ export function initPromiseProvider(options: {
   state: ProviderState;
   override?: ProviderOverride;
   hydratedValue?: unknown;
+  previousValue?: unknown;
 }): void {
-  const { cb, provider, ref, state, override, hydratedValue } = options;
+  const { cb, provider, ref, state, override, hydratedValue, previousValue } = options;
+  const prevData =
+    previousValue && typeof previousValue === 'object' && 'status' in previousValue
+      ? (previousValue as any).data
+      : undefined;
   // Use hydrated value (wrapped in asyncData) instead of asyncLoading when available.
   // The client-side factory still executes and will update the value when fresh data arrives.
-  state.value = hydratedValue !== undefined ? asyncData(hydratedValue) : asyncLoading();
+  state.value = hydratedValue !== undefined ? asyncData(hydratedValue) : asyncLoading(prevData);
 
   const abortController = new AbortController();
   state.abortController = abortController;
@@ -115,10 +120,15 @@ export function initObservableProvider(options: {
   state: ProviderState;
   override?: ProviderOverride;
   hydratedValue?: unknown;
+  previousValue?: unknown;
 }): void {
-  const { cb, provider, ref, state, override, hydratedValue } = options;
+  const { cb, provider, ref, state, override, hydratedValue, previousValue } = options;
+  const prevData =
+    previousValue && typeof previousValue === 'object' && 'status' in previousValue
+      ? (previousValue as any).data
+      : undefined;
   // Use hydrated value (wrapped in asyncData) instead of asyncLoading when available.
-  state.value = hydratedValue !== undefined ? asyncData(hydratedValue) : asyncLoading();
+  state.value = hydratedValue !== undefined ? asyncData(hydratedValue) : asyncLoading(prevData);
 
   const abortController = new AbortController();
   state.abortController = abortController;
@@ -205,10 +215,15 @@ export function initAsyncNotifierProvider(options: {
   state: ProviderState;
   override?: ProviderOverride;
   hydratedValue?: unknown;
+  previousValue?: unknown;
 }): void {
-  const { cb, provider, ref, state, override, hydratedValue } = options;
+  const { cb, provider, ref, state, override, hydratedValue, previousValue } = options;
+  const prevData =
+    previousValue && typeof previousValue === 'object' && 'status' in previousValue
+      ? (previousValue as any).data
+      : undefined;
   // Use hydrated value (wrapped in asyncData) instead of asyncLoading when available.
-  state.value = hydratedValue !== undefined ? asyncData(hydratedValue) : asyncLoading();
+  state.value = hydratedValue !== undefined ? asyncData(hydratedValue) : asyncLoading(prevData);
 
   const abortController = new AbortController();
   state.abortController = abortController;

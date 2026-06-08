@@ -357,7 +357,11 @@ export class RiverContainer {
     return current;
   }
 
-  private initializeProvider(provider: ProviderBase<any>, override?: ProviderOverride): unknown {
+  private initializeProvider(
+    provider: ProviderBase<any>,
+    override?: ProviderOverride,
+    previousValue?: unknown,
+  ): unknown {
     // Circular dependency detection
     if (this.initializingStack.has(provider.id)) {
       throw new Error(
@@ -418,6 +422,7 @@ export class RiverContainer {
             state,
             override,
             hydratedValue,
+            previousValue,
           });
           break;
         case 'observableProvider':
@@ -428,6 +433,7 @@ export class RiverContainer {
             state,
             override,
             hydratedValue,
+            previousValue,
           });
           break;
         case 'notifierProvider':
@@ -448,6 +454,7 @@ export class RiverContainer {
             state,
             override,
             hydratedValue,
+            previousValue,
           });
           break;
         case 'notifierAccessor':
@@ -571,7 +578,7 @@ export class RiverContainer {
 
     // Re-initialize
     const override = this.overrideMap.get(provider.id);
-    this.initializeProvider(provider, override);
+    this.initializeProvider(provider, override, oldValue);
 
     // Restore listeners and dependency graph
     const newState = this.getOwnState(provider.id)!;
