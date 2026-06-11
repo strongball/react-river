@@ -35,10 +35,26 @@ export interface ProviderFamily<P, Arg> {
 
 // ── Key serialization ──────────────────────────────────────────
 
+function stableStringify(val: unknown): string {
+  if (val === null) return 'null';
+  if (typeof val === 'object') {
+    if (typeof (val as any).toJSON === 'function') {
+      return stableStringify((val as any).toJSON());
+    }
+    if (Array.isArray(val)) {
+      return '[' + val.map(stableStringify).join(',') + ']';
+    }
+    const keys = Object.keys(val).sort();
+    const parts = keys.map(k => JSON.stringify(k) + ':' + stableStringify((val as Record<string, unknown>)[k]));
+    return '{' + parts.join(',') + '}';
+  }
+  return JSON.stringify(val);
+}
+
 function serializeArg(arg: unknown): string {
   if (typeof arg === 'string') return arg;
   if (typeof arg === 'number' || typeof arg === 'boolean') return String(arg);
-  return JSON.stringify(arg);
+  return stableStringify(arg);
 }
 
 // ── Generic family factory ─────────────────────────────────────

@@ -118,6 +118,19 @@ describe('Provider Families', () => {
     expect(p({ id: 1 })).not.toBe(p({ id: 2 }));
   });
 
+  it('should treat object arguments with different key order as the same', () => {
+    const container = new RiverContainer();
+    const p = providerFamily<string, { a?: number; b?: number }>((ref, arg) => `a: ${arg.a}, b: ${arg.b}`, { name: 'p' });
+
+    const arg1 = { a: 1, b: 2 };
+    const arg2 = { b: 2, a: 1 };
+
+    expect(p(arg1)).toBe(p(arg2));
+    expect(container.read(p(arg1))).toBe('a: 1, b: 2');
+    expect(container.read(p(arg2))).toBe('a: 1, b: 2');
+  });
+
+
   it('family.clear() should clear the cache', () => {
     const p = providerFamily((ref, id) => id, { name: 'clear' });
     const instance1 = p(1);
