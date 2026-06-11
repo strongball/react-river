@@ -1,3 +1,10 @@
+## [1.0.38](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.37...v1.0.38) (2026-06-11)
+
+
+### Features
+
+* enable key-order independent caching for object arguments in providerFamily ([5ff1734](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/commit/5ff1734d46d2c00692a0bf7973f5e3f7bd4b0de2))
+
 ## [1.0.37](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.36...v1.0.37) (2026-06-08)
 
 
