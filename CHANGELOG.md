@@ -1,3 +1,10 @@
+## [1.0.39](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.38...v1.0.39) (2026-07-03)
+
+
+### Bug Fixes
+
+* ensure notifierAccessor updates when parent notifier provider is invalidated ([7319665](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/commit/7319665c8e55183dfbfed4abbdb81e0a71521499))
+
 ## [1.0.38](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.37...v1.0.38) (2026-06-11)
 
 
