@@ -189,4 +189,26 @@ describe('AsyncNotifier', () => {
     container.dispose();
     expect(disposed).toBe(true);
   });
+
+  it('should update .notifier accessor when provider is invalidated', () => {
+    class DummyNotifier extends Notifier<number> {
+      build() {
+        return 0;
+      }
+    }
+    const p = notifierProvider(() => new DummyNotifier(), { name: 'test_invalidate_notifier' });
+    const container = new RiverContainer();
+
+    // 1. Initial read of the notifier
+    const notifier1 = container.read(p.notifier);
+
+    // 2. Invalidate the parent provider (should trigger re-creation of notifier)
+    container.invalidate(p);
+
+    // 3. Read the notifier again
+    const notifier2 = container.read(p.notifier);
+
+    // 4. Assert that they are different instances
+    expect(notifier1).not.toBe(notifier2);
+  });
 });

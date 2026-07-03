@@ -300,4 +300,11 @@ export function initNotifierAccessor(options: {
     );
   }
   state.value = parentState.notifierInstance;
+
+  // Register dependency so that invalidating the parent notifier correctly
+  // invalidates and re-initializes this accessor to point to the new notifier instance.
+  if (parentProvider) {
+    parentState.dependents.add(accessor.id);
+    state.dependencies.add(parentProvider);
+  }
 }

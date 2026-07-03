@@ -602,6 +602,15 @@ export class RiverContainer {
       }
 
       this.propagateToDependents(provider.id);
+    } else {
+      // Even if the value didn't change, we must re-initialize any notifierAccessor dependents
+      // because the parent's notifierInstance was recreated, so the accessor's cached value is stale.
+      for (const depId of Array.from(newState.dependents)) {
+        const depProvider = this.providerMap.get(depId);
+        if (depProvider && depProvider.kind === 'notifierAccessor') {
+          this.reinitialize(depProvider);
+        }
+      }
     }
   }
 
