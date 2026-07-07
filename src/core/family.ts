@@ -31,6 +31,8 @@ export interface ProviderFamily<P, Arg> {
   (arg: Arg): P;
   /** Clear all cached provider instances */
   clear(): void;
+  /** Get all cached provider instances */
+  getProviders(): P[];
 }
 
 // ── Key serialization ──────────────────────────────────────────
@@ -73,6 +75,7 @@ function createFamily<P, Arg>(factory: (arg: Arg, argKey: string) => P): Provide
   };
 
   family.clear = () => cache.clear();
+  family.getProviders = () => Array.from(cache.values());
 
   return family;
 }

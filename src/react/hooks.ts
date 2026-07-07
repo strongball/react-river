@@ -10,6 +10,7 @@ import { useRiverContainer } from './scope';
 import type { AsyncValue } from '../core/async_value';
 import { asyncData, asyncError, asyncLoading } from '../core/async_value';
 import type { ListenerCallback, ProviderBase, RiverRef, StateProvider } from '../core/types';
+import type { ProviderFamily } from '../core/family';
 
 // ── useRiverWatch — subscribe to a provider (triggers re-render) ────
 export interface UseRiverWatchOptions<T, S = T> {
@@ -199,6 +200,7 @@ export function useRiverRef(): RiverRef {
     riverRefRef.current = {
       read: (provider) => containerRef.current.read(provider),
       invalidate: (provider) => containerRef.current.invalidate(provider),
+      invalidateFamily: (family: ProviderFamily<any, any>) => containerRef.current.invalidateFamily(family),
       refresh: (provider) => containerRef.current.refresh(provider),
       set: <T>(provider: StateProvider<T>, value: T | ((prev: T) => T)) => containerRef.current.set(provider, value),
       listen: (provider, callback) => containerRef.current.listen(provider, callback),

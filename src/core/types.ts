@@ -3,6 +3,7 @@
  * ════════════════════════════════════════════════════════════════ */
 
 import type { AsyncValue } from './async_value';
+import type { ProviderFamily } from './family';
 
 // ── Utility Types ──────────────────────────────────────────────
 
@@ -100,6 +101,8 @@ export interface Ref {
   onResume(callback: () => void): void;
   /** Force this provider to re-initialize. */
   invalidateSelf(): void;
+  /** Invalidate all active instances of a family. */
+  invalidateFamily(family: ProviderFamily<any, any>): void;
 }
 
 // ── RiverRef (used in React components via useRiverRef) ────────
@@ -109,6 +112,8 @@ export interface RiverRef {
   read<T>(provider: ProviderBase<T>): T;
   /** Force a provider to re-initialize. */
   invalidate(provider: ProviderBase<any>): void;
+  /** Invalidate all active instances of a family. */
+  invalidateFamily(family: ProviderFamily<any, any>): void;
   /** Invalidate and immediately return the new value. */
   refresh<T>(provider: ProviderBase<T>): T;
   /** Set a StateProvider's value directly. */

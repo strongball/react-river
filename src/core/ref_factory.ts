@@ -8,6 +8,7 @@ import { asyncValueToPromise } from './async_value';
 import type { AsyncValue } from './async_value';
 import type { ContainerCallbacks } from './container_types';
 import type { ListenerCallback, PromiseAccessor, ProviderBase, Ref, Unsubscribe } from './types';
+import type { ProviderFamily } from './family';
 
 // ── Return type for watch helpers ──────────────────────────────
 
@@ -67,6 +68,10 @@ export function createRef(cb: ContainerCallbacks, ownerId: symbol): Ref {
     invalidateSelf: (): void => {
       const provider = cb.providerMap.get(ownerId);
       if (provider) cb.invalidate(provider);
+    },
+
+    invalidateFamily: (family: ProviderFamily<any, any>): void => {
+      cb.invalidateFamily(family);
     },
   };
 }

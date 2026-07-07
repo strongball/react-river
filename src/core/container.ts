@@ -33,6 +33,7 @@ import {
 import type { AsyncData, AsyncValue } from './async_value';
 import type { ProviderState, ContainerCallbacks } from './container_types';
 import type { RiverObserver } from './observer';
+import type { ProviderFamily } from './family';
 
 // Re-export public types so existing imports keep working
 export type { DevToolsProviderSnapshot, RiverContainerOptions, RiverCachePolicy } from './container_types';
@@ -85,6 +86,7 @@ export class RiverContainer {
       listen: this.listen.bind(this),
       read: this.read.bind(this),
       invalidate: this.invalidate.bind(this),
+      invalidateFamily: this.invalidateFamily.bind(this),
       providerMap: this.providerMap,
     };
   }
@@ -133,6 +135,17 @@ export class RiverContainer {
     if (!state?.initialized) return;
 
     this.reinitialize(provider);
+  }
+
+  /** Force all active instances of a family to re-initialize. */
+  invalidateFamily(family: ProviderFamily<any, any>): void {
+    this.assertNotDisposed();
+    if (family && typeof family.getProviders === 'function') {
+      const providers = family.getProviders();
+      for (const provider of providers) {
+        this.invalidate(provider);
+      }
+    }
   }
 
   /** Invalidate and return the new value. */

@@ -5,6 +5,7 @@
 
 import type { ListenerCallback, ProviderBase, ProviderOverride, Unsubscribe } from './types';
 import type { RiverObserver } from './observer';
+import type { ProviderFamily } from './family';
 
 // ── Internal Provider State ────────────────────────────────────
 
@@ -132,6 +133,7 @@ export interface ContainerCallbacks {
   listen<T>(provider: ProviderBase<T>, callback: ListenerCallback<T>): Unsubscribe;
   read<T>(provider: ProviderBase<T>): T;
   invalidate(provider: ProviderBase<any>): void;
+  invalidateFamily(family: ProviderFamily<any, any>): void;
   providerMap: Map<symbol, ProviderBase<any>>;
 }
 

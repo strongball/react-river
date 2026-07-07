@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { RiverContainer } from '../container';
+import { provider } from '../provider';
 import {
   providerFamily,
   stateProviderFamily,
@@ -178,5 +179,68 @@ describe('Provider Families', () => {
     expect(p(1)).not.toBe(p(2));
     // Note: currently '1' and 1 collide in serializeArg implementation
     // expect(p('1')).not.toBe(p(1));
+  });
+
+  it('family.getProviders() should return all cached provider instances', () => {
+    const p = providerFamily((ref, id) => id, { name: 'getProvidersTest' });
+    const instance1 = p(1);
+    const instance2 = p(2);
+    
+    const providers = p.getProviders();
+    expect(providers).toHaveLength(2);
+    expect(providers).toContain(instance1);
+    expect(providers).toContain(instance2);
+  });
+
+  it('container.invalidateFamily should invalidate all instances of a family', () => {
+    const container = new RiverContainer();
+    let counter = 0;
+    const p = stateProviderFamily<number, number>((ref, id) => {
+      counter++;
+      return counter;
+    }, { name: 'invalidateFamilyTest' });
+
+    // Initialize two instances
+    const val1 = container.read(p(1));
+    const val2 = container.read(p(2));
+    expect(val1).toBe(1);
+    expect(val2).toBe(2);
+
+    // Invalidate the entire family
+    container.invalidateFamily(p);
+
+    // Read again, they should both be re-initialized
+    const newVal1 = container.read(p(1));
+    const newVal2 = container.read(p(2));
+    expect(newVal1).toBe(3);
+    expect(newVal2).toBe(4);
+  });
+
+  it('ref.invalidateFamily should invalidate all instances of a family from within another provider', () => {
+    const container = new RiverContainer();
+    let counter = 0;
+    const p = stateProviderFamily<number, number>((ref, id) => {
+      counter++;
+      return counter;
+    }, { name: 'refInvalidateFamilyTest' });
+
+    // Initialize two instances
+    container.read(p(1));
+    container.read(p(2));
+
+    const triggerProvider = provider((ref) => {
+      return {
+        trigger: () => ref.invalidateFamily(p),
+      };
+    }, { name: 'trigger' });
+
+    const trig = container.read(triggerProvider);
+    trig.trigger();
+
+    // Read again, they should both be re-initialized
+    const newVal1 = container.read(p(1));
+    const newVal2 = container.read(p(2));
+    expect(newVal1).toBe(3);
+    expect(newVal2).toBe(4);
   });
 });
