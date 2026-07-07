@@ -1,3 +1,10 @@
+## [1.0.40](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.39...v1.0.40) (2026-07-07)
+
+
+### Features
+
+* add support for invalidating entire provider families via container and ref API ([7314b48](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/commit/7314b482313eb6fbef79474bca52f69c7f2ff44a))
+
 ## [1.0.39](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.38...v1.0.39) (2026-07-03)
 
 
