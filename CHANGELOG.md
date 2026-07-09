@@ -1,3 +1,10 @@
+## [1.0.41](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.40...v1.0.41) (2026-07-09)
+
+
+### Bug Fixes
+
+* abort mutation on onMutate error, improve container cleanup and promise validation, and update library build formats. ([987e03a](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/commit/987e03a9c956698944c369c8d43d57e35036c6bf))
+
 ## [1.0.40](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.39...v1.0.40) (2026-07-07)
 
 
