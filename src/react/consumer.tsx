@@ -45,6 +45,7 @@ export function Consumer({ children }: ConsumerProps) {
   // After each render, sync subscriptions with the watched providers.
   // Using useLayoutEffect ensures it runs synchronously before painting
   // and avoids subscription side effects in the render phase.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useLayoutEffect(() => {
     const currentWatched = watchedProvidersRef.current;
 
