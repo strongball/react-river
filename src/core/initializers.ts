@@ -98,6 +98,18 @@ export function initPromiseProvider(options: {
 
   const promise = (override ? override.create(ref) : provider._create(ref)) as Promise<unknown>;
 
+  // Guard: ensure the factory returned a thenable, not a plain value
+  if (!promise || typeof (promise as any).then !== 'function') {
+    cb.notifyObservers('error', provider, new Error(
+      `promiseProvider "${provider.name ?? provider.id.description}" factory must return a Promise, ` +
+        `got ${typeof promise}.`,
+    ));
+    cb.updateValue(provider.id, asyncError(
+      new Error(`Expected a Promise from factory, got ${typeof promise}`),
+    ));
+    return;
+  }
+
   promise.then(
     (data) => {
       if (abortController.signal.aborted) return;

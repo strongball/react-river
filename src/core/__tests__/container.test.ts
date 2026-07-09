@@ -915,16 +915,18 @@ describe('RiverContainer', () => {
     it('resolvePromiseAccessor error path and null parentValue', async () => {
       const container = new RiverContainer();
 
-      // 1. null parentValue (simulated)
+      // 1. null parentValue should reject with a descriptive error
       const fakeAccessor: any = {
         kind: 'promiseAccessor',
-        _parentProvider: { id: Symbol('nonexistent'), options: {} },
+        name: 'test_accessor',
+        _parentProvider: { id: Symbol('nonexistent'), name: 'nonexistent', options: {} },
       };
       // Force read to return null
       const originalRead = container.read;
       container.read = () => null as any;
       const p1 = (container as any).resolvePromiseAccessor(fakeAccessor);
       expect(p1).toBeInstanceOf(Promise);
+      await expect(p1).rejects.toThrow('has no value for promise accessor');
       container.read = originalRead;
 
       // 2. error path in listener

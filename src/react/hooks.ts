@@ -346,8 +346,10 @@ export function useRiverMutation<TData = void, TVariables = void, TContext = unk
         try {
           // onMutate — before the mutation (optimistic updates go here)
           context = await onMutateFn(variables, riverRef);
-        } catch {
-          // If onMutate itself throws, still proceed with the mutation
+        } catch (err) {
+          // If onMutate itself throws, abort the mutation and surface the error
+          setState(asyncError<TData | undefined>(err));
+          throw err;
         }
       }
 

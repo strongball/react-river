@@ -35,6 +35,8 @@ export interface ProviderState {
 
   /** Timeout for cacheTime before auto-dispose */
   disposeTimeout?: ReturnType<typeof setTimeout>;
+  /** Generation counter for auto-dispose microtask cancellation. */
+  disposeGeneration?: number;
 
   /** The notifier/controller instance (for notifier-based providers) */
   notifierInstance?: unknown;

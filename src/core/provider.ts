@@ -21,14 +21,34 @@ import type {
 } from './types';
 import type { AsyncValue } from './async_value';
 
-// ── Internal ID counter for debugging ──────────────────────────
+// ── Internal ID generation ────────────────────────────────────
+
+// Module-level cache that survives Vite HMR re-execution (stored on
+// import.meta.hot.data).  Plain Symbol() gives isolation between
+// independent apps on the same page; the cache reuses the same symbol
+// across hot-reloads so container overrides remain valid.
+let symbolCache: Map<string, symbol>;
+
+if (typeof import.meta !== 'undefined' && import.meta.hot?.data) {
+  symbolCache = import.meta.hot.data.riverSymbolCache as Map<string, symbol>;
+}
+
+if (!symbolCache) {
+  symbolCache = new Map<string, symbol>();
+}
+
+// Persist across HMR so the next re-execution inherits existing symbols
+if (typeof import.meta !== 'undefined' && import.meta.hot?.data) {
+  import.meta.hot.data.riverSymbolCache = symbolCache;
+}
 
 function nextId(name: string): symbol {
-  // Use Symbol.for() for named providers so the same name always yields the
-  // same Symbol identity.  This is critical for HMR: when a module re-executes,
-  // the provider object is recreated but its Symbol id stays identical, so
-  // container overrides (keyed by Symbol) remain valid.
-  return Symbol.for(`river:${name}`);
+  let sym = symbolCache.get(name);
+  if (!sym) {
+    sym = Symbol(`river:${name}`);
+    symbolCache.set(name, sym);
+  }
+  return sym;
 }
 
 
@@ -41,7 +61,7 @@ function createNotifierAccessor<N>(
 ): NotifierAccessor<N> {
   const name = `${options.name}.notifier`;
   return {
-    id: Symbol.for(`river:${name}`),
+    id: nextId(name),
     kind: 'notifierAccessor',
     name,
     options: { ...options, name } as ProviderOptions<N>,
@@ -56,7 +76,7 @@ function createPromiseAccessor<T>(
 ): PromiseAccessor<T> {
   const name = `${options.name}.promise`;
   return {
-    id: Symbol.for(`river:${name}`),
+    id: nextId(name),
     kind: 'promiseAccessor',
     name,
     options: { ...options, name } as ProviderOptions<Promise<T>>,

@@ -191,25 +191,27 @@ describe('useRiverMutation', () => {
     expect(result.current.list).toEqual(['a', 'b', 'c']);
   });
 
-  it('should still proceed when onMutate throws', async () => {
+  it('should abort mutation when onMutate throws', async () => {
     const onMutate = vi.fn(() => { throw new Error('onMutate error'); });
+    const onSuccess = vi.fn();
 
     const { result } = renderHook(
       () =>
         useRiverMutation(
           async (_ref, n: number) => n * 2,
-          { onMutate },
+          { onMutate, onSuccess },
         ),
       { wrapper },
     );
 
-    // Mutation should still execute despite onMutate throwing
+    // Mutation should abort when onMutate throws
     await act(async () => {
-      await result.current.mutate(5);
+      await expect(result.current.mutate(5)).rejects.toThrow('onMutate error');
     });
 
-    expect(result.current.state.status).toBe('data');
-    expect(result.current.state.data).toBe(10);
+    // The mutation function should NOT have been called
+    expect(onSuccess).not.toHaveBeenCalled();
+    expect(result.current.state.status).toBe('error');
   });
 
   it('should isolate state per hook instance (table scenario)', async () => {

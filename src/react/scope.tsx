@@ -3,7 +3,7 @@
  *  React context provider, analogous to Riverpod's ProviderScope.
  * ════════════════════════════════════════════════════════════════ */
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { RiverContainer } from '../core/container';
 
@@ -86,6 +86,28 @@ export function RiverScope({ children, overrides, observers, cachePolicy, initia
         initialState,
       }),
   );
+
+  // Sync prop changes to the container after mount
+  const observersRef = useRef(observers);
+
+  useEffect(() => {
+    // Sync observers
+    if (observersRef.current !== observers) {
+      // Remove old observers
+      if (observersRef.current) {
+        for (const obs of observersRef.current) {
+          container.removeObserver(obs);
+        }
+      }
+      // Add new observers
+      if (observers) {
+        for (const obs of observers) {
+          container.addObserver(obs);
+        }
+      }
+      observersRef.current = observers;
+    }
+  }, [container, observers]);
 
   // Dispose on actual unmount only, surviving Strict Mode double-invokes
   useEffect(() => {

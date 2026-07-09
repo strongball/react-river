@@ -307,12 +307,14 @@ export class RiverContainer {
 
     getSet(state).add(callback);
 
-    // If transitioning from 0 → 1 listeners, fire resume
+    // If transitioning from 0 → 1 listeners, fire resume and cancel pending disposal
     if (!hadListeners) {
       if (state.disposeTimeout) {
         clearTimeout(state.disposeTimeout);
         state.disposeTimeout = undefined;
       }
+      // Bump generation to invalidate any pending microtask disposal
+      state.disposeGeneration = (state.disposeGeneration || 0) + 1;
       for (const cb of state.resumeCallbacks) cb();
     }
 
@@ -351,7 +353,14 @@ export class RiverContainer {
   private resolvePromiseAccessor(accessor: PromiseAccessor<unknown>): Promise<unknown> {
     const parentProvider = accessor._parentProvider;
     const parentValue = this.read(parentProvider) as AsyncValue<unknown>;
-    if (!parentValue) return new Promise(() => {});
+    if (!parentValue) {
+      return Promise.reject(
+        new Error(
+          `Parent provider "${parentProvider.name ?? parentProvider.id.description}" ` +
+            `has no value for promise accessor "${accessor.name ?? accessor.id.description}".`,
+        ),
+      );
+    }
 
     return asyncValueToPromise(
       parentValue,
@@ -565,6 +574,19 @@ export class RiverContainer {
               }
             }
             shouldReinitialize = anyChanged;
+
+            // Update lastValue for all selectors after propagation check,
+            // so subsequent checks compare against the latest values.
+            if (shouldReinitialize) {
+              for (const item of selectors) {
+                try {
+                  item.lastValue = item.selector(state.value);
+                } catch {
+                  // Selector threw; lastValue will remain stale — next
+                  // propagation will treat it as changed and reinitialize.
+                }
+              }
+            }
           }
         }
 
@@ -597,8 +619,19 @@ export class RiverContainer {
     const newState = this.getOwnState(provider.id)!;
     newState.snapshotListeners = state.snapshotListeners;
     newState.valueListeners = state.valueListeners;
-    newState.dependents = state.dependents;
     newState.watchSelectors = state.watchSelectors;
+
+    // Restore dependents, but filter out stale entries where the dependent
+    // provider no longer has a forward edge to this provider (e.g., the
+    // create function conditionally watches different providers after re-init).
+    const validDependents = new Set<symbol>();
+    for (const depId of state.dependents) {
+      const depState = this.getState(depId);
+      if (depState?.dependencies.has(provider)) {
+        validDependents.add(depId);
+      }
+    }
+    newState.dependents = validDependents;
 
     // Check if value actually changed
     if (!this.valuesEqual(oldValue, newState.value, provider)) {
@@ -645,7 +678,12 @@ export class RiverContainer {
             }
           }, state.cacheTime);
         } else {
+          // Use a generation counter so that a new addListener in the same
+          // microtask can invalidate the pending dispose by incrementing
+          // the generation — the stale microtask will see a mismatch and bail.
+          const gen = (state.disposeGeneration = (state.disposeGeneration || 0) + 1);
           queueMicrotask(() => {
+            if (gen !== state.disposeGeneration) return;
             const currentState = this.getState(provider.id);
             if (currentState && !this.hasListeners(currentState)) {
               this.disposeProvider(provider);
