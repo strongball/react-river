@@ -1,3 +1,10 @@
+## [1.0.42](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.41...v1.0.42) (2026-08-06)
+
+
+### Features
+
+* add StreamProvider for consuming synchronous and asynchronous iterables ([669f77c](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/commit/669f77c9b2e5229c382d1eaebc7335e148abe6bf))
+
 ## [1.0.41](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.40...v1.0.41) (2026-07-09)
 
 
