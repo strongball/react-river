@@ -9,6 +9,7 @@ import {
   PostCard,
   TimerCard,
   StreamCard,
+  GeneratorCard,
 } from './components';
 
 // ════════════════════════════════════════════════════════════════
@@ -32,6 +33,7 @@ export default function App() {
           <PostCard />
           <TimerCard />
           <StreamCard />
+          <GeneratorCard />
         </div>
 
         <footer className="app-footer">

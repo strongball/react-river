@@ -7,6 +7,7 @@ import {
   stateProviderFamily,
   promiseProviderFamily,
   observableProviderFamily,
+  streamProviderFamily,
   notifierProviderFamily,
   asyncNotifierProviderFamily,
 } from '../family';
@@ -68,6 +69,20 @@ describe('Provider Families', () => {
 
     expect(container.read(stream(10)).data).toBe(10);
     expect(container.read(stream(20)).data).toBe(20);
+  });
+
+  it('streamProviderFamily should create parameterized generator providers', () => {
+    const container = new RiverContainer();
+    const stream = streamProviderFamily<number, number>(
+      function* (_ref, value) {
+        yield value;
+        yield value * 2;
+      },
+      { name: 'generatorStream' },
+    );
+
+    expect(container.read(stream(3)).data).toBe(6);
+    expect(container.read(stream(4)).data).toBe(8);
   });
 
   it('notifierProviderFamily should create parameterized notifier providers', () => {

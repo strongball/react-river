@@ -18,6 +18,8 @@ import type {
   StateProvider,
   ObservableProvider,
   ObservableLike,
+  StreamProvider,
+  StreamSource,
 } from './types';
 import type { AsyncValue } from './async_value';
 
@@ -27,7 +29,7 @@ import type { AsyncValue } from './async_value';
 // import.meta.hot.data).  Plain Symbol() gives isolation between
 // independent apps on the same page; the cache reuses the same symbol
 // across hot-reloads so container overrides remain valid.
-let symbolCache: Map<string, symbol>;
+let symbolCache: Map<string, symbol> | undefined;
 
 if (typeof import.meta !== 'undefined' && import.meta.hot?.data) {
   symbolCache = import.meta.hot.data.riverSymbolCache as Map<string, symbol>;
@@ -37,16 +39,18 @@ if (!symbolCache) {
   symbolCache = new Map<string, symbol>();
 }
 
+const providerSymbolCache = symbolCache;
+
 // Persist across HMR so the next re-execution inherits existing symbols
 if (typeof import.meta !== 'undefined' && import.meta.hot?.data) {
-  import.meta.hot.data.riverSymbolCache = symbolCache;
+  import.meta.hot.data.riverSymbolCache = providerSymbolCache;
 }
 
 function nextId(name: string): symbol {
-  let sym = symbolCache.get(name);
+  let sym = providerSymbolCache.get(name);
   if (!sym) {
     sym = Symbol(`river:${name}`);
-    symbolCache.set(name, sym);
+    providerSymbolCache.set(name, sym);
   }
   return sym;
 }
@@ -154,6 +158,26 @@ export function observableProvider<T>(
 
   (obsP as any).promise = createPromiseAccessor(id, obsP, options);
   return obsP;
+}
+
+// ── streamProvider() — Generator / iterable data source ─────────
+
+export function streamProvider<T>(
+  create: (ref: Ref) => StreamSource<T> | PromiseLike<StreamSource<T>>,
+  options: ProviderOptions<T>,
+): StreamProvider<T> {
+  const id = nextId(options.name);
+
+  const streamP = {
+    id,
+    kind: 'streamProvider',
+    name: options.name,
+    options,
+    _create: create,
+  } as unknown as StreamProvider<T>;
+
+  (streamP as any).promise = createPromiseAccessor(id, streamP, options);
+  return streamP;
 }
 
 // ── notifierProvider() — Class-based synchronous state ─────────

@@ -10,6 +10,7 @@ import {
   provider,
   stateProvider,
   observableProvider,
+  streamProvider,
 } from './provider';
 
 import type { AsyncNotifier, Notifier } from './notifier';
@@ -23,6 +24,8 @@ import type {
   StateProvider,
   ObservableProvider,
   ObservableLike,
+  StreamProvider,
+  StreamSource,
 } from './types';
 
 // ── Family types ───────────────────────────────────────────────
@@ -151,6 +154,21 @@ export function observableProviderFamily<T, Arg>(
 ): ProviderFamily<ObservableProvider<T>, Arg> {
   return createFamily((arg, key) =>
     observableProvider((ref) => create(ref, arg), {
+      ...options,
+      name: `${options.name}(${key})`,
+    }),
+  );
+}
+
+/**
+ * Create a parameterized generator / iterable data source provider.
+ */
+export function streamProviderFamily<T, Arg>(
+  create: (ref: Ref, arg: Arg) => StreamSource<T> | PromiseLike<StreamSource<T>>,
+  options: ProviderOptions<T>,
+): ProviderFamily<StreamProvider<T>, Arg> {
+  return createFamily((arg, key) =>
+    streamProvider((ref) => create(ref, arg), {
       ...options,
       name: `${options.name}(${key})`,
     }),

@@ -19,6 +19,8 @@ import type {
   StateProvider,
   ObservableProvider,
   ObservableLike,
+  StreamProvider,
+  StreamSource,
 } from './types';
 
 // ── Simple Provider ────────────────────────────────────────────
@@ -179,6 +181,167 @@ export function initObservableProvider(options: {
     );
   } else {
     subscribe(result);
+  }
+}
+
+// ── Stream Provider ────────────────────────────────────────────
+
+function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
+  return !!value && typeof (value as any).then === 'function';
+}
+
+function isAsyncIterable(value: unknown): value is AsyncIterable<unknown> {
+  return !!value && typeof (value as any)[Symbol.asyncIterator] === 'function';
+}
+
+function isIterable(value: unknown): value is Iterable<unknown> {
+  return !!value && typeof (value as any)[Symbol.iterator] === 'function';
+}
+
+/**
+ * Initialize a provider backed by a synchronous or asynchronous iterable.
+ * The current item is exposed as AsyncValue<T>; the promise accessor resolves
+ * on the first yielded item and subsequent items update the provider normally.
+ */
+export function initStreamProvider(options: {
+  cb: ContainerCallbacks;
+  provider: StreamProvider<unknown>;
+  ref: Ref;
+  state: ProviderState;
+  override?: ProviderOverride;
+  hydratedValue?: unknown;
+  previousValue?: unknown;
+}): void {
+  const { cb, provider, ref, state, override, hydratedValue, previousValue } = options;
+  const prevData =
+    previousValue && typeof previousValue === 'object' && 'status' in previousValue
+      ? (previousValue as AsyncValue<unknown>).data
+      : undefined;
+
+  // Use hydrated value (wrapped in asyncData) instead of asyncLoading when available.
+  state.value = hydratedValue !== undefined ? asyncData(hydratedValue) : asyncLoading(prevData);
+
+  const abortController = new AbortController();
+  state.abortController = abortController;
+  let cancelled = false;
+
+  const isCancelled = () => cancelled || abortController.signal.aborted;
+
+  // Register cancellation before invoking the factory so a promise returned by
+  // the factory cannot start consuming a stream after the provider is disposed.
+  state.disposeCallbacks.push(() => {
+    cancelled = true;
+  });
+
+  const handleError = (error: unknown) => {
+    if (isCancelled()) return;
+
+    cb.notifyObservers('error', provider, error);
+    const currentValue = cb.getState(provider.id)?.value as AsyncValue<unknown> | undefined;
+    cb.updateValue(provider.id, asyncError(error, currentValue?.data));
+  };
+
+  const consumeIterable = (source: Iterable<unknown>) => {
+    let iterator: Iterator<unknown>;
+    try {
+      iterator = source[Symbol.iterator]();
+    } catch (error) {
+      handleError(error);
+      return;
+    }
+
+    let closed = false;
+    const close = () => {
+      if (closed) return;
+      closed = true;
+      try {
+        iterator.return?.();
+      } catch {
+        // Iterator cleanup should not break provider disposal.
+      }
+    };
+    state.disposeCallbacks.push(close);
+
+    try {
+      while (!isCancelled() && !closed) {
+        const result = iterator.next();
+        if (result.done) break;
+        cb.updateValue(provider.id, asyncData(result.value));
+      }
+    } catch (error) {
+      close();
+      handleError(error);
+    } finally {
+      closed = true;
+    }
+  };
+
+  const consumeAsyncIterable = (source: AsyncIterable<unknown>) => {
+    let iterator: AsyncIterator<unknown>;
+    try {
+      iterator = source[Symbol.asyncIterator]();
+    } catch (error) {
+      handleError(error);
+      return;
+    }
+
+    let closed = false;
+    const close = () => {
+      if (closed) return;
+      closed = true;
+      try {
+        const result = iterator.return?.();
+        if (result !== undefined) {
+          void Promise.resolve(result).catch(() => {
+            // Iterator cleanup should not break provider disposal.
+          });
+        }
+      } catch {
+        // Iterator cleanup should not break provider disposal.
+      }
+    };
+    state.disposeCallbacks.push(close);
+
+    void (async () => {
+      try {
+        while (!isCancelled() && !closed) {
+          const result = await iterator.next();
+          if (isCancelled() || closed) break;
+          if (result.done) break;
+          cb.updateValue(provider.id, asyncData(result.value));
+        }
+      } catch (error) {
+        close();
+        handleError(error);
+      } finally {
+        closed = true;
+      }
+    })();
+  };
+
+  const consume = (source: StreamSource<unknown>) => {
+    if (isAsyncIterable(source)) {
+      consumeAsyncIterable(source);
+    } else if (isIterable(source)) {
+      consumeIterable(source);
+    } else {
+      handleError(
+        new TypeError(
+          `streamProvider "${provider.name ?? provider.id.description}" factory must return an Iterable or AsyncIterable, ` +
+            `got ${typeof source}.`,
+        ),
+      );
+    }
+  };
+
+  const result = (override ? override.create(ref) : provider._create(ref)) as
+    | StreamSource<unknown>
+    | PromiseLike<StreamSource<unknown>>;
+
+  if (isPromiseLike(result)) {
+    result.then(consume, handleError);
+  } else {
+    consume(result);
   }
 }
 

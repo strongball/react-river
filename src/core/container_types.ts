@@ -106,7 +106,7 @@ export interface RiverContainerOptions {
    * Pre-computed state from server-side rendering (SSR).
    * Keys are provider `name` strings; values are the serialized state.
    *
-   * For async providers (`promiseProvider`, `observableProvider`, `asyncNotifierProvider`),
+   * For async providers (`promiseProvider`, `observableProvider`, `streamProvider`, `asyncNotifierProvider`),
    * the hydrated value is wrapped in `asyncData()` as the initial state instead of
    * `asyncLoading()`, avoiding a loading flash. The client-side factory still executes
    * and will update the value when fresh data arrives.

@@ -38,7 +38,7 @@ graph TD
     subgraph DefLayer ["1. 定義與生成層 (src/core)"]
         PB["ProviderBase<br/>(狀態的靜態定義)"]
         Ref["RiverRef<br/>(容器操作代理介面)"]
-        Initializers["Initializers<br/>(provider, promiseProvider...)"]
+        Initializers["Initializers<br/>(provider, promiseProvider, streamProvider...)"]
         
         Initializers -->|建立藍圖| PB
     end
@@ -123,7 +123,7 @@ sequenceDiagram
 
 ### 2. 非同步狀態與 `provider.promise` 機制
 
-針對 `PromiseProvider` 或 `AsyncNotifierProvider`，框架提供了 `.promise` 存取器（稱為 `PromiseAccessor`）。
+針對 `PromiseProvider`、`ObservableProvider`、`StreamProvider` 或 `AsyncNotifierProvider`，框架提供了 `.promise` 存取器（稱為 `PromiseAccessor`）。
 
 #### 運作邏輯：
 - `PromiseAccessor` 本身是**無狀態 (Stateless)** 的 Provider。

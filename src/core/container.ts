@@ -11,6 +11,7 @@ import {
   initStateProvider,
   initPromiseProvider,
   initObservableProvider,
+  initStreamProvider,
   initNotifierProvider,
   initAsyncNotifierProvider,
   initNotifierAccessor,
@@ -27,6 +28,7 @@ import {
   type StateProvider,
   type PromiseProvider,
   type ObservableProvider,
+  type StreamProvider,
   type Unsubscribe,
 } from './types';
 
@@ -262,6 +264,7 @@ export class RiverContainer {
       const isAsyncKind =
         provider.kind === 'promiseProvider' ||
         provider.kind === 'observableProvider' ||
+        provider.kind === 'streamProvider' ||
         provider.kind === 'asyncNotifierProvider';
 
       if (isAsyncKind) {
@@ -451,6 +454,17 @@ export class RiverContainer {
           initObservableProvider({
             cb: this.cb,
             provider: provider as ObservableProvider<unknown>,
+            ref,
+            state,
+            override,
+            hydratedValue,
+            previousValue,
+          });
+          break;
+        case 'streamProvider':
+          initStreamProvider({
+            cb: this.cb,
+            provider: provider as StreamProvider<unknown>,
             ref,
             state,
             override,

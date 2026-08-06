@@ -12,7 +12,7 @@
 - **🚀 Declarative & Reactive**: Define state as "Providers" and watch them automatically update.
 - **🔗 Dependency Injection**: Easily compose providers that depend on other providers.
 - **⚡ Performance Optimized**: Fine-grained subscriptions with `select` selectors to prevent unnecessary re-renders.
-- **🛠️ First-class Async Support**: Built-in `promiseProvider` and `observableProvider` with loading/error/data states.
+- **🛠️ First-class Async Support**: Built-in `promiseProvider`, `observableProvider`, and `streamProvider` with loading/error/data states.
 - **🌐 SSR Ready**: Built-in `dehydrate()` / `initialState` support for seamless Server-Side Rendering hydration with zero loading flash.
 - **🔍 DevTools**: Built-in interactive DevTools and logging for debugging state transitions and dependency graphs.
 - **📦 Type Safe**: Written in TypeScript with deep inference for your state and notifiers.
@@ -104,8 +104,23 @@ function Counter() {
 | `stateProvider`         | Simple mutable state. Provides a `set` method to update value.       |
 | `promiseProvider`       | Asynchronous data fetching. Returns an `AsyncValue`.                 |
 | `observableProvider`    | Stream/Subscription based state (e.g., WebSockets, Observables).     |
+| `streamProvider`        | Generator / iterable based state (`function*` or `async function*`). |
 | `notifierProvider`      | Complex logic encapsulated in a synchronous `Notifier` class.        |
 | `asyncNotifierProvider` | Async logic encapsulated in an `AsyncNotifier` class.                |
+
+`streamProvider` consumes synchronous and asynchronous iterables. Each yielded value becomes the provider's current data:
+
+```ts
+import { streamProvider } from '@zerologix/react-river';
+
+const numbersProvider = streamProvider(async function* () {
+  yield 1;
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+  yield 2;
+}, { name: 'numbers' });
+```
+
+The provider stops the iterator when it is disposed or refreshed. A synchronous generator is consumed during initialization, so its final yielded value is the value available after `read()` returns.
 
 ### Hooks
 
@@ -283,7 +298,7 @@ When a provider is first read on the client and there is a matching key in `init
 | :--- | :--- | :--- |
 | `stateProvider` / `provider` | Uses hydrated value directly | Runs (to rebuild `ref.watch` deps) |
 | `notifierProvider` | Uses hydrated value, Notifier instance created | Runs `build()` (to rebuild deps) |
-| `promiseProvider` / `observableProvider` / `asyncNotifierProvider` | `asyncData(hydratedValue)` — **no loading flash** | Runs — Stale-while-revalidate |
+| `promiseProvider` / `observableProvider` / `streamProvider` / `asyncNotifierProvider` | `asyncData(hydratedValue)` — **no loading flash** | Runs — Stale-while-revalidate |
 
 > **Stale-while-revalidate**: For async providers, the UI renders immediately with the hydrated data (no loading spinner), while the factory re-fetches silently in the background. When fresh data arrives, the UI updates automatically.
 

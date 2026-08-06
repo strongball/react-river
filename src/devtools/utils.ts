@@ -35,6 +35,7 @@ export function kindLabel(kind: string): string {
     stateProvider: 'STATE',
     promiseProvider: 'ASYNC',
     observableProvider: 'OBS',
+    streamProvider: 'STREAM',
     notifierProvider: 'NTFY',
     asyncNotifierProvider: 'A·NTFY',
     notifierAccessor: 'ACC',
@@ -254,6 +255,7 @@ export const KIND_FILL: Record<string, string> = {
   stateProvider: 'rgba(74,222,128,0.2)',
   promiseProvider: 'rgba(250,204,21,0.2)',
   observableProvider: 'rgba(34,211,238,0.2)',
+  streamProvider: 'rgba(167,139,250,0.2)',
   notifierProvider: 'rgba(251,146,60,0.2)',
   asyncNotifierProvider: 'rgba(250,204,21,0.2)',
 };
@@ -263,6 +265,7 @@ export const KIND_STROKE: Record<string, string> = {
   stateProvider: '#4ade80',
   promiseProvider: '#facc15',
   observableProvider: '#22d3ee',
+  streamProvider: '#a78bfa',
   notifierProvider: '#fb923c',
   asyncNotifierProvider: '#facc15',
 };
