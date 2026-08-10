@@ -1,3 +1,10 @@
+## [1.0.43](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.42...v1.0.43) (2026-08-10)
+
+
+### Bug Fixes
+
+* harden provider state lifecycle ([a7be01b](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/commit/a7be01b30c4c5fca04a6a2405be57d98cdeacd1a))
+
 ## [1.0.42](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.41...v1.0.42) (2026-08-06)
 
 
