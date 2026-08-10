@@ -111,7 +111,7 @@ describe('Initializers', () => {
     // Manual notifierAccessor simulation
     const accessor: any = {
       kind: 'notifierAccessor',
-      id: Symbol('acc'),
+      id: 'river:notifierAccessor:acc',
       _parentId: base.id,
       _parentProvider: base,
       options: {},
@@ -124,8 +124,8 @@ describe('Initializers', () => {
     const container = new RiverContainer();
     const orphanAccessor: any = {
       kind: 'notifierAccessor',
-      id: Symbol('orphan'),
-      _parentId: Symbol('missing'),
+      id: 'river:notifierAccessor:orphan',
+      _parentId: 'river:provider:missing',
       options: {},
     };
     expect(() => (container as any).ensureInitialized(orphanAccessor)).toThrow(/Parent provider not found/);

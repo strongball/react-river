@@ -5,6 +5,39 @@ import { Notifier, AsyncNotifier } from '../notifier';
 import { notifierProvider, asyncNotifierProvider, stateProvider } from '../provider';
 
 describe('Notifier', () => {
+  it('stale stateProvider controller cannot update state after invalidation', () => {
+    const p = stateProvider(() => 0, { name: 'test_stale_state_controller' });
+    const container = new RiverContainer();
+    const staleController = container.read(p.notifier);
+
+    container.invalidate(p);
+    const currentController = container.read(p.notifier);
+    staleController.state = 10;
+
+    expect(container.read(p)).toBe(0);
+    expect(currentController.state).toBe(0);
+    expect(staleController.state).toBe(0);
+  });
+
+  it('stale Notifier cannot update state after invalidation', () => {
+    class CounterNotifier extends Notifier<number> {
+      build() {
+        return 0;
+      }
+    }
+    const p = notifierProvider(() => new CounterNotifier(), { name: 'test_stale_notifier' });
+    const container = new RiverContainer();
+    const staleNotifier = container.read(p.notifier);
+
+    container.invalidate(p);
+    const currentNotifier = container.read(p.notifier);
+    staleNotifier.state = 10;
+
+    expect(container.read(p)).toBe(0);
+    expect(currentNotifier.state).toBe(0);
+    expect(staleNotifier.state).toBe(0);
+  });
+
   it('should manage synchronous state', () => {
     class CounterNotifier extends Notifier<number> {
       build() {
@@ -95,6 +128,34 @@ describe('Notifier', () => {
 });
 
 describe('AsyncNotifier', () => {
+  it('stale AsyncNotifier cannot update state after invalidation', async () => {
+    class TestAsyncNotifier extends AsyncNotifier<number> {
+      async build() {
+        return 1;
+      }
+    }
+    const p = asyncNotifierProvider(() => new TestAsyncNotifier(), { name: 'test_stale_async_notifier' });
+    const container = new RiverContainer();
+    const staleNotifier = container.read(p.notifier);
+    await container.read(p.promise);
+
+    container.invalidate(p);
+    const currentNotifier = container.read(p.notifier);
+    await container.read(p.promise);
+    staleNotifier.state = {
+      status: 'data',
+      data: 10,
+      isLoading: false,
+      isError: false,
+      hasData: true,
+      error: undefined,
+    };
+
+    expect(container.read(p).data).toBe(1);
+    expect(currentNotifier.state.data).toBe(1);
+    expect(staleNotifier.state.data).toBe(1);
+  });
+
   it('should manage asynchronous state', async () => {
     class DelayedNotifier extends AsyncNotifier<string> {
       async build() {

@@ -21,7 +21,7 @@ interface WatchResult {
 
 // ── Ref Factory ────────────────────────────────────────────────
 
-export function createRef(cb: ContainerCallbacks, ownerId: symbol): Ref {
+export function createRef(cb: ContainerCallbacks, ownerId: string): Ref {
   return {
     watch: <T, R = T>(provider: ProviderBase<T>, select?: (value: T) => R): R => {
       let result: WatchResult;
@@ -143,14 +143,14 @@ function watchRegularProvider(
 /** Record a dependency relationship between owner and target providers. */
 function trackDependency(
   cb: ContainerCallbacks,
-  ownerId: symbol,
+  ownerId: string,
   trackTarget: ProviderBase<any>,
   effectiveSelector: ((val: unknown) => unknown) | undefined,
   selectedValue: unknown,
 ): void {
   const ownerState = cb.getState(ownerId);
   if (ownerState) {
-    ownerState.dependencies.add(trackTarget);
+    ownerState.dependencies.add(trackTarget.id);
   }
   const targetState = cb.getState(trackTarget.id);
   if (targetState) {
@@ -185,11 +185,11 @@ function trackDependency(
  */
 function trackListenDependency(
   cb: ContainerCallbacks,
-  ownerId: symbol,
+  ownerId: string,
   target: ProviderBase<any>,
 ): void {
   const ownerState = cb.getState(ownerId);
   if (ownerState) {
-    ownerState.dependencies.add(target);
+    ownerState.dependencies.add(target.id);
   }
 }

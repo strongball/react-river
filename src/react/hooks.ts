@@ -82,6 +82,8 @@ export function useRiverWatch<T, S = T>(
   optionsOrSelector?: ((value: T) => S) | UseRiverWatchOptions<T, S>,
 ): T | S | undefined {
   const container = useRiverContainer();
+  const providerRef = useRef(provider);
+  providerRef.current = provider;
 
   let selector: ((value: T) => S) | undefined = undefined;
   let enabled = true;
@@ -125,7 +127,7 @@ export function useRiverWatch<T, S = T>(
   const subscribe = useCallback(
     (onStoreChange: () => void) => {
       if (!enabled) return () => {};
-      return container.subscribe(provider, onStoreChange);
+      return container.subscribe(providerRef.current, onStoreChange);
     },
     // oxlint-disable-next-line eslint-plugin-react-hooks/exhaustive-deps
     [container, provider.id, enabled],
@@ -141,7 +143,7 @@ export function useRiverWatch<T, S = T>(
       return undefined;
     }
 
-    const rawValue = container.read(provider) as T;
+    const rawValue = container.read(providerRef.current) as T;
     const sel = selectorRef.current;
 
     const cache = cacheRef.current;
@@ -231,8 +233,7 @@ export function useRiverListen<T>(provider: ProviderBase<T>, callback: ListenerC
     return container.listen(provider, (next, prev) => {
       callbackRef.current(next as T, prev as T | undefined);
     });
-    // oxlint-disable-next-line eslint-plugin-react-hooks/exhaustive-deps
-  }, [container, provider.id]);
+  }, [container, provider]);
 }
 
 // ── useRiverMutation — imperative async operation (React-local state) ──
@@ -337,9 +338,11 @@ export function useRiverMutation<TData = void, TVariables = void, TContext = unk
   );
   const stateRef = useRef(state);
   stateRef.current = state;
+  const mutationGenerationRef = useRef(0);
 
   const mutate = useCallback(
     async (variables: TVariables): Promise<TData> => {
+      const generation = ++mutationGenerationRef.current;
       let context: TContext | undefined;
       const onMutateFn = optionsRef.current?.onMutate;
       if (onMutateFn) {
@@ -348,30 +351,49 @@ export function useRiverMutation<TData = void, TVariables = void, TContext = unk
           context = await onMutateFn(variables, riverRef);
         } catch (err) {
           // If onMutate itself throws, abort the mutation and surface the error
-          setState(asyncError<TData | undefined>(err));
+          if (generation === mutationGenerationRef.current) {
+            setState(asyncError<TData | undefined>(err));
+          }
           throw err;
         }
       }
 
-      setState(asyncLoading(stateRef.current.data));
+      if (generation === mutationGenerationRef.current) {
+        setState(asyncLoading(stateRef.current.data));
+      }
+      let result: TData;
       try {
-        const result = await fnRef.current(riverRef, variables);
-        setState(asyncData<TData | undefined>(result));
-        optionsRef.current?.onSuccess?.(result, variables, context, riverRef);
-        optionsRef.current?.onSettled?.(result, undefined, variables, context, riverRef);
-        return result;
+        result = await fnRef.current(riverRef, variables);
       } catch (err) {
-        setState(asyncError<TData | undefined>(err, stateRef.current.data));
-        optionsRef.current?.onError?.(err, variables, context, riverRef);
-        optionsRef.current?.onSettled?.(undefined, err, variables, context, riverRef);
+        if (generation === mutationGenerationRef.current) {
+          setState(asyncError<TData | undefined>(err, stateRef.current.data));
+        }
+        try {
+          optionsRef.current?.onError?.(err, variables, context, riverRef);
+        } finally {
+          optionsRef.current?.onSettled?.(undefined, err, variables, context, riverRef);
+        }
         throw err;
       }
+
+      if (generation === mutationGenerationRef.current) {
+        setState(asyncData<TData | undefined>(result));
+      }
+      try {
+        optionsRef.current?.onSuccess?.(result, variables, context, riverRef);
+      } finally {
+        optionsRef.current?.onSettled?.(result, undefined, variables, context, riverRef);
+      }
+      return result;
     },
     [riverRef],
   );
 
   const reset = useCallback(
-    () => setState(asyncData<TData | undefined>(undefined)),
+    () => {
+      mutationGenerationRef.current++;
+      setState(asyncData<TData | undefined>(undefined));
+    },
     [],
   );
 

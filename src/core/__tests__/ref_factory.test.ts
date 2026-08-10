@@ -75,7 +75,7 @@ describe('Ref Factory & Dependency Tracking', () => {
   });
 
   it('stateless dependency tracking (mock callback)', () => {
-    const ownerId = Symbol('owner');
+    const ownerId = 'river:provider:owner';
     const target = provider(() => 1, { name: 'test_provider_2559' });
     const mockCb = {
       getState: () => undefined,
@@ -155,7 +155,7 @@ describe('Ref Factory & Dependency Tracking', () => {
   });
 
   it('ref.invalidateSelf when provider is missing from map', () => {
-    const ownerId = Symbol('owner');
+    const ownerId = 'river:provider:owner';
     const mockCb = {
       providerMap: new Map(),
       invalidate: vi.fn(),

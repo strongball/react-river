@@ -13,7 +13,7 @@ export interface DevToolsEvent {
   type: 'create' | 'update' | 'dispose' | 'error';
   providerName: string;
   providerKind: string;
-  providerId: symbol;
+  providerId: string;
   timestamp: number;
   value?: unknown;
   previousValue?: unknown;

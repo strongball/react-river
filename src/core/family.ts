@@ -40,26 +40,28 @@ export interface ProviderFamily<P, Arg> {
 
 // ── Key serialization ──────────────────────────────────────────
 
-function stableStringify(val: unknown): string {
-  if (val === null) return 'null';
-  if (typeof val === 'object') {
-    if (typeof (val as any).toJSON === 'function') {
-      return stableStringify((val as any).toJSON());
+function serializeArg(value: unknown, stack = new Set<object>()): string {
+  if (value === null || typeof value !== 'object') {
+    const json = JSON.stringify(value);
+    if (json === undefined || (typeof value === 'number' && !Number.isFinite(value))) {
+      throw new TypeError('Family arguments must be JSON values');
     }
-    if (Array.isArray(val)) {
-      return '[' + val.map(stableStringify).join(',') + ']';
-    }
-    const keys = Object.keys(val).sort();
-    const parts = keys.map(k => JSON.stringify(k) + ':' + stableStringify((val as Record<string, unknown>)[k]));
-    return '{' + parts.join(',') + '}';
+    return json;
   }
-  return JSON.stringify(val);
-}
+  if (stack.has(value)) throw new TypeError('Family arguments cannot contain circular references');
+  if (!Array.isArray(value) && Object.getPrototypeOf(value) !== Object.prototype) {
+    throw new TypeError('Family arguments must be plain objects or arrays');
+  }
 
-function serializeArg(arg: unknown): string {
-  if (typeof arg === 'string') return arg;
-  if (typeof arg === 'number' || typeof arg === 'boolean') return String(arg);
-  return stableStringify(arg);
+  stack.add(value);
+  const json = Array.isArray(value)
+    ? `[${value.map((item) => serializeArg(item, stack)).join(',')}]`
+    : `{${Object.keys(value)
+        .sort()
+        .map((key) => `${JSON.stringify(key)}:${serializeArg((value as Record<string, unknown>)[key], stack)}`)
+        .join(',')}}`;
+  stack.delete(value);
+  return json;
 }
 
 // ── Generic family factory ─────────────────────────────────────

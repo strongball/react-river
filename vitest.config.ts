@@ -17,7 +17,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@zerologix/react-river': resolve(__dirname, 'src/index.ts'),
+      '@zerologix/react-river': resolve(import.meta.dirname, 'src/index.ts'),
     },
   },
 });

@@ -19,12 +19,12 @@ export interface ProviderState {
   /** Explicit value listeners — receives (prev, next) */
   valueListeners: Set<ListenerCallback<unknown>>;
 
-  /** Providers this one depends on (via ref.watch) */
-  dependencies: Set<ProviderBase<any>>;
+  /** Stable IDs of providers this one depends on (via ref.watch). */
+  dependencies: Set<string>;
   /** Providers that depend on this one */
-  dependents: Set<symbol>;
+  dependents: Set<string>;
   /** Selectors used by dependents. A value of null means unconditional dependency. */
-  watchSelectors?: Map<symbol, Array<{ selector: (val: unknown) => unknown; lastValue: unknown }> | null>;
+  watchSelectors?: Map<string, Array<{ selector: (val: unknown) => unknown; lastValue: unknown }> | null>;
 
   /** Cleanup callbacks registered via ref.onDispose */
   disposeCallbacks: (() => void)[];
@@ -54,7 +54,7 @@ export interface ProviderState {
 // ── DevTools Snapshot (read-only inspection) ───────────────────
 
 export interface DevToolsProviderSnapshot {
-  id: symbol;
+  id: string;
   name: string;
   kind: string;
   value: unknown;
@@ -89,7 +89,7 @@ export interface RiverCachePolicy {
   /**
    * Default `cacheTime` (ms) for providers that don't specify their own.
    * Only effective when the provider's resolved `autoDispose` is `true`.
-   * Built-in default is `0` (dispose immediately).
+   * Built-in default is `60000` (60 seconds).
    */
   cacheTime?: number;
 }
@@ -124,19 +124,19 @@ export interface RiverContainerOptions {
  * Avoids coupling those modules directly to the RiverContainer class.
  */
 export interface ContainerCallbacks {
-  updateValue(providerId: symbol, newValue: unknown): void;
+  updateValue(providerId: string, newValue: unknown): void;
   notifyObservers(
     event: 'create' | 'update' | 'dispose' | 'error',
     provider: ProviderBase<any>,
     ...args: unknown[]
   ): void;
-  getState(id: symbol): ProviderState | undefined;
+  getState(id: string): ProviderState | undefined;
   ensureInitialized(provider: ProviderBase<any>): unknown;
   listen<T>(provider: ProviderBase<T>, callback: ListenerCallback<T>): Unsubscribe;
   read<T>(provider: ProviderBase<T>): T;
   invalidate(provider: ProviderBase<any>): void;
   invalidateFamily(family: ProviderFamily<any, any>): void;
-  providerMap: Map<symbol, ProviderBase<any>>;
+  providerMap: Map<string, ProviderBase<any>>;
 }
 
 // ── Factory ────────────────────────────────────────────────────

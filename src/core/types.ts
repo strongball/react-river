@@ -26,7 +26,7 @@ export type ProviderKind =
 // ── Provider Options ───────────────────────────────────────────
 
 export interface ProviderOptions<T = any> {
-  /** Unique name for debugging, DevTools, and SSR hydration. */
+  /** Stable, unique identity used by runtime state, HMR, DevTools, and SSR. */
   name: string;
   /**
    * If true, provider is disposed when all listeners are removed.
@@ -36,7 +36,7 @@ export interface ProviderOptions<T = any> {
   /**
    * Additional time in milliseconds to keep the provider alive after all listeners are removed.
    * Only has an effect if `autoDispose` is true.
-   * Default is 0ms (dispose immediately).
+   * Default is 60,000ms.
    */
   cacheTime?: number;
   /**
@@ -126,16 +126,17 @@ export interface RiverRef {
 // ── Provider Base ──────────────────────────────────────────────
 
 export interface ProviderBase<T = any> {
-  readonly id: symbol;
+  /** Stable runtime identity. Equal to `name` and survives HMR. */
+  readonly id: string;
   readonly kind: ProviderKind;
-  readonly name: string | undefined;
+  readonly name: string;
   readonly options: ProviderOptions<T>;
   readonly __phantom?: T;
 }
 
 /** Get a human-readable label for a provider (for DevTools / debugging). */
 export function getProviderLabel(provider: ProviderBase<any>): string {
-  return provider.name ?? provider.id.description ?? 'unknown';
+  return provider.name;
 }
 
 // ── Observable Support ──────────────────────────────────────────
@@ -224,7 +225,7 @@ export interface AsyncNotifierProvider<N, T> extends ProviderBase<AsyncValue<T>>
 export interface NotifierAccessor<N> extends ProviderBase<N> {
   readonly kind: 'notifierAccessor';
   /** @internal */
-  readonly _parentId: symbol;
+  readonly _parentId: string;
   /** @internal */
   readonly _parentProvider?: ProviderBase<any>;
 }
@@ -233,7 +234,7 @@ export interface NotifierAccessor<N> extends ProviderBase<N> {
 export interface PromiseAccessor<T> extends ProviderBase<Promise<T>> {
   readonly kind: 'promiseAccessor';
   /** @internal */
-  readonly _parentId: symbol;
+  readonly _parentId: string;
   /** @internal */
   readonly _parentProvider: ProviderBase<AsyncValue<T>>;
 }

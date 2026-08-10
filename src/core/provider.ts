@@ -23,49 +23,15 @@ import type {
 } from './types';
 import type { AsyncValue } from './async_value';
 
-// ── Internal ID generation ────────────────────────────────────
-
-// Module-level cache that survives Vite HMR re-execution (stored on
-// import.meta.hot.data).  Plain Symbol() gives isolation between
-// independent apps on the same page; the cache reuses the same symbol
-// across hot-reloads so container overrides remain valid.
-let symbolCache: Map<string, symbol> | undefined;
-
-if (typeof import.meta !== 'undefined' && import.meta.hot?.data) {
-  symbolCache = import.meta.hot.data.riverSymbolCache as Map<string, symbol>;
-}
-
-if (!symbolCache) {
-  symbolCache = new Map<string, symbol>();
-}
-
-const providerSymbolCache = symbolCache;
-
-// Persist across HMR so the next re-execution inherits existing symbols
-if (typeof import.meta !== 'undefined' && import.meta.hot?.data) {
-  import.meta.hot.data.riverSymbolCache = providerSymbolCache;
-}
-
-function nextId(name: string): symbol {
-  let sym = providerSymbolCache.get(name);
-  if (!sym) {
-    sym = Symbol(`river:${name}`);
-    providerSymbolCache.set(name, sym);
-  }
-  return sym;
-}
-
-
-
 // ── Sub-provider factories ─────────────────────────────────────
 
 function createNotifierAccessor<N>(
-  parentId: symbol,
+  parentId: string,
   options: ProviderOptions<any>,
 ): NotifierAccessor<N> {
   const name = `${options.name}.notifier`;
   return {
-    id: nextId(name),
+    id: name,
     kind: 'notifierAccessor',
     name,
     options: { ...options, name } as ProviderOptions<N>,
@@ -74,13 +40,13 @@ function createNotifierAccessor<N>(
 }
 
 function createPromiseAccessor<T>(
-  parentId: symbol,
+  parentId: string,
   parentProvider: ProviderBase<AsyncValue<T>>,
   options: ProviderOptions<T>,
 ): PromiseAccessor<T> {
   const name = `${options.name}.promise`;
   return {
-    id: nextId(name),
+    id: name,
     kind: 'promiseAccessor',
     name,
     options: { ...options, name } as ProviderOptions<Promise<T>>,
@@ -93,7 +59,7 @@ function createPromiseAccessor<T>(
 
 export function provider<T>(create: (ref: Ref) => T, options: ProviderOptions<T>): Provider<T> {
   return {
-    id: nextId(options.name),
+    id: options.name,
     kind: 'provider',
     name: options.name,
     options,
@@ -104,7 +70,7 @@ export function provider<T>(create: (ref: Ref) => T, options: ProviderOptions<T>
 // ── stateProvider() — Simple mutable state ─────────────────────
 
 export function stateProvider<T>(create: (ref: Ref) => T, options: ProviderOptions<T>): StateProvider<T> {
-  const id = nextId(options.name);
+  const id = options.name;
 
   const notifier = createNotifierAccessor<StateController<T>>(id, options);
 
@@ -126,7 +92,7 @@ export function promiseProvider<T>(
   create: (ref: Ref) => Promise<T>,
   options: ProviderOptions<T>,
 ): PromiseProvider<T> {
-  const id = nextId(options.name);
+  const id = options.name;
 
   const promiseP = {
     id,
@@ -146,7 +112,7 @@ export function observableProvider<T>(
   create: (ref: Ref) => ObservableLike<T> | Promise<ObservableLike<T>>,
   options: ProviderOptions<T>,
 ): ObservableProvider<T> {
-  const id = nextId(options.name);
+  const id = options.name;
 
   const obsP = {
     id,
@@ -166,7 +132,7 @@ export function streamProvider<T>(
   create: (ref: Ref) => StreamSource<T> | PromiseLike<StreamSource<T>>,
   options: ProviderOptions<T>,
 ): StreamProvider<T> {
-  const id = nextId(options.name);
+  const id = options.name;
 
   const streamP = {
     id,
@@ -186,7 +152,7 @@ export function notifierProvider<N extends Notifier<any>>(
   createNotifier: () => N,
   options: ProviderOptions<N extends Notifier<infer T> ? T : unknown>,
 ): NotifierProvider<N, N extends Notifier<infer T> ? T : unknown> {
-  const id = nextId(options.name);
+  const id = options.name;
 
   const notifier = createNotifierAccessor<N>(id, options);
 
@@ -208,7 +174,7 @@ export function asyncNotifierProvider<N extends AsyncNotifier<any>>(
   createNotifier: () => N,
   options: ProviderOptions<N extends AsyncNotifier<infer T> ? T : unknown>,
 ): AsyncNotifierProvider<N, N extends AsyncNotifier<infer T> ? T : unknown> {
-  const id = nextId(options.name);
+  const id = options.name;
 
   const notifier = createNotifierAccessor<N>(id, options);
 

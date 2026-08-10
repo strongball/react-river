@@ -192,8 +192,40 @@ describe('Provider Families', () => {
     // Check key internal via cache if we could, but we can just check if they are distinct
     expect(p(true)).not.toBe(p(false));
     expect(p(1)).not.toBe(p(2));
-    // Note: currently '1' and 1 collide in serializeArg implementation
-    // expect(p('1')).not.toBe(p(1));
+    expect(p('1')).not.toBe(p(1));
+    expect(p('true')).not.toBe(p(true));
+  });
+
+  it('uses deterministic JSON names for SSR hydration', () => {
+    const serverFamily = stateProviderFamily((ref, id: number | string) => `server:${id}`, { name: 'item' });
+    const server = new RiverContainer();
+    const unsubscribeNumber = server.subscribe(serverFamily(1), () => {});
+    const unsubscribeString = server.subscribe(serverFamily('1'), () => {});
+    const dehydrated = server.dehydrate();
+    unsubscribeNumber();
+    unsubscribeString();
+    expect(Object.keys(dehydrated)).toEqual(['item(1)', 'item("1")']);
+
+    const clientFamily = stateProviderFamily((ref, id: number | string) => `client:${id}`, { name: 'item' });
+    const client = new RiverContainer({ initialState: { ...dehydrated } });
+
+    expect(client.read(clientFamily(1))).toBe('server:1');
+    expect(client.read(clientFamily('1'))).toBe('server:1');
+  });
+
+  it('rejects circular arguments with a clear error', () => {
+    const p = providerFamily((ref, arg: object) => arg, { name: 'circular' });
+    const arg: { self?: object } = {};
+    arg.self = arg;
+
+    expect(() => p(arg)).toThrow('Family arguments cannot contain circular references');
+  });
+
+  it('rejects non-plain objects that would otherwise collide', () => {
+    const p = providerFamily((ref, arg: object) => arg, { name: 'non-plain' });
+
+    expect(() => p(new Map([['id', 1]]))).toThrow('Family arguments must be plain objects or arrays');
+    expect(() => p(new Set([1]))).toThrow('Family arguments must be plain objects or arrays');
   });
 
   it('family.getProviders() should return all cached provider instances', () => {

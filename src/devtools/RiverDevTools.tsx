@@ -65,7 +65,7 @@ export function RiverDevTools({ defaultPosition, defaultOpen = false }: RiverDev
   const [search, setSearch] = useState('');
   const [eventSearch, setEventSearch] = useState('');
   const [sortMode, setSortMode] = useState<'name' | 'recent'>('name');
-  const [expandedId, setExpandedId] = useState<symbol | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [position, setPosition] = useState(defaultPosition ?? { x: 16, y: 16 });
   const [maxEvents, setMaxEvents] = useState(() => pinnedDevtools.current.getMaxEvents?.() ?? 100);
   const [graphRoot, setGraphRoot] = useState<string | null>(null);
@@ -83,7 +83,7 @@ export function RiverDevTools({ defaultPosition, defaultOpen = false }: RiverDev
       return [...rawSnapshots].sort((a, b) => a.name.localeCompare(b.name));
     }
     // sortMode === 'recent'
-    const latestMap = new Map<symbol, number>();
+    const latestMap = new Map<string, number>();
     for (const e of events) {
       if (!latestMap.has(e.providerId)) latestMap.set(e.providerId, e.timestamp);
     }

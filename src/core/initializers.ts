@@ -68,6 +68,7 @@ export function initStateProvider(options: {
       this.update(() => v);
     },
     update: (updater: (current: unknown) => unknown) => {
+      if (cb.getState(provider.id) !== state) return;
       const newValue = updater(state.value);
       cb.updateValue(provider.id, newValue);
     },
@@ -103,7 +104,7 @@ export function initPromiseProvider(options: {
   // Guard: ensure the factory returned a thenable, not a plain value
   if (!promise || typeof (promise as any).then !== 'function') {
     cb.notifyObservers('error', provider, new Error(
-      `promiseProvider "${provider.name ?? provider.id.description}" factory must return a Promise, ` +
+      `promiseProvider "${provider.name ?? provider.id}" factory must return a Promise, ` +
         `got ${typeof promise}.`,
     ));
     cb.updateValue(provider.id, asyncError(
@@ -327,7 +328,7 @@ export function initStreamProvider(options: {
     } else {
       handleError(
         new TypeError(
-          `streamProvider "${provider.name ?? provider.id.description}" factory must return an Iterable or AsyncIterable, ` +
+          `streamProvider "${provider.name ?? provider.id}" factory must return an Iterable or AsyncIterable, ` +
             `got ${typeof source}.`,
         ),
       );
@@ -368,6 +369,7 @@ export function initNotifierProvider(options: {
   const notifier = p._createNotifier();
   notifier._ref = ref;
   notifier._setState = (value: unknown) => {
+    if (cb.getState(provider.id) !== state) return;
     notifier._state = value;
     cb.updateValue(provider.id, value);
   };
@@ -425,6 +427,7 @@ export function initAsyncNotifierProvider(options: {
   const notifier = p._createNotifier();
   notifier._ref = ref;
   notifier._setState = (value: AsyncValue<unknown>) => {
+    if (cb.getState(provider.id) !== state) return;
     notifier._state = value;
     cb.updateValue(provider.id, value);
   };
@@ -471,7 +474,7 @@ export function initNotifierAccessor(options: {
   const parentState = cb.getState(parentId);
   if (!parentState) {
     throw new Error(
-      `Parent provider not found for notifier accessor: ${accessor.name ?? accessor.id.description}`,
+      `Parent provider not found for notifier accessor: ${accessor.name ?? accessor.id}`,
     );
   }
   state.value = parentState.notifierInstance;
@@ -480,6 +483,6 @@ export function initNotifierAccessor(options: {
   // invalidates and re-initializes this accessor to point to the new notifier instance.
   if (parentProvider) {
     parentState.dependents.add(accessor.id);
-    state.dependencies.add(parentProvider);
+    state.dependencies.add(parentProvider.id);
   }
 }

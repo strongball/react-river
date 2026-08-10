@@ -114,7 +114,7 @@ export function groupFamilySnapshots(
       // because we want to de-duplicate them next
       grouped.set(baseName, {
         ...s,
-        id: Symbol(baseName),
+        id: `river:family-group:${baseName}`,
         name: baseName,
         dependencies: [],
         dependents: [],

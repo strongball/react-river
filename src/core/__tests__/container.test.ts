@@ -687,9 +687,9 @@ describe('RiverContainer', () => {
       const p = stateProvider(() => 1, { name: 'test_stateProvider_15346' });
       container.read(p);
       const state = container.getState(p.id)!;
-      state.dependents.add(Symbol()); // description-less symbol
+      state.dependents.add('river:provider:unknown');
       const snapshots = container.getProviderStates();
-      expect(snapshots.find((s) => s.id === p.id)?.dependents).toContain('unknown');
+      expect(snapshots.find((s) => s.id === p.id)?.dependents).toContain('river:provider:unknown');
     });
 
     it('assertNotDisposed on all public methods', () => {
@@ -708,7 +708,7 @@ describe('RiverContainer', () => {
 
     it('unknown provider kind', () => {
       const container = new RiverContainer();
-      const fakeProvider: any = { id: Symbol('fake'), kind: 'wrong', options: {} };
+      const fakeProvider: any = { id: 'river:wrong:fake', kind: 'wrong', options: {} };
       expect(() => (container as any).initializeProvider(fakeProvider)).toThrow(/Unknown provider kind/);
     });
 
@@ -877,8 +877,8 @@ describe('RiverContainer', () => {
     it('updateValue and getOwnState safety', () => {
       const container = new RiverContainer();
       // Directly call private methods to hit early returns
-      (container as any).updateValue(Symbol('missing'), 1);
-      expect((container as any).getOwnState(Symbol('missing'))).toBeUndefined();
+      (container as any).updateValue('river:provider:missing', 1);
+      expect((container as any).getOwnState('river:provider:missing')).toBeUndefined();
     });
 
     it('checkAutoDispose with invalid provider state', () => {
@@ -890,13 +890,13 @@ describe('RiverContainer', () => {
 
     it('propagateToDependents with missing state or provider', () => {
       const container = new RiverContainer();
-      const id = Symbol('missing');
+      const id = 'river:provider:missing';
       (container as any).propagateToDependents(id);
 
       const p = stateProvider(() => 1, { name: 'test_stateProvider_20948' });
       container.read(p);
       const state = container.getState(p.id)!;
-      state.dependents.add(Symbol('ghost'));
+      state.dependents.add('river:provider:ghost');
       (container as any).propagateToDependents(p.id); // Should skip ghost
     });
 
@@ -919,7 +919,7 @@ describe('RiverContainer', () => {
       const fakeAccessor: any = {
         kind: 'promiseAccessor',
         name: 'test_accessor',
-        _parentProvider: { id: Symbol('nonexistent'), name: 'nonexistent', options: {} },
+        _parentProvider: { id: 'river:promiseProvider:nonexistent', name: 'nonexistent', options: {} },
       };
       // Force read to return null
       const originalRead = container.read;
@@ -1073,7 +1073,7 @@ describe('RiverContainer', () => {
 
     it('initializeProvider default branch coverage', () => {
       const container = new RiverContainer();
-      const p: any = { id: Symbol('unknown'), kind: 'unknown', options: {} };
+      const p: any = { id: 'river:unknown:unknown', kind: 'unknown', options: {} };
       expect(() => (container as any).initializeProvider(p)).toThrow(/Unknown provider kind/);
     });
     it('remaining branches (186, 268, 510) - final polish', async () => {
@@ -1111,28 +1111,33 @@ describe('RiverContainer', () => {
     it('comprehensive edge cases (141-186, 268, 358, 510)', async () => {
       const container = new RiverContainer();
 
-      // 1. Snapshot and getLabel fallback (L162, L184-186)
-      const idDep = Symbol();
-      const depProvider: any = { id: idDep, kind: 'provider', options: { autoDispose: false } };
+      // 1. Snapshot label (L162, L184-186)
+      const idDep = 'river:provider:unknown';
+      const depProvider: any = {
+        id: idDep,
+        name: idDep,
+        kind: 'provider',
+        options: { name: idDep, autoDispose: false },
+      };
       container.providerMap.set(idDep, depProvider);
       const stateDep = createProviderState();
       stateDep.initialized = true;
       (container as any).states.set(idDep, stateDep);
 
       // 2. Skip logic in getProviderStates (L168, L171)
-      const idGhost = Symbol('ghost');
+      const idGhost = 'river:provider:ghost';
       const stateGhost = createProviderState();
       stateGhost.initialized = false;
       (container as any).states.set(idGhost, stateGhost);
 
-      const idMissing = Symbol('missing');
+      const idMissing = 'river:provider:missing';
       const stateMissing = createProviderState();
       stateMissing.initialized = true;
       (container as any).states.set(idMissing, stateMissing);
 
       const snapshots = container.getProviderStates();
       expect(snapshots.length).toBe(1);
-      expect(snapshots[0].name).toBe('unknown');
+      expect(snapshots[0].name).toBe('river:provider:unknown');
 
       // 3. resolvePromiseAccessor both branches (L265, L268)
       let resolveP1: any, rejectP2: any;
@@ -1157,5 +1162,69 @@ describe('RiverContainer', () => {
       // 6. dispose specific branches (L141, L144)
       container.dispose();
     });
+  });
+});
+
+describe('RiverContainer propagation regressions', () => {
+  it('preserves state across a same-name HMR replacement', () => {
+    const original = provider(() => 1, { name: 'hmr_stable' });
+    const container = new RiverContainer();
+    expect(container.read(original)).toBe(1);
+
+    const replacement = provider(() => 2, { name: 'hmr_stable' });
+    expect(replacement.id).toBe(original.id);
+    expect(container.read(replacement)).toBe(1);
+
+    container.invalidate(replacement);
+    expect(container.read(replacement)).toBe(2);
+  });
+
+  it('rebuilds a diamond dependency once with the settled value', () => {
+    const base = stateProvider(() => 1, { name: 'diamond_base' });
+    const left = provider((ref) => ref.watch(base) * 2, { name: 'diamond_left' });
+    const right = provider((ref) => ref.watch(base) * 3, { name: 'diamond_right' });
+    let builds = 0;
+    const total = provider((ref) => {
+      builds++;
+      return ref.watch(left) + ref.watch(right);
+    }, { name: 'diamond_total' });
+    const values: number[] = [];
+    const container = new RiverContainer();
+    container.listen(total, (next) => values.push(next));
+
+    container.set(base, 2);
+
+    expect(values).toEqual([10]);
+    expect(builds).toBe(2);
+  });
+
+  it('orders queued dependents by transitive dependencies', () => {
+    const base = stateProvider(() => 1, { name: 'ordered_base' });
+    const middle = provider((ref) => ref.watch(base) * 2, { name: 'ordered_middle' });
+    const nested = provider((ref) => ref.watch(middle) * 10, { name: 'ordered_nested' });
+    let builds = 0;
+    const total = provider((ref) => {
+      builds++;
+      // Register total before middle in base.dependents while total also
+      // depends transitively on middle through nested.
+      return ref.watch(base) + ref.watch(nested);
+    }, { name: 'ordered_total' });
+    const values: number[] = [];
+    const container = new RiverContainer();
+    container.listen(total, (next) => values.push(next));
+
+    container.set(base, 2);
+
+    expect(values).toEqual([42]);
+    expect(builds).toBe(2);
+  });
+
+  it('uses the documented 60 second default cache time', () => {
+    const disposable = provider(() => 1, { name: 'default_cache_time' });
+    const container = new RiverContainer();
+    const unsubscribe = container.subscribe(disposable, () => {});
+    unsubscribe();
+
+    expect(container.getProviderStates()[0]?.cacheTime).toBe(60000);
   });
 });

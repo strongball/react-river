@@ -28,9 +28,9 @@ export interface ConsumerProps {
 export function Consumer({ children }: ConsumerProps) {
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
   const riverRef = useRiverRef();
-  const subs = useRef(new Map<symbol, () => void>());
+  const subs = useRef(new Map<string, () => void>());
   // Track which providers were watched in the current render
-  const watchedProvidersRef = useRef(new Map<symbol, ProviderBase<any>>());
+  const watchedProvidersRef = useRef(new Map<string, ProviderBase<any>>());
 
   // Standard cleanup on unmount
   useEffect(() => {
@@ -78,4 +78,3 @@ export function Consumer({ children }: ConsumerProps) {
 
   return <>{children(consumerRef as ConsumerRef)}</>;
 }
-

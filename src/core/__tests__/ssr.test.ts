@@ -261,6 +261,69 @@ describe('familyProvider SSR', () => {
   });
 });
 
+describe('SSR safety regressions', () => {
+  it('does not poison initialization after fromJSON throws', () => {
+    let shouldThrow = true;
+    const hydratedProvider = provider(() => 'factory', {
+      name: 'retryable',
+      fromJSON: (value) => {
+        if (shouldThrow) throw new Error('bad payload');
+        return String(value);
+      },
+    });
+    const container = new RiverContainer({ initialState: { retryable: 'hydrated' } });
+
+    expect(() => container.read(hydratedProvider)).toThrow('bad payload');
+    shouldThrow = false;
+    expect(container.read(hydratedProvider)).toBe('hydrated');
+  });
+
+  it('does not mutate caller-owned or frozen initial state', () => {
+    const initialState = Object.freeze({ frozen: 'hydrated' });
+    const hydratedProvider = provider(() => 'factory', { name: 'frozen' });
+    const container = new RiverContainer({ initialState });
+
+    expect(container.read(hydratedProvider)).toBe('hydrated');
+    expect(initialState).toEqual({ frozen: 'hydrated' });
+  });
+
+  it('ignores inherited hydration properties', () => {
+    const initialState = Object.create({ inherited: 'unsafe' }) as Record<string, unknown>;
+    const hydratedProvider = provider(() => 'factory', { name: 'inherited' });
+
+    expect(new RiverContainer({ initialState }).read(hydratedProvider)).toBe('factory');
+  });
+
+  it('dehydrates __proto__ as an own JSON property', () => {
+    const protoProvider = provider(() => ({ safe: true }), { name: '__proto__' });
+    const container = new RiverContainer();
+    container.read(protoProvider);
+
+    const dehydrated = container.dehydrate();
+    expect(Object.hasOwn(dehydrated, '__proto__')).toBe(true);
+    expect(JSON.parse(JSON.stringify(dehydrated))).toEqual(JSON.parse('{"__proto__":{"safe":true}}'));
+  });
+
+  it('rejects duplicate SSR keys instead of silently overwriting', () => {
+    const first = provider(() => 1, { name: 'duplicate-ssr' });
+    const second = stateProvider(() => 2, { name: 'duplicate-ssr' });
+    const container = new RiverContainer();
+    container.read(first);
+    expect(() => container.read(second)).toThrow('Duplicate provider name');
+  });
+
+  it('rejects two providers consuming the same hydration key', () => {
+    const first = provider(() => 'first', { name: 'duplicate-hydration' });
+    const second = stateProvider(() => 'second', { name: 'duplicate-hydration' });
+    const container = new RiverContainer({
+      initialState: { 'duplicate-hydration': 'hydrated' },
+    });
+
+    expect(container.read(first)).toBe('hydrated');
+    expect(() => container.read(second)).toThrow('Duplicate provider name');
+  });
+});
+
 // ── SSR Options (ssr flag, toJSON, fromJSON) ───────────────────
 
 describe('SSR options', () => {

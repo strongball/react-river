@@ -10,6 +10,16 @@ import { RiverScope } from '../scope';
 const wrapper = ({ children }: { children: React.ReactNode }) => <RiverScope>{children}</RiverScope>;
 
 describe('useRiverMutation', () => {
+  const deferred = <T,>() => {
+    let resolve!: (value: T) => void;
+    let reject!: (reason?: unknown) => void;
+    const promise = new Promise<T>((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
+    return { promise, resolve, reject };
+  };
+
   it('should start with idle state (asyncData undefined)', () => {
     const { result } = renderHook(
       () => useRiverMutation(async () => {}),
@@ -99,6 +109,57 @@ describe('useRiverMutation', () => {
     expect(result.current.state.data).toBeUndefined();
   });
 
+  it('should only let the latest mutation update state', async () => {
+    const first = deferred<string>();
+    const second = deferred<string>();
+    const { result } = renderHook(
+      () => useRiverMutation(async (_ref, value: 'first' | 'second') =>
+        value === 'first' ? first.promise : second.promise),
+      { wrapper },
+    );
+
+    let firstPromise!: Promise<string>;
+    let secondPromise!: Promise<string>;
+    act(() => {
+      firstPromise = result.current.mutate('first');
+      secondPromise = result.current.mutate('second');
+    });
+
+    await act(async () => {
+      second.resolve('second result');
+      await secondPromise;
+    });
+    expect(result.current.state.data).toBe('second result');
+
+    const firstError = new Error('first failed');
+    await act(async () => {
+      first.reject(firstError);
+      await expect(firstPromise).rejects.toBe(firstError);
+    });
+    expect(result.current.state.data).toBe('second result');
+  });
+
+  it('should not let an in-flight mutation overwrite reset state', async () => {
+    const pending = deferred<number>();
+    const { result } = renderHook(
+      () => useRiverMutation(async () => pending.promise),
+      { wrapper },
+    );
+
+    let mutationPromise!: Promise<number>;
+    act(() => {
+      mutationPromise = result.current.mutate(undefined as never);
+      result.current.reset();
+    });
+
+    await act(async () => {
+      pending.resolve(42);
+      await expect(mutationPromise).resolves.toBe(42);
+    });
+    expect(result.current.state.status).toBe('data');
+    expect(result.current.state.data).toBeUndefined();
+  });
+
   it('should call onSuccess / onSettled callbacks with context', async () => {
     const onMutate = vi.fn(() => ({ snapshot: 'before' }));
     const onSuccess = vi.fn();
@@ -125,6 +186,29 @@ describe('useRiverMutation', () => {
 
     expect(onSettled).toHaveBeenCalledTimes(1);
     expect(onSettled).toHaveBeenCalledWith(10, undefined, 5, { snapshot: 'before' }, expect.any(Object));
+  });
+
+  it('should not classify an onSuccess callback error as a mutation failure', async () => {
+    const callbackError = new Error('callback failed');
+    const onError = vi.fn();
+    const onSettled = vi.fn();
+    const { result } = renderHook(
+      () => useRiverMutation(async () => 42, {
+        onSuccess: () => { throw callbackError; },
+        onError,
+        onSettled,
+      }),
+      { wrapper },
+    );
+
+    await act(async () => {
+      await expect(result.current.mutate(undefined as never)).rejects.toBe(callbackError);
+    });
+
+    expect(result.current.state.status).toBe('data');
+    expect(result.current.state.data).toBe(42);
+    expect(onError).not.toHaveBeenCalled();
+    expect(onSettled).toHaveBeenCalledWith(42, undefined, undefined, undefined, expect.any(Object));
   });
 
   it('should call onError / onSettled callbacks with context on failure', async () => {
@@ -278,4 +362,3 @@ describe('useRiverMutation', () => {
     });
   });
 });
-

@@ -3,6 +3,15 @@ import { provider, stateProvider, promiseProvider, observableProvider, notifierP
 import { Notifier, AsyncNotifier } from '../notifier';
 
 describe('Providers Factories', () => {
+  it('uses a stable name-derived identity for HMR replacements', () => {
+    const first = provider(() => 1, { name: 'duplicate' });
+    const second = provider(() => 2, { name: 'duplicate' });
+
+    expect(first.id).toBe(second.id);
+    expect(first.id).toBe('duplicate');
+    expect(first.name).toBe(second.name);
+  });
+
   it('provider() creates correct object', () => {
     const p = provider(() => 1, { name: 'test' });
     expect(p.kind).toBe('provider');

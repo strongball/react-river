@@ -43,16 +43,22 @@ export type { DevToolsProviderSnapshot, RiverContainerOptions, RiverCachePolicy 
 // ── RiverContainer ─────────────────────────────────────────────
 
 export class RiverContainer {
-  private states = new Map<symbol, ProviderState>();
-  private overrideMap = new Map<symbol, ProviderOverride>();
-  providerMap = new Map<symbol, ProviderBase<any>>();
-  private initializingStack = new Set<symbol>();
+  private states = new Map<string, ProviderState>();
+  private overrideMap = new Map<string, ProviderOverride>();
+  providerMap = new Map<string, ProviderBase<any>>();
+  private initializingStack = new Set<string>();
   private parent: RiverContainer | undefined;
   private observers: RiverObserver[];
   public disposed = false;
 
+  /** Pending dependency rebuilds for the current propagation transaction. */
+  private propagationQueue = new Set<string>();
+  private isPropagating = false;
+
   /** SSR hydration state: provider name → pre-computed value. */
   private initialState: Record<string, unknown> | undefined;
+  /** Tracks which provider consumed each hydration key. */
+  private hydratedProviderIds = new Map<string, string>();
 
   /** Default auto-dispose and cache-time policy for providers in this scope. */
   private readonly cachePolicy: Required<RiverCachePolicy>;
@@ -72,7 +78,9 @@ export class RiverContainer {
     this.parent = options.parent;
     this.observers = options.observers ?? [];
     this.cachePolicy = { autoDispose: true, cacheTime: 60000, ...options.cachePolicy };
-    this.initialState = options.initialState;
+    this.initialState = options.initialState
+      ? Object.assign(Object.create(null) as Record<string, unknown>, options.initialState)
+      : undefined;
 
     if (options.overrides) {
       for (const override of options.overrides) {
@@ -188,6 +196,8 @@ export class RiverContainer {
     this.states.clear();
     this.overrideMap.clear();
     this.providerMap.clear();
+    this.propagationQueue.clear();
+    this.hydratedProviderIds.clear();
     this.disposed = true;
   }
 
@@ -215,10 +225,13 @@ export class RiverContainer {
         listenerCount: state.snapshotListeners.size + state.valueListeners.size,
         dependencyCount: state.dependencies.size,
         dependentCount: state.dependents.size,
-        dependencies: Array.from(state.dependencies).map(getProviderLabel),
-        dependents: Array.from(state.dependents).map((sym) => {
-          const p = this.providerMap.get(sym);
-          return p ? getProviderLabel(p) : (sym.description ?? 'unknown');
+        dependencies: Array.from(state.dependencies).map((dependencyId) => {
+          const dependency = this.providerMap.get(dependencyId);
+          return dependency ? getProviderLabel(dependency) : dependencyId;
+        }),
+        dependents: Array.from(state.dependents).map((dependentId) => {
+          const p = this.providerMap.get(dependentId);
+          return p ? getProviderLabel(p) : dependentId;
         }),
         autoDispose: state.autoDispose,
         cacheTime: state.cacheTime,
@@ -245,6 +258,7 @@ export class RiverContainer {
    */
   dehydrate(): Record<string, unknown> {
     const result: Record<string, unknown> = {};
+    const providerIdsByKey = new Map<string, string>();
 
     for (const [id, state] of this.states) {
       if (!state.initialized) continue;
@@ -256,6 +270,14 @@ export class RiverContainer {
 
       // Explicitly opted out of SSR
       if (ssr === false) continue;
+
+      const existingProviderId = providerIdsByKey.get(provider.name);
+      if (existingProviderId && existingProviderId !== provider.id) {
+        throw new Error(
+          `Duplicate SSR provider key "${provider.name}". Provider names must be unique for dehydration.`,
+        );
+      }
+      providerIdsByKey.set(provider.name, provider.id);
 
       const value = state.value;
       let exportValue: unknown;
@@ -286,7 +308,12 @@ export class RiverContainer {
 
       // Validate and export
       if (isSerializable(exportValue)) {
-        result[provider.name] = exportValue;
+        Object.defineProperty(result, provider.name, {
+          value: exportValue,
+          enumerable: true,
+          configurable: true,
+          writable: true,
+        });
       } else if (process.env.NODE_ENV !== 'production') {
         validateSerializable(exportValue, provider.name);
       }
@@ -330,6 +357,12 @@ export class RiverContainer {
   // ── Initialization ───────────────────────────────────────────
 
   private ensureInitialized(provider: ProviderBase<any>): unknown {
+    const registered = this.providerMap.get(provider.id);
+    if (registered && registered.kind !== provider.kind) {
+      throw new Error(
+        `Duplicate provider name "${provider.name}". Provider names must be globally unique.`,
+      );
+    }
     // Register provider for reverse lookup (DevTools, dependency graph)
     this.providerMap.set(provider.id, provider);
 
@@ -359,8 +392,8 @@ export class RiverContainer {
     if (!parentValue) {
       return Promise.reject(
         new Error(
-          `Parent provider "${parentProvider.name ?? parentProvider.id.description}" ` +
-            `has no value for promise accessor "${accessor.name ?? accessor.id.description}".`,
+          `Parent provider "${parentProvider.name ?? parentProvider.id}" ` +
+            `has no value for promise accessor "${accessor.name ?? accessor.id}".`,
         ),
       );
     }
@@ -390,7 +423,7 @@ export class RiverContainer {
     // Circular dependency detection
     if (this.initializingStack.has(provider.id)) {
       throw new Error(
-        `Circular dependency detected when initializing provider: ${provider.name ?? provider.id.description}`,
+        `Circular dependency detected when initializing provider: ${provider.name ?? provider.id}`,
       );
     }
     this.initializingStack.add(provider.id);
@@ -403,21 +436,29 @@ export class RiverContainer {
 
     const ref = createRef(this.cb, provider.id);
 
-    // Resolve hydrated value from SSR initialState (only for named providers).
-    // Once consumed, the key is deleted so re-initialization (refresh/invalidate)
-    // will use the factory instead of the stale hydrated value.
     let hydratedValue: unknown;
-    if (provider.name && this.initialState && provider.name in this.initialState) {
-      hydratedValue = this.initialState[provider.name];
-      delete this.initialState[provider.name];
-    }
-
-    // Apply fromJSON transformation if configured
-    if (hydratedValue !== undefined && provider.options.fromJSON) {
-      hydratedValue = provider.options.fromJSON(hydratedValue);
-    }
+    let hydrationKey: string | undefined;
 
     try {
+      // Resolve hydrated value from an own property only. Consumption is
+      // committed after successful initialization so retries remain possible.
+      if (provider.name && this.initialState) {
+        const hydratedProviderId = this.hydratedProviderIds.get(provider.name);
+        if (hydratedProviderId && hydratedProviderId !== provider.id) {
+          throw new Error(
+            `Duplicate SSR provider key "${provider.name}". Provider names must be unique for hydration.`,
+          );
+        }
+
+        if (!hydratedProviderId && Object.hasOwn(this.initialState, provider.name)) {
+          hydrationKey = provider.name;
+          hydratedValue = this.initialState[provider.name];
+          if (hydratedValue !== undefined && provider.options.fromJSON) {
+            hydratedValue = provider.options.fromJSON(hydratedValue);
+          }
+        }
+      }
+
       switch (provider.kind) {
         case 'provider':
           initSimpleProvider({
@@ -507,8 +548,14 @@ export class RiverContainer {
       }
 
       state.initialized = true;
+      if (hydrationKey) {
+        delete this.initialState![hydrationKey];
+        this.hydratedProviderIds.set(hydrationKey, provider.id);
+      }
       this.notifyObservers('create', provider, state.value);
     } catch (error) {
+      this.teardownState(provider.id, state, { clearListeners: true, cascadeAutoDispose: false });
+      this.states.delete(provider.id);
       this.notifyObservers('error', provider, error);
       throw error;
     } finally {
@@ -520,7 +567,7 @@ export class RiverContainer {
 
   // ── Value updates & notification ─────────────────────────────
 
-  private updateValue(providerId: symbol, newValue: unknown): void {
+  private updateValue(providerId: string, newValue: unknown): void {
     const state = this.getOwnState(providerId);
     if (!state) return;
 
@@ -562,7 +609,7 @@ export class RiverContainer {
     return Object.is(a, b);
   }
 
-  private propagateToDependents(providerId: symbol): void {
+  private propagateToDependents(providerId: string): void {
     const state = this.getState(providerId);
     if (!state) return;
 
@@ -605,9 +652,44 @@ export class RiverContainer {
         }
 
         if (shouldReinitialize) {
-          this.reinitialize(depProvider);
+          this.propagationQueue.add(depId);
         }
       }
+    }
+
+    if (this.isPropagating) return;
+
+    this.isPropagating = true;
+    const dependsOnQueuedProvider = (candidateId: string, visited = new Set<string>()): boolean => {
+      if (visited.has(candidateId)) return false;
+      visited.add(candidateId);
+      const candidateState = this.getState(candidateId);
+      if (!candidateState) return false;
+      return Array.from(candidateState.dependencies).some(
+        (dependencyId) =>
+          this.propagationQueue.has(dependencyId) ||
+          dependsOnQueuedProvider(dependencyId, visited),
+      );
+    };
+    try {
+      while (this.propagationQueue.size > 0) {
+        let nextId: string | undefined;
+        for (const candidateId of this.propagationQueue) {
+          if (!dependsOnQueuedProvider(candidateId)) {
+            nextId = candidateId;
+            break;
+          }
+        }
+        nextId ??= this.propagationQueue.values().next().value as string;
+        this.propagationQueue.delete(nextId);
+        const nextProvider = this.providerMap.get(nextId);
+        if (nextProvider) {
+          this.reinitialize(nextProvider);
+        }
+      }
+    } finally {
+      this.propagationQueue.clear();
+      this.isPropagating = false;
     }
   }
 
@@ -638,10 +720,10 @@ export class RiverContainer {
     // Restore dependents, but filter out stale entries where the dependent
     // provider no longer has a forward edge to this provider (e.g., the
     // create function conditionally watches different providers after re-init).
-    const validDependents = new Set<symbol>();
+    const validDependents = new Set<string>();
     for (const depId of state.dependents) {
       const depState = this.getState(depId);
-      if (depState?.dependencies.has(provider)) {
+      if (depState?.dependencies.has(provider.id)) {
         validDependents.add(depId);
       }
     }
@@ -722,7 +804,7 @@ export class RiverContainer {
    * Clears timeouts, runs dispose callbacks, aborts async ops, and removes dependency links.
    */
   private teardownState(
-    id: symbol,
+    id: string,
     state: ProviderState,
     opts: { clearListeners: boolean; cascadeAutoDispose: boolean },
   ): void {
@@ -743,12 +825,13 @@ export class RiverContainer {
 
     state.abortController?.abort();
 
-    for (const depProvider of Array.from(state.dependencies)) {
-      const depState = this.getState(depProvider.id);
+    for (const dependencyId of Array.from(state.dependencies)) {
+      const depState = this.getState(dependencyId);
       depState?.dependents.delete(id);
       depState?.watchSelectors?.delete(id);
       if (opts.cascadeAutoDispose) {
-        this.checkAutoDispose(depProvider);
+        const dependency = this.providerMap.get(dependencyId);
+        if (dependency) this.checkAutoDispose(dependency);
       }
     }
 
@@ -809,11 +892,11 @@ export class RiverContainer {
     return state.snapshotListeners.size > 0 || state.valueListeners.size > 0 || state.dependents.size > 0;
   }
 
-  public getState(id: symbol): ProviderState | undefined {
+  public getState(id: string): ProviderState | undefined {
     return this.states.get(id) ?? this.parent?.getState(id);
   }
 
-  private getOwnState(id: symbol): ProviderState | undefined {
+  private getOwnState(id: string): ProviderState | undefined {
     return this.states.get(id);
   }
 

@@ -3,11 +3,11 @@ import { resolve } from 'path';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  root: resolve(__dirname, 'example'),
+  root: resolve(import.meta.dirname, 'example'),
   plugins: [react()],
   resolve: {
     alias: {
-      '@zerologix/react-river': resolve(__dirname, 'src/index.ts'),
+      '@zerologix/react-river': resolve(import.meta.dirname, 'src/index.ts'),
     },
   },
   server: {
