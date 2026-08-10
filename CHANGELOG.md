@@ -1,3 +1,10 @@
+## [1.0.44](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.43...v1.0.44) (2026-08-10)
+
+
+### Features
+
+* enhance DevTools UI with rapid event grouping, improved layout styling, and integrated copy functionality for provider details. ([a49f7da](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/commit/a49f7dabcacde4e721d1b88e04bed0ca1c3d4693))
+
 ## [1.0.43](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.42...v1.0.43) (2026-08-10)
 
 

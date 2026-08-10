@@ -1,6 +1,6 @@
 {
   "name": "@zerologix/react-river",
-  "version": "1.0.43",
+  "version": "1.0.44",
   "description": "A lightweight, Riverpod-inspired state management library for React.",
   "keywords": [
     "hooks",
