@@ -14,10 +14,12 @@ import { DependencyGraph } from './components/DependencyGraph';
 import { EventItem } from './components/EventItem';
 import { IconTrash } from './components/Icons';
 import { ProviderItem } from './components/ProviderItem';
+import type { DevToolsEvent } from './devtools-observer';
 import { createDevToolsObserver } from './devtools-observer';
 // Hooks
 import { useDraggable } from './hooks/useDraggable';
 import { injectDevToolsStyles } from './inject-styles';
+import { groupRapidEvents } from './utils';
 
 // Inject styles at module load time
 injectDevToolsStyles();
@@ -64,6 +66,9 @@ export function RiverDevTools({ defaultPosition, defaultOpen = false }: RiverDev
   const [tab, setTab] = useState<Tab>('providers');
   const [search, setSearch] = useState('');
   const [eventSearch, setEventSearch] = useState('');
+  const [eventTypeFilter, setEventTypeFilter] = useState<DevToolsEvent['type'] | 'all'>('all');
+  const [eventsPaused, setEventsPaused] = useState(false);
+  const [pausedEvents, setPausedEvents] = useState<readonly DevToolsEvent[] | null>(null);
   const [sortMode, setSortMode] = useState<'name' | 'recent'>('name');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [position, setPosition] = useState(defaultPosition ?? { x: 16, y: 16 });
@@ -102,11 +107,18 @@ export function RiverDevTools({ defaultPosition, defaultOpen = false }: RiverDev
   }, [snapshots, search]);
 
   // ── Filtered events ────────────────────────────────────────
+  const eventSource = eventsPaused ? (pausedEvents ?? events) : events;
+
   const filteredEvents = useMemo(() => {
-    if (!eventSearch) return events;
     const lower = eventSearch.toLowerCase();
-    return events.filter((e) => e.providerName.toLowerCase().includes(lower) || e.type.toLowerCase().includes(lower));
-  }, [events, eventSearch]);
+    return eventSource.filter(
+      (e) =>
+        (eventTypeFilter === 'all' || e.type === eventTypeFilter) &&
+        (!eventSearch || e.providerName.toLowerCase().includes(lower) || e.type.toLowerCase().includes(lower)),
+    );
+  }, [eventSource, eventSearch, eventTypeFilter]);
+
+  const displayEvents = useMemo(() => groupRapidEvents(filteredEvents), [filteredEvents]);
 
   // ── Keyboard shortcut (Ctrl+Shift+D) ──────────────────────
   useEffect(() => {
@@ -139,14 +151,19 @@ export function RiverDevTools({ defaultPosition, defaultOpen = false }: RiverDev
     <div className="river-devtools">
       <div className="rd-panel" style={{ position: 'fixed', left: position.x, top: position.y }}>
         {/* Header */}
-        <div className="rd-header" onMouseDown={onMouseDown}>
-          <div className="rd-header-title">
+        <div className="rd-header">
+          <div className="rd-header-drag" onMouseDown={onMouseDown}>
             <span className="rd-header-logo">🌊</span>
-            River DevTools
-            <span className="rd-header-badge">{snapshots.length}</span>
+            <div className="rd-header-copy">
+              <div className="rd-header-title">
+                River DevTools
+                <span className="rd-header-badge">{snapshots.length}</span>
+              </div>
+              <span className="rd-header-subtitle">Inspect state, events, and dependencies</span>
+            </div>
           </div>
           <div className="rd-header-actions">
-            <button className="rd-icon-btn" onClick={() => setOpen(false)} title="Close (Ctrl+Shift+D)">
+            <button type="button" className="rd-icon-btn" onClick={() => setOpen(false)} title="Close (Ctrl+Shift+D)">
               ✕
             </button>
           </div>
@@ -154,13 +171,13 @@ export function RiverDevTools({ defaultPosition, defaultOpen = false }: RiverDev
 
         {/* Tabs */}
         <div className="rd-tabs">
-          <button className="rd-tab" data-active={tab === 'providers'} onClick={() => setTab('providers')}>
+          <button type="button" className="rd-tab" data-active={tab === 'providers'} onClick={() => setTab('providers')}>
             Providers
           </button>
-          <button className="rd-tab" data-active={tab === 'events'} onClick={() => setTab('events')}>
+          <button type="button" className="rd-tab" data-active={tab === 'events'} onClick={() => setTab('events')}>
             Events {events.length > 0 && <span className="rd-tab-count">{events.length}</span>}
           </button>
-          <button className="rd-tab" data-active={tab === 'graph'} onClick={() => setTab('graph')}>
+          <button type="button" className="rd-tab" data-active={tab === 'graph'} onClick={() => setTab('graph')}>
             Graph
           </button>
         </div>
@@ -230,6 +247,18 @@ export function RiverDevTools({ defaultPosition, defaultOpen = false }: RiverDev
                 onChange={(e) => setEventSearch(e.target.value)}
                 style={{ flex: 1 }}
               />
+              <select
+                className="rd-event-filter"
+                value={eventTypeFilter}
+                onChange={(e) => setEventTypeFilter(e.target.value as DevToolsEvent['type'] | 'all')}
+                aria-label="Filter event type"
+              >
+                <option value="all">All events</option>
+                <option value="create">Create</option>
+                <option value="update">Update</option>
+                <option value="dispose">Dispose</option>
+                <option value="error">Error</option>
+              </select>
               <div className="rd-settings" style={{ padding: 0, border: 'none' }}>
                 <label>
                   Max:
@@ -241,7 +270,32 @@ export function RiverDevTools({ defaultPosition, defaultOpen = false }: RiverDev
                     onChange={(e) => setMaxEvents(Number(e.target.value) || 100)}
                   />
                 </label>
-                <button className="rd-icon-btn" onClick={() => pinnedDevtools.current.clearEvents()} title="Clear">
+                <button
+                  type="button"
+                  className="rd-live-btn"
+                  data-active={eventsPaused}
+                  onClick={() => {
+                    if (eventsPaused) {
+                      setEventsPaused(false);
+                      setPausedEvents(null);
+                    } else {
+                      setPausedEvents(events);
+                      setEventsPaused(true);
+                    }
+                  }}
+                  title={eventsPaused ? 'Resume live events' : 'Pause live events'}
+                >
+                  {eventsPaused ? 'Resume' : 'Pause'}
+                </button>
+                <button
+                  type="button"
+                  className="rd-icon-btn"
+                  onClick={() => {
+                    pinnedDevtools.current.clearEvents();
+                    if (eventsPaused) setPausedEvents([]);
+                  }}
+                  title="Clear"
+                >
                   <IconTrash />
                 </button>
               </div>
@@ -254,8 +308,8 @@ export function RiverDevTools({ defaultPosition, defaultOpen = false }: RiverDev
                 </div>
               ) : (
                 <div className="rd-event-list">
-                  {filteredEvents.map((event, i) => (
-                    <EventItem key={`${event.timestamp}-${i}`} event={event} />
+                  {displayEvents.map(({ event, repeatCount }, i) => (
+                    <EventItem key={`${event.timestamp}-${event.providerId}-${i}`} event={event} repeatCount={repeatCount} />
                   ))}
                 </div>
               )}

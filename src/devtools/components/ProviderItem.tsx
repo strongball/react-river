@@ -1,5 +1,7 @@
+import type { KeyboardEvent } from 'react';
 import type { DevToolsProviderSnapshot } from '../../core/container';
 import { kindLabel, serializeValue } from '../utils';
+import { CopyButton } from './CopyButton';
 import { IconEye } from './Icons';
 
 interface ProviderItemProps {
@@ -14,61 +16,79 @@ export function ProviderItem({
   expanded,
   onToggle,
 }: ProviderItemProps) {
+  const valueText = serializeValue(snapshot.value);
+  const previousValueText = snapshot.previousValue === undefined ? undefined : serializeValue(snapshot.previousValue);
+  const argumentsMatch = snapshot.name.match(/^.+?\((.*)\)$/);
+
+  const handleSummaryKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onToggle();
+    }
+  };
+
   return (
-    <div className="rd-provider-item" onClick={onToggle}>
-      <div className="rd-provider-row">
-        <span className={`rd-provider-kind rd-kind-${snapshot.kind}`}>
-          {kindLabel(snapshot.kind)}
-        </span>
-        <span className="rd-provider-name" title={snapshot.name}>
-          {snapshot.name}
-        </span>
-        <div className="rd-provider-meta">
-          <span title="Listeners">
-            <IconEye />
-            {snapshot.listenerCount}
+    <div className="rd-provider-item" data-expanded={expanded}>
+      <div
+        className="rd-provider-row"
+        role="button"
+        tabIndex={0}
+        aria-expanded={expanded}
+        onClick={onToggle}
+        onKeyDown={handleSummaryKeyDown}
+      >
+        <div className="rd-provider-identity">
+          <span className="rd-provider-chevron" aria-hidden="true">
+            ›
           </span>
-          <span title="Version">v{snapshot.version}</span>
-          {snapshot.autoDispose && <span className="rd-badge-auto-dispose">AD</span>}
+          <div className="rd-provider-heading">
+            <span className="rd-provider-name" title={snapshot.name}>
+              {snapshot.name}
+            </span>
+            <div className="rd-provider-meta">
+              <span className={`rd-provider-kind rd-kind-${snapshot.kind}`}>{kindLabel(snapshot.kind)}</span>
+              <span title="Listeners">
+                <IconEye />
+                {snapshot.listenerCount}
+              </span>
+              <span title="Version">v{snapshot.version}</span>
+              {snapshot.autoDispose && <span className="rd-badge-auto-dispose">AD</span>}
+              {snapshot.autoDispose && <span className="rd-provider-cache">cache {snapshot.cacheTime ?? 0}ms</span>}
+            </div>
+          </div>
         </div>
+        <CopyButton value={snapshot.name} label="Copy provider name" />
       </div>
 
       {expanded && (
         <div className="rd-provider-details">
-          <div className="rd-detail-row">
+          <div className="rd-detail-row rd-detail-row-data">
             <span className="rd-detail-label">Value</span>
-            <span className="rd-detail-value">
-              <pre>{serializeValue(snapshot.value)}</pre>
-            </span>
+            <div className="rd-detail-value">
+              <pre>{valueText}</pre>
+              <CopyButton value={valueText} label="Copy value" />
+            </div>
           </div>
 
-          {snapshot.previousValue !== undefined && (
-            <div className="rd-detail-row">
-              <span className="rd-detail-label">Previous</span>
-              <span className="rd-detail-value">
-                <pre>{serializeValue(snapshot.previousValue)}</pre>
-              </span>
-            </div>
+          {previousValueText !== undefined && (
+            <details className="rd-previous-details">
+              <summary>Previous value</summary>
+              <div className="rd-detail-value">
+                <pre>{previousValueText}</pre>
+                <CopyButton value={previousValueText} label="Copy previous value" />
+              </div>
+            </details>
           )}
 
-          <div className="rd-detail-row">
-            <span className="rd-detail-label">Kind</span>
-            <span className="rd-detail-value">{snapshot.kind}</span>
-          </div>
-
-          {snapshot.name.match(/^.+?\((.*)\)$/) && (
-            <div className="rd-detail-row">
+          {argumentsMatch && (
+            <div className="rd-detail-row rd-detail-row-data">
               <span className="rd-detail-label">Arguments</span>
-              <span className="rd-detail-value">
-                <pre>{snapshot.name.match(/^.+?\((.*)\)$/)![1]}</pre>
-              </span>
+              <div className="rd-detail-value">
+                <pre>{argumentsMatch[1]}</pre>
+                <CopyButton value={argumentsMatch[1]} label="Copy arguments" />
+              </div>
             </div>
           )}
-
-          <div className="rd-detail-row">
-            <span className="rd-detail-label">Listeners</span>
-            <span className="rd-detail-value">{snapshot.listenerCount}</span>
-          </div>
 
           {snapshot.dependencies.length > 0 && (
             <div className="rd-detail-row">
@@ -96,12 +116,6 @@ export function ProviderItem({
             </div>
           )}
 
-          {snapshot.autoDispose && (
-            <div className="rd-detail-row">
-              <span className="rd-detail-label">Cache Time</span>
-              <span className="rd-detail-value">{snapshot.cacheTime ?? 0}ms</span>
-            </div>
-          )}
         </div>
       )}
     </div>

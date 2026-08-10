@@ -1,4 +1,36 @@
+import type { DevToolsEvent } from './devtools-observer';
 import type { DevToolsProviderSnapshot } from '../core/container';
+
+export interface DisplayEventGroup {
+  event: DevToolsEvent;
+  repeatCount: number;
+}
+
+/** Groups consecutive updates from one provider into a single display row. */
+export function groupRapidEvents(
+  events: readonly DevToolsEvent[],
+  windowMs = 250,
+): DisplayEventGroup[] {
+  const groups: DisplayEventGroup[] = [];
+
+  for (const event of events) {
+    const previous = groups[groups.length - 1];
+    const isRapidUpdate =
+      previous &&
+      previous.event.type === 'update' &&
+      event.type === 'update' &&
+      previous.event.providerId === event.providerId &&
+      previous.event.timestamp - event.timestamp <= windowMs;
+
+    if (isRapidUpdate) {
+      previous.repeatCount += 1;
+    } else {
+      groups.push({ event, repeatCount: 1 });
+    }
+  }
+
+  return groups;
+}
 
 /** Serializes a value for display in the DevTools */
 export function serializeValue(value: unknown): string {
