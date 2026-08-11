@@ -1,3 +1,10 @@
+## [1.0.45](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.44...v1.0.45) (2026-08-11)
+
+
+### Features
+
+* enable support for undefined values in providerFamily arguments ([7cd9b5d](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/commit/7cd9b5d362f13ae14a1652d253e293e67e8c43a3))
+
 ## [1.0.44](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.43...v1.0.44) (2026-08-10)
 
 
