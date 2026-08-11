@@ -41,10 +41,11 @@ export interface ProviderFamily<P, Arg> {
 // ── Key serialization ──────────────────────────────────────────
 
 function serializeArg(value: unknown, stack = new Set<object>()): string {
+  if (value === undefined) return 'undefined';
   if (value === null || typeof value !== 'object') {
     const json = JSON.stringify(value);
     if (json === undefined || (typeof value === 'number' && !Number.isFinite(value))) {
-      throw new TypeError('Family arguments must be JSON values');
+      throw new TypeError('Family arguments must be JSON values or undefined');
     }
     return json;
   }

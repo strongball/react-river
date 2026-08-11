@@ -196,6 +196,15 @@ describe('Provider Families', () => {
     expect(p('true')).not.toBe(p(true));
   });
 
+  it('should support undefined family arguments without colliding with JSON values', () => {
+    const p = providerFamily((ref, arg: unknown) => arg, { name: 'optional' });
+
+    expect(p(undefined)).toBe(p(undefined));
+    expect(p(undefined)).not.toBe(p(null));
+    expect(p({})).not.toBe(p({ value: undefined }));
+    expect(p([undefined])).not.toBe(p([null]));
+  });
+
   it('uses deterministic JSON names for SSR hydration', () => {
     const serverFamily = stateProviderFamily((ref, id: number | string) => `server:${id}`, { name: 'item' });
     const server = new RiverContainer();
