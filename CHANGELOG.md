@@ -1,3 +1,10 @@
+## [1.0.46](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.45...v1.0.46) (2026-08-12)
+
+
+### Features
+
+* add support for Date objects in family arguments and provide detailed error paths for validation failures ([71c4cb2](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/commit/71c4cb2b6f872f8764e8853b000dfe6ee99e6884))
+
 ## [1.0.45](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.44...v1.0.45) (2026-08-11)
 
 
