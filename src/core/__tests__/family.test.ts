@@ -205,6 +205,23 @@ describe('Provider Families', () => {
     expect(p([undefined])).not.toBe(p([null]));
   });
 
+  it('should support Date family arguments without colliding with strings', () => {
+    const p = providerFamily((ref, arg: unknown) => arg, { name: 'date' });
+    const date = new Date('2026-08-12T00:00:00.000Z');
+
+    expect(p(date)).toBe(p(new Date(date.getTime())));
+    expect(p(date)).not.toBe(p(date.toISOString()));
+  });
+
+  it('reports the path of an invalid Date family argument', () => {
+    const p = providerFamily((ref, arg: unknown) => arg, { name: 'date' });
+    const invalidDate = new Date('not-a-date');
+
+    expect(() => p({ filters: { startAt: invalidDate } })).toThrow(
+      'Family argument at "argument.filters.startAt" is an invalid Date.',
+    );
+  });
+
   it('uses deterministic JSON names for SSR hydration', () => {
     const serverFamily = stateProviderFamily((ref, id: number | string) => `server:${id}`, { name: 'item' });
     const server = new RiverContainer();
@@ -227,14 +244,20 @@ describe('Provider Families', () => {
     const arg: { self?: object } = {};
     arg.self = arg;
 
-    expect(() => p(arg)).toThrow('Family arguments cannot contain circular references');
+    expect(() => p(arg)).toThrow(
+      'Family arguments cannot contain circular references: "argument.self" references "argument".',
+    );
   });
 
   it('rejects non-plain objects that would otherwise collide', () => {
     const p = providerFamily((ref, arg: object) => arg, { name: 'non-plain' });
 
-    expect(() => p(new Map([['id', 1]]))).toThrow('Family arguments must be plain objects or arrays');
-    expect(() => p(new Set([1]))).toThrow('Family arguments must be plain objects or arrays');
+    expect(() => p(new Map([['id', 1]]))).toThrow(
+      'Family arguments must be plain objects or arrays. Invalid value at "argument": received Map.',
+    );
+    expect(() => p({ filter: new Set([1]) })).toThrow(
+      'Family arguments must be plain objects or arrays. Invalid value at "argument.filter": received Set.',
+    );
   });
 
   it('family.getProviders() should return all cached provider instances', () => {

@@ -40,26 +40,70 @@ export interface ProviderFamily<P, Arg> {
 
 // ── Key serialization ──────────────────────────────────────────
 
-function serializeArg(value: unknown, stack = new Set<object>()): string {
+function propertyPath(path: string, key: string): string {
+  return /^[A-Za-z_$][\w$]*$/.test(key) ? `${path}.${key}` : `${path}[${JSON.stringify(key)}]`;
+}
+
+function describeValue(value: unknown): string {
+  if (value === null) return 'null';
+  if (value === undefined) return 'undefined';
+  if (value instanceof Date) return `Date(${Number.isNaN(value.getTime()) ? 'invalid' : value.toISOString()})`;
+  if (Array.isArray(value)) return 'Array';
+  if (typeof value === 'object') return value.constructor?.name || 'Object';
+  if (typeof value === 'string') return `string ${JSON.stringify(value)}`;
+  if (typeof value === 'number') return `number ${String(value)}`;
+  if (typeof value === 'bigint') return `bigint ${String(value)}n`;
+  if (typeof value === 'symbol') return `symbol ${String(value)}`;
+  return typeof value;
+}
+
+function serializeArg(value: unknown, stack = new Map<object, string>(), path = 'argument'): string {
   if (value === undefined) return 'undefined';
   if (value === null || typeof value !== 'object') {
-    const json = JSON.stringify(value);
+    let json: string | undefined;
+    try {
+      json = JSON.stringify(value);
+    } catch {
+      throw new TypeError(
+        `Family arguments must be JSON values or undefined. Invalid value at "${path}": received ${describeValue(value)}.`,
+      );
+    }
     if (json === undefined || (typeof value === 'number' && !Number.isFinite(value))) {
-      throw new TypeError('Family arguments must be JSON values or undefined');
+      throw new TypeError(
+        `Family arguments must be JSON values or undefined. Invalid value at "${path}": received ${describeValue(value)}.`,
+      );
     }
     return json;
   }
-  if (stack.has(value)) throw new TypeError('Family arguments cannot contain circular references');
-  if (!Array.isArray(value) && Object.getPrototypeOf(value) !== Object.prototype) {
-    throw new TypeError('Family arguments must be plain objects or arrays');
+
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) {
+      throw new TypeError(`Family argument at "${path}" is an invalid Date.`);
+    }
+    // Keep Date distinct from an ISO string containing the same timestamp.
+    return `Date(${JSON.stringify(value.toISOString())})`;
   }
 
-  stack.add(value);
+  if (stack.has(value)) {
+    throw new TypeError(
+      `Family arguments cannot contain circular references: "${path}" references "${stack.get(value)}".`,
+    );
+  }
+  if (!Array.isArray(value) && Object.getPrototypeOf(value) !== Object.prototype) {
+    throw new TypeError(
+      `Family arguments must be plain objects or arrays. Invalid value at "${path}": received ${describeValue(value)}.`,
+    );
+  }
+
+  stack.set(value, path);
   const json = Array.isArray(value)
-    ? `[${value.map((item) => serializeArg(item, stack)).join(',')}]`
+    ? `[${value.map((item, index) => serializeArg(item, stack, `${path}[${index}]`)).join(',')}]`
     : `{${Object.keys(value)
         .sort()
-        .map((key) => `${JSON.stringify(key)}:${serializeArg((value as Record<string, unknown>)[key], stack)}`)
+        .map(
+          (key) =>
+            `${JSON.stringify(key)}:${serializeArg((value as Record<string, unknown>)[key], stack, propertyPath(path, key))}`,
+        )
         .join(',')}}`;
   stack.delete(value);
   return json;
