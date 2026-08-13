@@ -1,3 +1,10 @@
+## [1.0.47](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.46...v1.0.47) (2026-08-13)
+
+
+### Features
+
+* add RiverScope hydration and observer updates, configure test thresholds, and document core features and patterns. ([a322557](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/commit/a322557795065c2aa4f26373ac37dfc1ae13f2f5))
+
 ## [1.0.46](https://gitlab.com/zerologix/logixintelligent/logixtrader/react-river/compare/v1.0.45...v1.0.46) (2026-08-12)
 
 
