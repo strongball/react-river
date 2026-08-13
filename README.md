@@ -126,20 +126,71 @@ The provider stops the iterator when it is disposed or refreshed. A synchronous 
 
 - **`useRiverWatch(provider)`**: Subscribes to a provider and re-renders when it changes.
 - **`useRiverWatch(provider, selector)`**: Subscribes to a specific part of the state. Only re-renders if the selected value changes.
-- **`useRiverRef()`**: Returns a `RiverRef` for imperative operations (`read`, `set`, `invalidate`, `refresh`).
+- **`useRiverWatch(provider, { selector?, enabled? })`**: Combines selection with conditional subscription. While initially disabled it returns `undefined`; if disabled after being enabled, it keeps the last selected value until enabled again.
+- **`useRiverRef()`**: Returns a `RiverRef` for imperative operations (`read`, `set`, `invalidate`, `invalidateFamily`, `refresh`).
 - **`useRiverListen(provider, (next, prev) => { ... })`**: Runs a callback whenever the state changes. Does **not** trigger re-renders.
+- **`useRiverMutation(mutationFn, options?)`**: Runs an imperative async operation with React-local `AsyncValue` state.
+
+Use the options form of `useRiverWatch` when a subscription should be conditional:
+
+```tsx
+const userName = useRiverWatch(userProvider, {
+  selector: (user) => user.name,
+  enabled: isSignedIn,
+});
+```
+
+### Mutations
+
+`useRiverMutation` returns `{ state, mutate, reset }`. The mutation function receives a `RiverRef` and the variables passed to `mutate`. Lifecycle callbacks receive the same variables and ref; a value returned by `onMutate` is also passed to the success, error, and settled callbacks for optimistic updates or rollback.
+
+```tsx
+function DeleteUserButton({ userId }: { userId: string }) {
+  const { state, mutate, reset } = useRiverMutation(
+    async (ref, id: string) => {
+      await ref.read(apiProvider).deleteUser(id);
+    },
+    {
+      onSuccess: (_data, _id, _context, ref) => {
+        ref.invalidate(usersProvider);
+        ref.invalidateFamily(userByIdProvider);
+      },
+    },
+  );
+
+  return (
+    <>
+      <button disabled={state.isLoading} onClick={() => void mutate(userId).catch(showErrorToast)}>
+        Delete user
+      </button>
+      <button onClick={reset}>Reset mutation state</button>
+    </>
+  );
+}
+```
 
 ### Provider Families
 
 Families allow you to parameterize your providers (e.g., fetching a user by ID).
 
 ```ts
-const userByIdProvider = promiseProviderFamily((ref, id: string) => {
-  return fetchUser(id);
-});
+const userByIdProvider = promiseProviderFamily((ref, id: string) => fetchUser(id), { name: 'userById' });
 
 // Usage:
-const user = useRiverWatch(userByIdProvider("123"));
+const user = useRiverWatch(userByIdProvider('123'));
+```
+
+Family arguments use deterministic keys. They may contain JSON values, `undefined`, or valid `Date` instances, including inside arrays and plain objects. Object key order does not affect identity, while `undefined`, `null`, a `Date`, and the same ISO timestamp as a string remain distinct.
+
+Functions, symbols, `bigint`, non-finite numbers, invalid dates, circular references, class instances, and other non-plain objects are rejected. Structurally equivalent arguments return the same cached provider instance.
+
+Use `invalidateFamily` to re-initialize every initialized instance at once:
+
+```tsx
+const ref = useRiverRef();
+
+await saveUser();
+ref.invalidateFamily(userByIdProvider);
 ```
 
 ---
@@ -222,6 +273,30 @@ function App() {
 }
 ```
 
+For console logging or custom lifecycle monitoring, pass `RiverObserver` objects to either `RiverScope` or `RiverContainer`:
+
+```tsx
+import { loggerObserver, RiverScope, type RiverObserver } from '@zerologix/react-river';
+
+const auditObserver: RiverObserver = {
+  onProviderError(provider, error) {
+    reportError(provider.name, error);
+  },
+};
+
+const stateLogger = loggerObserver('App state');
+
+function App() {
+  return (
+    <RiverScope observers={[stateLogger, auditObserver]}>
+      <YourAppShell />
+    </RiverScope>
+  );
+}
+```
+
+Observers can implement `onProviderCreate`, `onProviderUpdate`, `onProviderDispose`, and `onProviderError`. `loggerObserver(prefix?)` provides all four and writes the events to the console.
+
 ---
 
 ## 🧪 Scoping & Overrides
@@ -240,6 +315,26 @@ const appOverrides = [
   <App />
 </RiverScope>;
 ```
+
+### Cache Policy
+
+Set default disposal behavior for a scope or a standalone container with `cachePolicy`:
+
+```tsx
+<RiverScope cachePolicy={{ autoDispose: true, cacheTime: 5_000 }}>
+  <App />
+</RiverScope>
+```
+
+```ts
+import { RiverContainer } from '@zerologix/react-river';
+
+const container = new RiverContainer({
+  cachePolicy: { autoDispose: false },
+});
+```
+
+The built-in defaults are `autoDispose: true` and `cacheTime: 60_000` milliseconds. `cacheTime` only applies when the resolved `autoDispose` value is `true`. Provider-level `autoDispose` and `cacheTime` options override the container or scope policy.
 
 ---
 

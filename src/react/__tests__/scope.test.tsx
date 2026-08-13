@@ -24,6 +24,53 @@ describe('RiverScope', () => {
     expect(screen.getByTestId('val').textContent).toBe('hello');
   });
 
+  it('should hydrate providers from initialState', () => {
+    const p = stateProvider(() => 'factory', { name: 'scope_hydrated_provider' });
+
+    function Child() {
+      const ref = useRiverRef();
+      return <div data-testid="hydrated-val">{ref.read(p)}</div>;
+    }
+
+    render(
+      <RiverScope initialState={{ scope_hydrated_provider: 'hydrated' }}>
+        <Child />
+      </RiverScope>,
+    );
+
+    expect(screen.getByTestId('hydrated-val').textContent).toBe('hydrated');
+  });
+
+  it('should replace observers when the observers prop changes', () => {
+    const p = stateProvider(() => 0, { name: 'scope_observer_provider' });
+    const firstObserver = { onProviderUpdate: vi.fn() };
+    const secondObserver = { onProviderUpdate: vi.fn() };
+    let setValue: ((value: number) => void) | undefined;
+
+    function Child() {
+      const ref = useRiverRef();
+      ref.read(p);
+      setValue = (value) => ref.set(p, value);
+      return null;
+    }
+
+    const { rerender } = render(
+      <RiverScope observers={[firstObserver]}>
+        <Child />
+      </RiverScope>,
+    );
+
+    rerender(
+      <RiverScope observers={[secondObserver]}>
+        <Child />
+      </RiverScope>,
+    );
+    setValue?.(1);
+
+    expect(firstObserver.onProviderUpdate).not.toHaveBeenCalled();
+    expect(secondObserver.onProviderUpdate).toHaveBeenCalledOnce();
+  });
+
   it('should support StrictMode remount logic', () => {
     let containerInstance: any;
 

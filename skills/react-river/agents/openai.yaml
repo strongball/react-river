@@ -1,0 +1,4 @@
+interface:
+  display_name: "React River"
+  short_description: "Build and maintain React River state management"
+  default_prompt: "Use $react-river to implement state management correctly in this React project."

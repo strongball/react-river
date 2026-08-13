@@ -13,6 +13,12 @@ export default defineConfig({
       reporter: ['text', 'text-summary', 'json', 'html', 'cobertura'],
       include: ['src/**/*.{ts,tsx}'],
       exclude: ['src/test/**', 'src/**/__tests__/**', 'src/devtools/**'],
+      thresholds: {
+        lines: 93,
+        branches: 82,
+        functions: 94,
+        statements: 91,
+      },
     },
   },
   resolve: {
