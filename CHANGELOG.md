@@ -1,3 +1,5 @@
+## [1.0.48](https://github.com/strongball/react-river/compare/v1.0.47...v1.0.48) (2026-08-14)
+
 # 1.0.0 (2026-08-14)
 
 
