@@ -1,13 +1,9 @@
 import { useMemo, useState, useRef, useEffect } from 'react';
-import type { DevToolsProviderSnapshot } from '../../core/container';
-import {
-  buildGraphLayout,
-  getConnectedNodes,
-  groupFamilySnapshots,
-  KIND_FILL,
-  KIND_STROKE,
-} from '../utils';
+
+import { buildGraphLayout, getConnectedNodes, groupFamilySnapshots, KIND_FILL, KIND_STROKE } from '../utils';
 import { IconChevronLeft } from './Icons';
+
+import type { DevToolsProviderSnapshot } from '../../core/container';
 
 interface DependencyGraphProps {
   snapshots: DevToolsProviderSnapshot[];
@@ -17,19 +13,12 @@ interface DependencyGraphProps {
 }
 
 /** Component for the dependency graph visualization */
-export function DependencyGraph({
-  snapshots,
-  graphRoot,
-  onSetRoot,
-  onResetRoot,
-}: DependencyGraphProps) {
+export function DependencyGraph({ snapshots, graphRoot, onSetRoot, onResetRoot }: DependencyGraphProps) {
   const [scale, setScale] = useState(1);
   const [hiddenNodes, setHiddenNodes] = useState<Set<string>>(new Set());
 
   // Filter out accessors for clarity
-  const filteredNodes = snapshots.filter(
-    (s) => s.kind !== 'notifierAccessor' && s.kind !== 'promiseAccessor',
-  );
+  const filteredNodes = snapshots.filter((s) => s.kind !== 'notifierAccessor' && s.kind !== 'promiseAccessor');
 
   // Group family instances into single nodes
   const groupedNodes = useMemo(() => groupFamilySnapshots(filteredNodes), [filteredNodes]);
@@ -53,10 +42,7 @@ export function DependencyGraph({
     return allNodes.filter((s) => connected.has(s.name));
   }, [allNodes, graphRoot]);
 
-  const { nodes, edges, viewBox, width, height } = useMemo(
-    () => buildGraphLayout(visibleNodes),
-    [visibleNodes],
-  );
+  const { nodes, edges, viewBox, width, height } = useMemo(() => buildGraphLayout(visibleNodes), [visibleNodes]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
@@ -131,20 +117,33 @@ export function DependencyGraph({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Graph toolbar */}
-      <div className="rd-graph-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', borderBottom: '1px solid var(--rd-border)', flexShrink: 0, minHeight: 48, flexWrap: 'wrap', gap: 8 }}>
+      <div
+        className="rd-graph-toolbar"
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '8px 12px',
+          borderBottom: '1px solid var(--rd-border)',
+          flexShrink: 0,
+          minHeight: 48,
+          flexWrap: 'wrap',
+          gap: 8,
+        }}
+      >
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           {graphRoot ? (
             <>
-              <button 
-                className="rd-graph-breadcrumb" 
+              <button
+                className="rd-graph-breadcrumb"
                 onClick={onResetRoot}
                 title="Return to full graph"
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: 4, 
-                  fontSize: 13, 
-                  fontWeight: 500, 
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  fontSize: 13,
+                  fontWeight: 500,
                   color: 'var(--rd-accent)',
                   background: 'rgba(124, 108, 240, 0.1)',
                   border: '1px solid transparent',
@@ -153,8 +152,8 @@ export function DependencyGraph({
                   borderRadius: 6,
                   transition: 'background 0.2s',
                 }}
-                onMouseOver={(e) => e.currentTarget.style.background = 'rgba(124, 108, 240, 0.2)'}
-                onMouseOut={(e) => e.currentTarget.style.background = 'rgba(124, 108, 240, 0.1)'}
+                onMouseOver={(e) => (e.currentTarget.style.background = 'rgba(124, 108, 240, 0.2)')}
+                onMouseOut={(e) => (e.currentTarget.style.background = 'rgba(124, 108, 240, 0.1)')}
               >
                 <IconChevronLeft />
                 {graphRoot}
@@ -171,7 +170,9 @@ export function DependencyGraph({
               </button>
             </>
           ) : (
-            <span className="rd-graph-hint" style={{ marginRight: 8 }}>Click a node to zoom in</span>
+            <span className="rd-graph-hint" style={{ marginRight: 8 }}>
+              Click a node to zoom in
+            </span>
           )}
 
           {/* Hidden Nodes indicators */}
@@ -181,7 +182,15 @@ export function DependencyGraph({
                 <button
                   key={name}
                   className="rd-dep-tag"
-                  style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, border: '1px dashed var(--rd-red)', padding: '2px 6px', background: 'transparent' }}
+                  style={{
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    border: '1px dashed var(--rd-red)',
+                    padding: '2px 6px',
+                    background: 'transparent',
+                  }}
                   onClick={() => {
                     setHiddenNodes((prev) => {
                       const next = new Set(prev);
@@ -198,16 +207,26 @@ export function DependencyGraph({
             </div>
           )}
         </div>
-        
+
         {/* Zoom Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <button className="rd-icon-btn" style={{ width: 24, height: 24, fontSize: 13 }} onClick={() => setScale(s => Math.max(0.4, Number((s - 0.2).toFixed(1))))} title="Zoom out">
+          <button
+            className="rd-icon-btn"
+            style={{ width: 24, height: 24, fontSize: 13 }}
+            onClick={() => setScale((s) => Math.max(0.4, Number((s - 0.2).toFixed(1))))}
+            title="Zoom out"
+          >
             -
           </button>
           <span style={{ fontSize: 11, fontFamily: 'var(--rd-font-mono)', minWidth: 36, textAlign: 'center' }}>
             {Math.round(scale * 100)}%
           </span>
-          <button className="rd-icon-btn" style={{ width: 24, height: 24, fontSize: 13 }} onClick={() => setScale(s => Math.min(2.0, Number((s + 0.2).toFixed(1))))} title="Zoom in">
+          <button
+            className="rd-icon-btn"
+            style={{ width: 24, height: 24, fontSize: 13 }}
+            onClick={() => setScale((s) => Math.min(2.0, Number((s + 0.2).toFixed(1))))}
+            title="Zoom in"
+          >
             +
           </button>
         </div>
@@ -215,16 +234,13 @@ export function DependencyGraph({
 
       {/* SVG Graph */}
       <div ref={containerRef} className="rd-graph-container" style={{ position: 'relative' }}>
-        <svg viewBox={viewBox} xmlns="http://www.w3.org/2000/svg" style={{ minWidth: Math.max(width, 100) * scale, minHeight: Math.max(height, 100) * scale }}>
+        <svg
+          viewBox={viewBox}
+          xmlns="http://www.w3.org/2000/svg"
+          style={{ minWidth: Math.max(width, 100) * scale, minHeight: Math.max(height, 100) * scale }}
+        >
           <defs>
-            <marker
-              id="rd-arrowhead"
-              markerWidth="8"
-              markerHeight="6"
-              refX="7"
-              refY="3"
-              orient="auto"
-            >
+            <marker id="rd-arrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
               <polygon points="0 0, 8 3, 0 6" fill="rgba(120,120,200,0.6)" />
             </marker>
           </defs>
@@ -241,13 +257,7 @@ export function DependencyGraph({
             const y2 = toNode.y + toNode.height / 2;
             const mx = (x1 + x2) / 2;
 
-            return (
-              <path
-                key={i}
-                className="rd-graph-edge"
-                d={`M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`}
-              />
-            );
+            return <path key={i} className="rd-graph-edge" d={`M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`} />;
           })}
 
           {/* Nodes */}

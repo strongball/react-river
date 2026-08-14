@@ -5,10 +5,11 @@
  * ════════════════════════════════════════════════════════════════ */
 
 import { asyncValueToPromise } from './async_value';
+
 import type { AsyncValue } from './async_value';
 import type { ContainerCallbacks } from './container_types';
-import type { ListenerCallback, PromiseAccessor, ProviderBase, Ref, Unsubscribe } from './types';
 import type { ProviderFamily } from './family';
+import type { ListenerCallback, PromiseAccessor, ProviderBase, Ref, Unsubscribe } from './types';
 
 // ── Return type for watch helpers ──────────────────────────────
 
@@ -103,10 +104,8 @@ function watchPromiseAccessor(
       return av.status === 'data' ? select(av.data) : undefined;
     };
     const extractSelected = (av: AsyncValue<unknown>) => select((av as { data: unknown }).data);
-    const returnValue = asyncValueToPromise(
-      parentValue,
-      extractSelected,
-      (onNext) => cb.listen(parentProvider, (next) => onNext(next as AsyncValue<unknown>)),
+    const returnValue = asyncValueToPromise(parentValue, extractSelected, (onNext) =>
+      cb.listen(parentProvider, (next) => onNext(next as AsyncValue<unknown>)),
     );
     return { trackTarget, effectiveSelector, selectedValue, returnValue };
   }
@@ -183,11 +182,7 @@ function trackDependency(
  * Only adds to ownerState.dependencies — does NOT add to targetState.dependents,
  * because propagateToDependents would re-initialize the listener (unwanted rebuild).
  */
-function trackListenDependency(
-  cb: ContainerCallbacks,
-  ownerId: string,
-  target: ProviderBase<any>,
-): void {
+function trackListenDependency(cb: ContainerCallbacks, ownerId: string, target: ProviderBase<any>): void {
   const ownerState = cb.getState(ownerId);
   if (ownerState) {
     ownerState.dependencies.add(target.id);

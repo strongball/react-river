@@ -3,8 +3,6 @@
  *  Class-based state management, analogous to Riverpod's Notifier.
  * ════════════════════════════════════════════════════════════════ */
 
-
-
 import type { AsyncValue } from './async_value';
 import type { Ref } from './types';
 
@@ -117,5 +115,3 @@ export abstract class AsyncNotifier<T> {
     this._ref.onDispose(callback);
   }
 }
-
-

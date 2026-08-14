@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import { RiverContainer } from '../container';
-import { provider, stateProvider, promiseProvider, notifierProvider } from '../provider';
-import { Notifier } from '../notifier';
+
 import { asyncData } from '../async_value';
+import { RiverContainer } from '../container';
+import { Notifier } from '../notifier';
+import { provider, stateProvider, promiseProvider, notifierProvider } from '../provider';
 
 import type { AsyncValue } from '../async_value';
 
@@ -94,10 +95,7 @@ describe('hydration via initialState', () => {
   });
 
   it('promiseProvider updates to fresh data after factory resolves', async () => {
-    const userProvider = promiseProvider(
-      () => Promise.resolve({ id: 2, name: 'Fresh' }),
-      { name: 'user' },
-    );
+    const userProvider = promiseProvider(() => Promise.resolve({ id: 2, name: 'Fresh' }), { name: 'user' });
 
     const container = new RiverContainer({
       initialState: { user: { id: 1, name: 'Hydrated' } },
@@ -144,10 +142,13 @@ describe('hydration via initialState', () => {
   it('sync providers with initialState still run factory to establish dependencies', () => {
     let watchCount = 0;
     const baseProvider = stateProvider(() => 10, { name: 'base' });
-    const derivedProvider = provider((ref) => {
-      watchCount++;
-      return ref.watch(baseProvider) * 2;
-    }, { name: 'derived' });
+    const derivedProvider = provider(
+      (ref) => {
+        watchCount++;
+        return ref.watch(baseProvider) * 2;
+      },
+      { name: 'derived' },
+    );
 
     const container = new RiverContainer({
       initialState: { derived: 42, base: 10 },
@@ -155,7 +156,7 @@ describe('hydration via initialState', () => {
 
     // We expect the state.value of derived to be 42 initially
     expect(container.read(derivedProvider)).toBe(42);
-    
+
     // But we expect the factory to have been called to establish `ref.watch`!
     expect(watchCount).toBe(1);
 
@@ -167,11 +168,14 @@ describe('hydration via initialState', () => {
   it('stateProvider with initialState still runs factory to establish dependencies', () => {
     const baseProvider = stateProvider(() => 'A', { name: 'base' });
     let factoryCalled = false;
-    const testStateProvider = stateProvider((ref) => {
-      factoryCalled = true;
-      ref.watch(baseProvider);
-      return 'default';
-    }, { name: 'testState' });
+    const testStateProvider = stateProvider(
+      (ref) => {
+        factoryCalled = true;
+        ref.watch(baseProvider);
+        return 'default';
+      },
+      { name: 'testState' },
+    );
 
     const container = new RiverContainer({
       initialState: { testState: 'hydrated' },
@@ -194,10 +198,7 @@ describe('SSR round-trip (dehydrate → hydrate)', () => {
   it('dehydrated state can hydrate a new container', async () => {
     // Server-side: create container, initialize providers, dehydrate
     const themeProvider = stateProvider(() => 'dark', { name: 'theme' });
-    const userProvider = promiseProvider(
-      () => Promise.resolve({ id: 1, name: 'John' }),
-      { name: 'user' },
-    );
+    const userProvider = promiseProvider(() => Promise.resolve({ id: 1, name: 'John' }), { name: 'user' });
 
     const serverContainer = new RiverContainer();
     serverContainer.read(themeProvider);
@@ -227,10 +228,9 @@ describe('SSR round-trip (dehydrate → hydrate)', () => {
 describe('familyProvider SSR', () => {
   it('dehydrates family provider instances with formatted names', async () => {
     const { promiseProviderFamily } = await import('../family');
-    const userFamily = promiseProviderFamily(
-      (_ref, id: number) => Promise.resolve({ id, name: `User ${id}` }),
-      { name: 'user' },
-    );
+    const userFamily = promiseProviderFamily((_ref, id: number) => Promise.resolve({ id, name: `User ${id}` }), {
+      name: 'user',
+    });
 
     const container = new RiverContainer();
     container.read(userFamily(123));
@@ -244,10 +244,9 @@ describe('familyProvider SSR', () => {
 
   it('hydrates family provider instances using formatted names', async () => {
     const { promiseProviderFamily } = await import('../family');
-    const userFamily = promiseProviderFamily(
-      (_ref, id: number) => Promise.resolve({ id, name: `User ${id}` }),
-      { name: 'user' },
-    );
+    const userFamily = promiseProviderFamily((_ref, id: number) => Promise.resolve({ id, name: `User ${id}` }), {
+      name: 'user',
+    });
 
     const container = new RiverContainer({
       initialState: {
@@ -355,7 +354,9 @@ describe('SSR options', () => {
       constructor(name: string) {
         this.name = name;
       }
-      greet() { return `Hi, ${this.name}`; }
+      greet() {
+        return `Hi, ${this.name}`;
+      }
     }
 
     const userProvider = stateProvider(() => new User('John'), { name: 'user' });
@@ -384,13 +385,10 @@ describe('SSR options', () => {
       }
     }
 
-    const productProvider = stateProvider(
-      () => new Product(1, 'Widget', 'secret'),
-      {
-        name: 'product',
-        toJSON: (product: Product) => ({ id: product.id, name: product.name }),
-      },
-    );
+    const productProvider = stateProvider(() => new Product(1, 'Widget', 'secret'), {
+      name: 'product',
+      toJSON: (product: Product) => ({ id: product.id, name: product.name }),
+    });
     const container = new RiverContainer();
     container.read(productProvider);
 
@@ -404,13 +402,10 @@ describe('SSR options', () => {
   });
 
   it('toJSON works with async providers (transforms unwrapped data)', async () => {
-    const userProvider = promiseProvider(
-      () => Promise.resolve({ id: 1, name: 'John', password: 'secret' }),
-      {
-        name: 'user',
-        toJSON: (data: any) => ({ id: data.id, name: data.name }),
-      },
-    );
+    const userProvider = promiseProvider(() => Promise.resolve({ id: 1, name: 'John', password: 'secret' }), {
+      name: 'user',
+      toJSON: (data: any) => ({ id: data.id, name: data.name }),
+    });
     const container = new RiverContainer();
     container.read(userProvider);
     await new Promise((r) => setTimeout(r, 10));
@@ -427,16 +422,15 @@ describe('SSR options', () => {
         this.id = id;
         this.name = name;
       }
-      greet() { return `Hi, ${this.name}`; }
+      greet() {
+        return `Hi, ${this.name}`;
+      }
     }
 
-    const userProvider = stateProvider(
-      () => new User(0, 'default'),
-      {
-        name: 'user',
-        fromJSON: (json: any) => new User(json.id, json.name),
-      },
-    );
+    const userProvider = stateProvider(() => new User(0, 'default'), {
+      name: 'user',
+      fromJSON: (json: any) => new User(json.id, json.name),
+    });
 
     const container = new RiverContainer({
       initialState: { user: { id: 1, name: 'Hydrated' } },
@@ -455,16 +449,15 @@ describe('SSR options', () => {
         this.id = id;
         this.name = name;
       }
-      display() { return `${this.id}: ${this.name}`; }
+      display() {
+        return `${this.id}: ${this.name}`;
+      }
     }
 
-    const userProvider = promiseProvider(
-      () => Promise.resolve(new UserData(2, 'Fresh')),
-      {
-        name: 'user',
-        fromJSON: (json: any) => new UserData(json.id, json.name),
-      },
-    );
+    const userProvider = promiseProvider(() => Promise.resolve(new UserData(2, 'Fresh')), {
+      name: 'user',
+      fromJSON: (json: any) => new UserData(json.id, json.name),
+    });
 
     const container = new RiverContainer({
       initialState: { user: { id: 1, name: 'Hydrated' } },
@@ -484,7 +477,9 @@ describe('SSR options', () => {
         this.theme = theme;
         this.locale = locale;
       }
-      label() { return `${this.theme}/${this.locale}`; }
+      label() {
+        return `${this.theme}/${this.locale}`;
+      }
     }
 
     const options = {
@@ -514,10 +509,13 @@ describe('SSR options', () => {
 describe('initialState should NOT be re-applied on refresh/invalidate', () => {
   it('stateProvider: refresh should re-run factory, not reuse initialState', () => {
     let callCount = 0;
-    const themeProvider = stateProvider(() => {
-      callCount++;
-      return `factory-${callCount}`;
-    }, { name: 'theme' });
+    const themeProvider = stateProvider(
+      () => {
+        callCount++;
+        return `factory-${callCount}`;
+      },
+      { name: 'theme' },
+    );
 
     const container = new RiverContainer({
       initialState: { theme: 'hydrated-dark' },
@@ -555,10 +553,13 @@ describe('initialState should NOT be re-applied on refresh/invalidate', () => {
 
   it('provider (read-only): refresh should re-run factory, not reuse initialState', () => {
     let callCount = 0;
-    const computedProvider = provider(() => {
-      callCount++;
-      return `computed-${callCount}`;
-    }, { name: 'computed' });
+    const computedProvider = provider(
+      () => {
+        callCount++;
+        return `computed-${callCount}`;
+      },
+      { name: 'computed' },
+    );
 
     const container = new RiverContainer({
       initialState: { computed: 'hydrated-42' },

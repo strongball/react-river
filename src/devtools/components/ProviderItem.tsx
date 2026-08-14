@@ -1,8 +1,10 @@
 import type { KeyboardEvent } from 'react';
-import type { DevToolsProviderSnapshot } from '../../core/container';
+
 import { kindLabel, serializeValue } from '../utils';
 import { CopyButton } from './CopyButton';
 import { IconEye } from './Icons';
+
+import type { DevToolsProviderSnapshot } from '../../core/container';
 
 interface ProviderItemProps {
   snapshot: DevToolsProviderSnapshot;
@@ -11,11 +13,7 @@ interface ProviderItemProps {
 }
 
 /** Component for a single provider in the provider list */
-export function ProviderItem({
-  snapshot,
-  expanded,
-  onToggle,
-}: ProviderItemProps) {
+export function ProviderItem({ snapshot, expanded, onToggle }: ProviderItemProps) {
   const valueText = serializeValue(snapshot.value);
   const previousValueText = snapshot.previousValue === undefined ? undefined : serializeValue(snapshot.previousValue);
   const argumentsMatch = snapshot.name.match(/^.+?\((.*)\)$/);
@@ -115,7 +113,6 @@ export function ProviderItem({
               </div>
             </div>
           )}
-
         </div>
       )}
     </div>

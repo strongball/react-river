@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
 import { RiverContainer } from '../container';
-import { provider } from '../provider';
 import {
   providerFamily,
   stateProviderFamily,
@@ -12,6 +11,7 @@ import {
   asyncNotifierProviderFamily,
 } from '../family';
 import { Notifier, AsyncNotifier } from '../notifier';
+import { provider } from '../provider';
 
 describe('Provider Families', () => {
   it('providerFamily should create parameterized providers', () => {
@@ -136,7 +136,9 @@ describe('Provider Families', () => {
 
   it('should treat object arguments with different key order as the same', () => {
     const container = new RiverContainer();
-    const p = providerFamily<string, { a?: number; b?: number }>((ref, arg) => `a: ${arg.a}, b: ${arg.b}`, { name: 'p' });
+    const p = providerFamily<string, { a?: number; b?: number }>((ref, arg) => `a: ${arg.a}, b: ${arg.b}`, {
+      name: 'p',
+    });
 
     const arg1 = { a: 1, b: 2 };
     const arg2 = { b: 2, a: 1 };
@@ -145,7 +147,6 @@ describe('Provider Families', () => {
     expect(container.read(p(arg1))).toBe('a: 1, b: 2');
     expect(container.read(p(arg2))).toBe('a: 1, b: 2');
   });
-
 
   it('family.clear() should clear the cache', () => {
     const p = providerFamily((ref, id) => id, { name: 'clear' });
@@ -264,7 +265,7 @@ describe('Provider Families', () => {
     const p = providerFamily((ref, id) => id, { name: 'getProvidersTest' });
     const instance1 = p(1);
     const instance2 = p(2);
-    
+
     const providers = p.getProviders();
     expect(providers).toHaveLength(2);
     expect(providers).toContain(instance1);
@@ -274,10 +275,13 @@ describe('Provider Families', () => {
   it('container.invalidateFamily should invalidate all instances of a family', () => {
     const container = new RiverContainer();
     let counter = 0;
-    const p = stateProviderFamily<number, number>((ref, id) => {
-      counter++;
-      return counter;
-    }, { name: 'invalidateFamilyTest' });
+    const p = stateProviderFamily<number, number>(
+      (ref, id) => {
+        counter++;
+        return counter;
+      },
+      { name: 'invalidateFamilyTest' },
+    );
 
     // Initialize two instances
     const val1 = container.read(p(1));
@@ -298,20 +302,26 @@ describe('Provider Families', () => {
   it('ref.invalidateFamily should invalidate all instances of a family from within another provider', () => {
     const container = new RiverContainer();
     let counter = 0;
-    const p = stateProviderFamily<number, number>((ref, id) => {
-      counter++;
-      return counter;
-    }, { name: 'refInvalidateFamilyTest' });
+    const p = stateProviderFamily<number, number>(
+      (ref, id) => {
+        counter++;
+        return counter;
+      },
+      { name: 'refInvalidateFamilyTest' },
+    );
 
     // Initialize two instances
     container.read(p(1));
     container.read(p(2));
 
-    const triggerProvider = provider((ref) => {
-      return {
-        trigger: () => ref.invalidateFamily(p),
-      };
-    }, { name: 'trigger' });
+    const triggerProvider = provider(
+      (ref) => {
+        return {
+          trigger: () => ref.invalidateFamily(p),
+        };
+      },
+      { name: 'trigger' },
+    );
 
     const trig = container.read(triggerProvider);
     trig.trigger();

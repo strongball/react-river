@@ -14,12 +14,13 @@ import { DependencyGraph } from './components/DependencyGraph';
 import { EventItem } from './components/EventItem';
 import { IconTrash } from './components/Icons';
 import { ProviderItem } from './components/ProviderItem';
-import type { DevToolsEvent } from './devtools-observer';
 import { createDevToolsObserver } from './devtools-observer';
 // Hooks
 import { useDraggable } from './hooks/useDraggable';
 import { injectDevToolsStyles } from './inject-styles';
 import { groupRapidEvents } from './utils';
+
+import type { DevToolsEvent } from './devtools-observer';
 
 // Inject styles at module load time
 injectDevToolsStyles();
@@ -171,7 +172,12 @@ export function RiverDevTools({ defaultPosition, defaultOpen = false }: RiverDev
 
         {/* Tabs */}
         <div className="rd-tabs">
-          <button type="button" className="rd-tab" data-active={tab === 'providers'} onClick={() => setTab('providers')}>
+          <button
+            type="button"
+            className="rd-tab"
+            data-active={tab === 'providers'}
+            onClick={() => setTab('providers')}
+          >
             Providers
           </button>
           <button type="button" className="rd-tab" data-active={tab === 'events'} onClick={() => setTab('events')}>
@@ -309,7 +315,11 @@ export function RiverDevTools({ defaultPosition, defaultOpen = false }: RiverDev
               ) : (
                 <div className="rd-event-list">
                   {displayEvents.map(({ event, repeatCount }, i) => (
-                    <EventItem key={`${event.timestamp}-${event.providerId}-${i}`} event={event} repeatCount={repeatCount} />
+                    <EventItem
+                      key={`${event.timestamp}-${event.providerId}-${i}`}
+                      event={event}
+                      repeatCount={repeatCount}
+                    />
                   ))}
                 </div>
               )}

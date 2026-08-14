@@ -3,6 +3,7 @@
  *  Create provider definitions (descriptions, not state).
  * ════════════════════════════════════════════════════════════════ */
 
+import type { AsyncValue } from './async_value';
 import type { AsyncNotifier, Notifier } from './notifier';
 import type {
   AsyncNotifierProvider,
@@ -21,14 +22,10 @@ import type {
   StreamProvider,
   StreamSource,
 } from './types';
-import type { AsyncValue } from './async_value';
 
 // ── Sub-provider factories ─────────────────────────────────────
 
-function createNotifierAccessor<N>(
-  parentId: string,
-  options: ProviderOptions<any>,
-): NotifierAccessor<N> {
+function createNotifierAccessor<N>(parentId: string, options: ProviderOptions<any>): NotifierAccessor<N> {
   const name = `${options.name}.notifier`;
   return {
     id: name,
@@ -88,10 +85,7 @@ export function stateProvider<T>(create: (ref: Ref) => T, options: ProviderOptio
 
 // ── promiseProvider() — Async data source ───────────────────────
 
-export function promiseProvider<T>(
-  create: (ref: Ref) => Promise<T>,
-  options: ProviderOptions<T>,
-): PromiseProvider<T> {
+export function promiseProvider<T>(create: (ref: Ref) => Promise<T>, options: ProviderOptions<T>): PromiseProvider<T> {
   const id = options.name;
 
   const promiseP = {

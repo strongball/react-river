@@ -5,12 +5,12 @@
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 
+import { asyncData, asyncError, asyncLoading } from '../core/async_value';
 import { useRiverContainer } from './scope';
 
 import type { AsyncValue } from '../core/async_value';
-import { asyncData, asyncError, asyncLoading } from '../core/async_value';
-import type { ListenerCallback, ProviderBase, RiverRef, StateProvider } from '../core/types';
 import type { ProviderFamily } from '../core/family';
+import type { ListenerCallback, ProviderBase, RiverRef, StateProvider } from '../core/types';
 
 // ── useRiverWatch — subscribe to a provider (triggers re-render) ────
 export interface UseRiverWatchOptions<T, S = T> {
@@ -73,10 +73,7 @@ export function useRiverWatch<T, S = T>(
   provider: ProviderBase<T>,
   options: UseRiverWatchOptions<T, S> & { enabled?: true },
 ): S;
-export function useRiverWatch<T, S = T>(
-  provider: ProviderBase<T>,
-  options: UseRiverWatchOptions<T, S>,
-): S | undefined;
+export function useRiverWatch<T, S = T>(provider: ProviderBase<T>, options: UseRiverWatchOptions<T, S>): S | undefined;
 export function useRiverWatch<T, S = T>(
   provider: ProviderBase<T>,
   optionsOrSelector?: ((value: T) => S) | UseRiverWatchOptions<T, S>,
@@ -171,7 +168,6 @@ export function useRiverWatch<T, S = T>(
 
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
-
 
 // ── useRiverRef — imperative access to the container ───────────
 
@@ -270,7 +266,13 @@ export interface UseRiverMutationOptions<TData, TVariables, TContext = unknown> 
   /** Called when the mutation fails. */
   onError?: (error: unknown, variables: TVariables, context: TContext | undefined, ref: RiverRef) => void;
   /** Called when the mutation completes (success or error). */
-  onSettled?: (data: TData | undefined, error: unknown | undefined, variables: TVariables, context: TContext | undefined, ref: RiverRef) => void;
+  onSettled?: (
+    data: TData | undefined,
+    error: unknown | undefined,
+    variables: TVariables,
+    context: TContext | undefined,
+    ref: RiverRef,
+  ) => void;
 }
 
 /**
@@ -333,9 +335,7 @@ export function useRiverMutation<TData = void, TVariables = void, TContext = unk
   const optionsRef = useRef(options);
   optionsRef.current = options;
 
-  const [state, setState] = useState<AsyncValue<TData | undefined>>(
-    () => asyncData<TData | undefined>(undefined),
-  );
+  const [state, setState] = useState<AsyncValue<TData | undefined>>(() => asyncData<TData | undefined>(undefined));
   const stateRef = useRef(state);
   stateRef.current = state;
   const mutationGenerationRef = useRef(0);
@@ -389,13 +389,10 @@ export function useRiverMutation<TData = void, TVariables = void, TContext = unk
     [riverRef],
   );
 
-  const reset = useCallback(
-    () => {
-      mutationGenerationRef.current++;
-      setState(asyncData<TData | undefined>(undefined));
-    },
-    [],
-  );
+  const reset = useCallback(() => {
+    mutationGenerationRef.current++;
+    setState(asyncData<TData | undefined>(undefined));
+  }, []);
 
   return { state, mutate, reset };
 }

@@ -5,11 +5,11 @@ Confirm exact signatures in the installed declaration file before editing a cons
 ## Providers and hooks
 
 ```ts
-import { provider, stateProvider } from "@stball/react-river";
+import { provider, stateProvider } from '@stball/react-river';
 
-export const countProvider = stateProvider(() => 0, { name: "count" });
+export const countProvider = stateProvider(() => 0, { name: 'count' });
 export const doubledProvider = provider((ref) => ref.watch(countProvider) * 2, {
-  name: "doubled",
+  name: 'doubled',
 });
 ```
 
@@ -34,10 +34,7 @@ return when(useRiverWatch(userProvider), {
 ## Families
 
 ```ts
-const userByIdProvider = promiseProviderFamily(
-  (_ref, id: string) => fetchUser(id),
-  { name: "userById" },
-);
+const userByIdProvider = promiseProviderFamily((_ref, id: string) => fetchUser(id), { name: 'userById' });
 const user = useRiverWatch(userByIdProvider(userId));
 ```
 
@@ -55,7 +52,7 @@ class CounterNotifier extends Notifier<number> {
   }
 }
 const counterProvider = notifierProvider(() => new CounterNotifier(), {
-  name: "counter",
+  name: 'counter',
 });
 ```
 

@@ -16,8 +16,8 @@ Create an isolated `RiverContainer` for each HTTP request to avoid cross-request
 
 ```typescript
 // server.ts (or where createRequestHandler is defined)
-import { createRequestHandler } from "@react-router/node";
-import { RiverContainer } from "@stball/react-river";
+import { createRequestHandler } from '@react-router/node';
+import { RiverContainer } from '@stball/react-river';
 
 export const handler = createRequestHandler({
   build,
@@ -38,7 +38,7 @@ In your page's `loader`, access the container from `context` and trigger your as
 
 ```tsx
 // src/pages/settings/index.tsx
-import { userProfileProvider } from "~/providers/user";
+import { userProfileProvider } from '~/providers/user';
 
 export async function loader({ context }) {
   const container = context.riverContainer;
@@ -60,8 +60,8 @@ In the `loader` of your `root.tsx`, dehydrate the container containing all the f
 
 ```tsx
 // src/root.tsx
-import { useLoaderData, Outlet, Scripts } from "react-router";
-import { RiverScope } from "@stball/react-river";
+import { useLoaderData, Outlet, Scripts } from 'react-router';
+import { RiverScope } from '@stball/react-river';
 
 // The root loader runs after/alongside child loaders
 export async function loader({ context }) {
@@ -100,9 +100,9 @@ If you cannot modify the Server Context or prefer each route to independently ma
 
 ```tsx
 // src/pages/training/index.tsx
-import { useLoaderData } from "react-router";
-import { RiverContainer, RiverScope, useRiverWatch } from "@stball/react-river";
-import { trainingListProvider } from "~/providers/training";
+import { useLoaderData } from 'react-router';
+import { RiverContainer, RiverScope, useRiverWatch } from '@stball/react-river';
+import { trainingListProvider } from '~/providers/training';
 
 // 1. Loader: Create a local Container -> Fetch Data -> Dehydrate
 export async function loader() {

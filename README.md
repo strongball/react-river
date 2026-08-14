@@ -37,7 +37,7 @@ yarn add @stball/react-river
 Place `RiverScope` at the root of your application (or any subtree) to provide the state container.
 
 ```tsx
-import { RiverScope } from "@stball/react-river";
+import { RiverScope } from '@stball/react-river';
 
 function App() {
   return (
@@ -53,7 +53,7 @@ function App() {
 Providers are "definitions" of state. They don't hold state themselves; the `RiverScope` container does.
 
 ```ts
-import { stateProvider, provider } from "@stball/react-river";
+import { stateProvider, provider } from '@stball/react-river';
 
 // 1. Simple mutable state
 export const counterProvider = stateProvider(() => 0);
@@ -70,8 +70,8 @@ export const doubledProvider = provider((ref) => {
 Use hooks to interact with your providers.
 
 ```tsx
-import { useRiverWatch, useRiverRef } from "@stball/react-river";
-import { counterProvider, doubledProvider } from "./providers";
+import { useRiverWatch, useRiverRef } from '@stball/react-river';
+import { counterProvider, doubledProvider } from './providers';
 
 function Counter() {
   // Watch a provider for changes (triggers re-render)
@@ -111,7 +111,7 @@ function Counter() {
 `streamProvider` consumes synchronous and asynchronous iterables. Each yielded value becomes the provider's current data:
 
 ```ts
-import { streamProvider } from "@stball/react-river";
+import { streamProvider } from '@stball/react-river';
 
 const numbersProvider = streamProvider(
   async function* () {
@@ -119,7 +119,7 @@ const numbersProvider = streamProvider(
     await new Promise((resolve) => setTimeout(resolve, 1000));
     yield 2;
   },
-  { name: "numbers" },
+  { name: 'numbers' },
 );
 ```
 
@@ -163,10 +163,7 @@ function DeleteUserButton({ userId }: { userId: string }) {
 
   return (
     <>
-      <button
-        disabled={state.isLoading}
-        onClick={() => void mutate(userId).catch(showErrorToast)}
-      >
+      <button disabled={state.isLoading} onClick={() => void mutate(userId).catch(showErrorToast)}>
         Delete user
       </button>
       <button onClick={reset}>Reset mutation state</button>
@@ -180,13 +177,10 @@ function DeleteUserButton({ userId }: { userId: string }) {
 Families allow you to parameterize your providers (e.g., fetching a user by ID).
 
 ```ts
-const userByIdProvider = promiseProviderFamily(
-  (ref, id: string) => fetchUser(id),
-  { name: "userById" },
-);
+const userByIdProvider = promiseProviderFamily((ref, id: string) => fetchUser(id), { name: 'userById' });
 
 // Usage:
-const user = useRiverWatch(userByIdProvider("123"));
+const user = useRiverWatch(userByIdProvider('123'));
 ```
 
 Family arguments use deterministic keys. They may contain JSON values, `undefined`, or valid `Date` instances, including inside arrays and plain objects. Object key order does not affect identity, while `undefined`, `null`, a `Date`, and the same ISO timestamp as a string remain distinct.
@@ -266,7 +260,7 @@ return <button onClick={() => notifier.increment()}>{count}</button>;
 Enhance your development experience with the built-in DevTools! It provides a floating panel to inspect provider values, track events, and visualize dependency graphs.
 
 ```tsx
-import { RiverDevTools, RiverScope } from "@stball/react-river";
+import { RiverDevTools, RiverScope } from '@stball/react-river';
 
 function App() {
   return (
@@ -282,11 +276,7 @@ function App() {
 For console logging or custom lifecycle monitoring, pass `RiverObserver` objects to either `RiverScope` or `RiverContainer`:
 
 ```tsx
-import {
-  loggerObserver,
-  RiverScope,
-  type RiverObserver,
-} from "@stball/react-river";
+import { loggerObserver, RiverScope, type RiverObserver } from '@stball/react-river';
 
 const auditObserver: RiverObserver = {
   onProviderError(provider, error) {
@@ -294,7 +284,7 @@ const auditObserver: RiverObserver = {
   },
 };
 
-const stateLogger = loggerObserver("App state");
+const stateLogger = loggerObserver('App state');
 
 function App() {
   return (
@@ -337,7 +327,7 @@ Set default disposal behavior for a scope or a standalone container with `cacheP
 ```
 
 ```ts
-import { RiverContainer } from "@stball/react-river";
+import { RiverContainer } from '@stball/react-river';
 
 const container = new RiverContainer({
   cachePolicy: { autoDispose: false },
@@ -362,7 +352,7 @@ A `name` is **required** for any provider to participate in SSR. This name is us
 ```ts
 export const userProvider = promiseProvider(
   async () => fetchUser(),
-  { name: "user" }, // ← required for SSR
+  { name: 'user' }, // ← required for SSR
 );
 ```
 
@@ -384,7 +374,7 @@ const initialRiverState = container.dehydrate();
 
 ```tsx
 // pages/_app.tsx (Next.js) or your root layout
-import { RiverScope } from "@stball/react-river";
+import { RiverScope } from '@stball/react-river';
 
 function App({ pageProps }) {
   return (
@@ -419,8 +409,8 @@ When a provider is first read on the client and there is a matching key in `init
 | `fromJSON`   | Custom deserialization: transform the raw JSON back into your model class on the client.           |
 
 ```ts
-export const userProvider = stateProvider(() => new User(0, "Guest"), {
-  name: "user",
+export const userProvider = stateProvider(() => new User(0, 'Guest'), {
+  name: 'user',
   toJSON: (user) => ({ id: user.id, name: user.name }), // server: Class → plain object
   fromJSON: (json) => new User(json.id, json.name), // client: plain object → Class
 });

@@ -3,8 +3,9 @@
  *  Console-based observer for debugging provider lifecycle.
  * ════════════════════════════════════════════════════════════════ */
 
-import type { RiverObserver } from '../core/observer';
 import { getProviderLabel } from '../core/types';
+
+import type { RiverObserver } from '../core/observer';
 
 /**
  * A simple console-based observer for debugging.

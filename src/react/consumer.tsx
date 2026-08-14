@@ -68,13 +68,16 @@ export function Consumer({ children }: ConsumerProps) {
     currentWatched.clear();
   });
 
-  const consumerRef = useMemo(() => ({
-    ...riverRef,
-    watch<T>(p: ProviderBase<T>): T {
-      watchedProvidersRef.current.set(p.id, p);
-      return riverRef.read(p);
-    },
-  }), [riverRef]);
+  const consumerRef = useMemo(
+    () => ({
+      ...riverRef,
+      watch<T>(p: ProviderBase<T>): T {
+        watchedProvidersRef.current.set(p.id, p);
+        return riverRef.read(p);
+      },
+    }),
+    [riverRef],
+  );
 
   return <>{children(consumerRef as ConsumerRef)}</>;
 }

@@ -9,10 +9,7 @@ interface Position {
  * Hook for making a component draggable.
  * Returns the onMouseDown handler to be attached to the drag handle.
  */
-export function useDraggable(
-  position: Position,
-  setPosition: (pos: Position) => void,
-) {
+export function useDraggable(position: Position, setPosition: (pos: Position) => void) {
   const dragging = useRef(false);
   const dragOffset = useRef({ x: 0, y: 0 });
 

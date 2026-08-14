@@ -4,8 +4,9 @@
  *  Does NOT register as a provider listener — zero lifecycle impact.
  * ════════════════════════════════════════════════════════════════ */
 
-import type { RiverObserver } from '../core/observer';
 import { getProviderLabel } from '../core/types';
+
+import type { RiverObserver } from '../core/observer';
 
 // ── Event Types ────────────────────────────────────────────────
 

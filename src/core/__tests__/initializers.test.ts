@@ -9,13 +9,16 @@ describe('Initializers', () => {
     // 1. Observable - next/error after abort
     const container1 = new RiverContainer();
     let push: any, pushErr: any;
-    const op1 = observableProvider(() => ({
-      subscribe: (o: any) => {
-        push = typeof o === 'function' ? o : o.next;
-        pushErr = o.error;
-        return { unsubscribe: () => {} };
-      },
-    }), { name: 'test_observable_op1' });
+    const op1 = observableProvider(
+      () => ({
+        subscribe: (o: any) => {
+          push = typeof o === 'function' ? o : o.next;
+          pushErr = o.error;
+          return { unsubscribe: () => {} };
+        },
+      }),
+      { name: 'test_observable_op1' },
+    );
     container1.read(op1);
     container1.dispose();
     push(1); // Hits line 117
@@ -67,31 +70,40 @@ describe('Initializers', () => {
 
     // 1. Observable error
     let triggerError: any;
-    const p1 = observableProvider(() => ({
-      subscribe: (o: any) => {
-        triggerError = typeof o === 'function' ? null : o.error;
-        return { unsubscribe: () => {} };
-      },
-    }), { name: 'test_observable_p1' });
+    const p1 = observableProvider(
+      () => ({
+        subscribe: (o: any) => {
+          triggerError = typeof o === 'function' ? null : o.error;
+          return { unsubscribe: () => {} };
+        },
+      }),
+      { name: 'test_observable_p1' },
+    );
     container.read(p1);
     triggerError('stream-fail');
     expect((container.read(p1) as any).error).toBe('stream-fail');
 
     // 2. Async creation failure
-    const p2 = observableProvider(async () => {
-      throw 'creation-fail';
-    }, { name: 'test_observable_p2' });
+    const p2 = observableProvider(
+      async () => {
+        throw 'creation-fail';
+      },
+      { name: 'test_observable_p2' },
+    );
     container.read(p2);
     await new Promise((r) => setTimeout(r, 0));
     expect((container.read(p2) as any).error).toBe('creation-fail');
 
     // 3. Async creation success (Hits line 134)
-    const p3 = observableProvider(async () => ({
-      subscribe: (o: any) => {
-        o.next('async-ok');
-        return { unsubscribe: () => {} };
-      },
-    }), { name: 'test_observable_p3' });
+    const p3 = observableProvider(
+      async () => ({
+        subscribe: (o: any) => {
+          o.next('async-ok');
+          return { unsubscribe: () => {} };
+        },
+      }),
+      { name: 'test_observable_p3' },
+    );
     container.read(p3);
     await new Promise((r) => setTimeout(r, 0));
     expect((container.read(p3) as any).data).toBe('async-ok');
@@ -134,12 +146,15 @@ describe('Initializers', () => {
   it('initialization overrides', () => {
     const p = provider(() => 1, { name: 'test_provider_p' });
     const sp = stateProvider(() => 10, { name: 'test_state_sp' });
-    const op = observableProvider(() => ({
-      subscribe: (o: any) => {
-        o.next(100);
-        return { unsubscribe: () => {} };
-      },
-    }), { name: 'test_observable_op' });
+    const op = observableProvider(
+      () => ({
+        subscribe: (o: any) => {
+          o.next(100);
+          return { unsubscribe: () => {} };
+        },
+      }),
+      { name: 'test_observable_op' },
+    );
 
     const container = new RiverContainer({
       overrides: [

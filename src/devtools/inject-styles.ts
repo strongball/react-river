@@ -8,7 +8,6 @@ import CSS from './RiverDevTools.css?inline';
 
 const STYLE_ID = 'river-devtools-styles';
 
-
 let injected = false;
 
 export function injectDevToolsStyles(): void {

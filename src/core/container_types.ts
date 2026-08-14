@@ -3,9 +3,9 @@
  *  Shared type definitions used by the container implementation.
  * ════════════════════════════════════════════════════════════════ */
 
-import type { ListenerCallback, ProviderBase, ProviderOverride, Unsubscribe } from './types';
-import type { RiverObserver } from './observer';
 import type { ProviderFamily } from './family';
+import type { RiverObserver } from './observer';
+import type { ListenerCallback, ProviderBase, ProviderOverride, Unsubscribe } from './types';
 
 // ── Internal Provider State ────────────────────────────────────
 

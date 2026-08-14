@@ -393,7 +393,9 @@
   line-height: 1;
   text-align: center;
   transform: rotate(0deg);
-  transition: transform var(--rd-transition), color var(--rd-transition);
+  transition:
+    transform var(--rd-transition),
+    color var(--rd-transition);
 }
 
 .rd-provider-identity {

@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import type { KeyboardEvent } from 'react';
-import type { DevToolsEvent } from '../devtools-observer';
-import { CopyButton } from './CopyButton';
+
 import { formatTime, serializeValue } from '../utils';
+import { CopyButton } from './CopyButton';
+
+import type { DevToolsEvent } from '../devtools-observer';
 
 /** Component for a single event in the event list */
 export function EventItem({ event, repeatCount = 1 }: { event: DevToolsEvent; repeatCount?: number }) {

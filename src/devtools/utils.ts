@@ -1,5 +1,5 @@
-import type { DevToolsEvent } from './devtools-observer';
 import type { DevToolsProviderSnapshot } from '../core/container';
+import type { DevToolsEvent } from './devtools-observer';
 
 export interface DisplayEventGroup {
   event: DevToolsEvent;
@@ -7,10 +7,7 @@ export interface DisplayEventGroup {
 }
 
 /** Groups consecutive updates from one provider into a single display row. */
-export function groupRapidEvents(
-  events: readonly DevToolsEvent[],
-  windowMs = 250,
-): DisplayEventGroup[] {
+export function groupRapidEvents(events: readonly DevToolsEvent[], windowMs = 250): DisplayEventGroup[] {
   const groups: DisplayEventGroup[] = [];
 
   for (const event of events) {
@@ -93,10 +90,7 @@ export interface GraphEdge {
 }
 
 /** Returns all node names reachable (ancestors + descendants) from a starting node */
-export function getConnectedNodes(
-  snapshots: DevToolsProviderSnapshot[],
-  rootName: string,
-): Set<string> {
+export function getConnectedNodes(snapshots: DevToolsProviderSnapshot[], rootName: string): Set<string> {
   const reachable = new Set<string>();
   reachable.add(rootName);
 
@@ -128,9 +122,7 @@ export function getConnectedNodes(
 }
 
 /** Merges developer tools snapshots of family instances into single nodes */
-export function groupFamilySnapshots(
-  snapshots: DevToolsProviderSnapshot[],
-): DevToolsProviderSnapshot[] {
+export function groupFamilySnapshots(snapshots: DevToolsProviderSnapshot[]): DevToolsProviderSnapshot[] {
   const grouped = new Map<string, DevToolsProviderSnapshot>();
   const nameMapping = new Map<string, string>(); // Maps original name -> base name
 
@@ -166,7 +158,7 @@ export function groupFamilySnapshots(
         merged.dependencies.push(depBase);
       }
     }
-    
+
     // We can optionally merge dependents too, but for building the graph layout,
     // only `dependencies` field is technically required by getConnectedNodes and buildGraphLayout.
     for (const dep of s.dependents) {
@@ -181,9 +173,13 @@ export function groupFamilySnapshots(
 }
 
 /** Computes the SVG layout for the dependency graph */
-export function buildGraphLayout(
-  items: DevToolsProviderSnapshot[],
-): { nodes: GraphNode[]; edges: GraphEdge[]; viewBox: string; width: number; height: number } {
+export function buildGraphLayout(items: DevToolsProviderSnapshot[]): {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  viewBox: string;
+  width: number;
+  height: number;
+} {
   if (items.length === 0) {
     return { nodes: [], edges: [], viewBox: '0 0 400 200', width: 400, height: 200 };
   }
@@ -192,15 +188,15 @@ export function buildGraphLayout(
   const depthMap = new Map<string, number>();
   const itemMap = new Map<string, DevToolsProviderSnapshot>();
   for (const s of items) itemMap.set(s.name, s);
-  
+
   const visited = new Set<string>();
 
   function getDepth(name: string): number {
     if (visited.has(name)) return 0; // Break circular
-    
+
     const cached = depthMap.get(name);
     if (cached !== undefined) return cached;
-    
+
     visited.add(name);
 
     const snap = itemMap.get(name);
@@ -219,7 +215,7 @@ export function buildGraphLayout(
     }
 
     visited.delete(name);
-    
+
     const depth = maxDep === -1 ? 0 : maxDep + 1;
     depthMap.set(name, depth);
     return depth;
@@ -248,8 +244,7 @@ export function buildGraphLayout(
   for (let col = 0; col <= maxDepth; col++) {
     const colItems = groups.get(col) ?? [];
     const colHeight = colItems.length * rowGap;
-    const maxColHeight =
-      Math.max(...Array.from(groups.values()).map((v) => v.length)) * rowGap;
+    const maxColHeight = Math.max(...Array.from(groups.values()).map((v) => v.length)) * rowGap;
     const startY = padY + (maxColHeight - colHeight) / 2;
 
     for (let row = 0; row < colItems.length; row++) {

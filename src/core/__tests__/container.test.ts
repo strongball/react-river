@@ -454,10 +454,13 @@ describe('RiverContainer', () => {
     it('promiseProvider refresh should transition to loading with previous data', async () => {
       const container = new RiverContainer();
       let count = 0;
-      const p = promiseProvider(async () => {
-        count++;
-        return `val-${count}`;
-      }, { name: 'refresh_test_promise' });
+      const p = promiseProvider(
+        async () => {
+          count++;
+          return `val-${count}`;
+        },
+        { name: 'refresh_test_promise' },
+      );
 
       // Initial read - transitions to loading
       expect(container.read(p).status).toBe('loading');
@@ -1184,10 +1187,13 @@ describe('RiverContainer propagation regressions', () => {
     const left = provider((ref) => ref.watch(base) * 2, { name: 'diamond_left' });
     const right = provider((ref) => ref.watch(base) * 3, { name: 'diamond_right' });
     let builds = 0;
-    const total = provider((ref) => {
-      builds++;
-      return ref.watch(left) + ref.watch(right);
-    }, { name: 'diamond_total' });
+    const total = provider(
+      (ref) => {
+        builds++;
+        return ref.watch(left) + ref.watch(right);
+      },
+      { name: 'diamond_total' },
+    );
     const values: number[] = [];
     const container = new RiverContainer();
     container.listen(total, (next) => values.push(next));
@@ -1203,12 +1209,15 @@ describe('RiverContainer propagation regressions', () => {
     const middle = provider((ref) => ref.watch(base) * 2, { name: 'ordered_middle' });
     const nested = provider((ref) => ref.watch(middle) * 10, { name: 'ordered_nested' });
     let builds = 0;
-    const total = provider((ref) => {
-      builds++;
-      // Register total before middle in base.dependents while total also
-      // depends transitively on middle through nested.
-      return ref.watch(base) + ref.watch(nested);
-    }, { name: 'ordered_total' });
+    const total = provider(
+      (ref) => {
+        builds++;
+        // Register total before middle in base.dependents while total also
+        // depends transitively on middle through nested.
+        return ref.watch(base) + ref.watch(nested);
+      },
+      { name: 'ordered_total' },
+    );
     const values: number[] = [];
     const container = new RiverContainer();
     container.listen(total, (next) => values.push(next));

@@ -10,17 +10,23 @@ describe('Ref Factory & Dependency Tracking', () => {
     const container = new RiverContainer();
 
     // 1. watch without selector (transparent)
-    const dep1 = promiseProvider(async (ref) => {
-      const p = await ref.watch(parent.promise);
-      return p + '!';
-    }, { name: 'test_promiseProvider_512' });
+    const dep1 = promiseProvider(
+      async (ref) => {
+        const p = await ref.watch(parent.promise);
+        return p + '!';
+      },
+      { name: 'test_promiseProvider_512' },
+    );
     expect(await container.read(dep1.promise)).toBe('data!');
 
     // 2. watch with selector
-    const dep2 = promiseProvider(async (ref) => {
-      const val = await ref.watch(parent.promise, (d) => (d as string).toUpperCase());
-      return val;
-    }, { name: 'test_promiseProvider_772' });
+    const dep2 = promiseProvider(
+      async (ref) => {
+        const val = await ref.watch(parent.promise, (d) => (d as string).toUpperCase());
+        return val;
+      },
+      { name: 'test_promiseProvider_772' },
+    );
     expect(await container.read(dep2.promise)).toBe('DATA');
   });
 
@@ -29,22 +35,31 @@ describe('Ref Factory & Dependency Tracking', () => {
     const target = provider(() => 1, { name: 'test_provider_1033' });
 
     // 1. Multiple conditional watches
-    const p1 = provider((ref) => {
-      ref.watch(target, (v) => v);
-      return ref.watch(target, (v) => v + 1);
-    }, { name: 'test_provider_1139' });
+    const p1 = provider(
+      (ref) => {
+        ref.watch(target, (v) => v);
+        return ref.watch(target, (v) => v + 1);
+      },
+      { name: 'test_provider_1139' },
+    );
 
     // 2. Unconditional watch overrides conditional
-    const p2 = provider((ref) => {
-      ref.watch(target, (v) => v);
-      return ref.watch(target);
-    }, { name: 'test_provider_1348' });
+    const p2 = provider(
+      (ref) => {
+        ref.watch(target, (v) => v);
+        return ref.watch(target);
+      },
+      { name: 'test_provider_1348' },
+    );
 
     // 3. Conditional watch after unconditional (hit selectors !== null branch)
-    const p3 = provider((ref) => {
-      ref.watch(target);
-      return ref.watch(target, (v) => v);
-    }, { name: 'test_provider_1571' });
+    const p3 = provider(
+      (ref) => {
+        ref.watch(target);
+        return ref.watch(target, (v) => v);
+      },
+      { name: 'test_provider_1571' },
+    );
 
     container.read(p1);
     container.read(p2);
@@ -53,10 +68,13 @@ describe('Ref Factory & Dependency Tracking', () => {
 
   it('ref methods: lifecycle and invalidation', () => {
     let capturedRef: any;
-    const p = provider((ref) => {
-      capturedRef = ref;
-      return 1;
-    }, { name: 'test_provider_1874' });
+    const p = provider(
+      (ref) => {
+        capturedRef = ref;
+        return 1;
+      },
+      { name: 'test_provider_1874' },
+    );
     const container = new RiverContainer();
 
     container.read(p);
@@ -92,16 +110,22 @@ describe('Ref Factory & Dependency Tracking', () => {
     vi.useFakeTimers();
     const container = new RiverContainer();
     let rejectP: any;
-    const p = promiseProvider(() => {
-      const pr = new Promise((_, r) => (rejectP = r));
-      pr.catch(() => {});
-      return pr;
-    }, { name: 'test_promiseProvider_3172' });
-    const dep = promiseProvider(async (ref) => {
-      const pr = (ref as any).watch(p.promise, (v: any) => v);
-      pr.catch(() => {});
-      return await pr;
-    }, { name: 'test_promiseProvider_3357' });
+    const p = promiseProvider(
+      () => {
+        const pr = new Promise((_, r) => (rejectP = r));
+        pr.catch(() => {});
+        return pr;
+      },
+      { name: 'test_promiseProvider_3172' },
+    );
+    const dep = promiseProvider(
+      async (ref) => {
+        const pr = (ref as any).watch(p.promise, (v: any) => v);
+        pr.catch(() => {});
+        return await pr;
+      },
+      { name: 'test_promiseProvider_3357' },
+    );
 
     container.read(dep);
 
@@ -124,11 +148,14 @@ describe('Ref Factory & Dependency Tracking', () => {
   it('watchPromiseAccessor with parent already in error', async () => {
     vi.useFakeTimers();
     let rejectParent: any;
-    const parent = promiseProvider(() => {
-      const pr = new Promise((_, r) => (rejectParent = r));
-      pr.catch(() => {});
-      return pr;
-    }, { name: 'test_promiseProvider_4150' });
+    const parent = promiseProvider(
+      () => {
+        const pr = new Promise((_, r) => (rejectParent = r));
+        pr.catch(() => {});
+        return pr;
+      },
+      { name: 'test_promiseProvider_4150' },
+    );
     const container = new RiverContainer();
 
     const pPromise = container.read(parent.promise);
@@ -138,11 +165,14 @@ describe('Ref Factory & Dependency Tracking', () => {
     vi.runAllTimers();
     await Promise.allSettled([pPromise]);
 
-    const dep = promiseProvider(async (ref) => {
-      const pr = ref.watch(parent.promise, (d) => d);
-      pr.catch(() => {});
-      return await pr;
-    }, { name: 'test_promiseProvider_4571' });
+    const dep = promiseProvider(
+      async (ref) => {
+        const pr = ref.watch(parent.promise, (d) => d);
+        pr.catch(() => {});
+        return await pr;
+      },
+      { name: 'test_promiseProvider_4571' },
+    );
 
     const dPromise = container.read(dep.promise);
     dPromise.catch(() => {});

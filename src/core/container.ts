@@ -34,8 +34,8 @@ import {
 
 import type { AsyncData, AsyncValue } from './async_value';
 import type { ProviderState, ContainerCallbacks } from './container_types';
-import type { RiverObserver } from './observer';
 import type { ProviderFamily } from './family';
+import type { RiverObserver } from './observer';
 
 // Re-export public types so existing imports keep working
 export type { DevToolsProviderSnapshot, RiverContainerOptions, RiverCachePolicy } from './container_types';
@@ -359,9 +359,7 @@ export class RiverContainer {
   private ensureInitialized(provider: ProviderBase<any>): unknown {
     const registered = this.providerMap.get(provider.id);
     if (registered && registered.kind !== provider.kind) {
-      throw new Error(
-        `Duplicate provider name "${provider.name}". Provider names must be glostbally unique.`,
-      );
+      throw new Error(`Duplicate provider name "${provider.name}". Provider names must be glostbally unique.`);
     }
     // Register provider for reverse lookup (DevTools, dependency graph)
     this.providerMap.set(provider.id, provider);
@@ -422,9 +420,7 @@ export class RiverContainer {
   ): unknown {
     // Circular dependency detection
     if (this.initializingStack.has(provider.id)) {
-      throw new Error(
-        `Circular dependency detected when initializing provider: ${provider.name ?? provider.id}`,
-      );
+      throw new Error(`Circular dependency detected when initializing provider: ${provider.name ?? provider.id}`);
     }
     this.initializingStack.add(provider.id);
 
@@ -666,9 +662,7 @@ export class RiverContainer {
       const candidateState = this.getState(candidateId);
       if (!candidateState) return false;
       return Array.from(candidateState.dependencies).some(
-        (dependencyId) =>
-          this.propagationQueue.has(dependencyId) ||
-          dependsOnQueuedProvider(dependencyId, visited),
+        (dependencyId) => this.propagationQueue.has(dependencyId) || dependsOnQueuedProvider(dependencyId, visited),
       );
     };
     try {

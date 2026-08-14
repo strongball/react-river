@@ -1,6 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { provider, stateProvider, promiseProvider, observableProvider, notifierProvider, asyncNotifierProvider } from '../provider';
+
 import { Notifier, AsyncNotifier } from '../notifier';
+import {
+  provider,
+  stateProvider,
+  promiseProvider,
+  observableProvider,
+  notifierProvider,
+  asyncNotifierProvider,
+} from '../provider';
 
 describe('Providers Factories', () => {
   it('uses a stable name-derived identity for HMR replacements', () => {
@@ -42,8 +50,12 @@ describe('Providers Factories', () => {
 
   it('notifierProvider() creates correct object', () => {
     class MyNotifier extends Notifier<number> {
-      override build() { return 0; }
-      updateState(val: number) { this.state = val; }
+      override build() {
+        return 0;
+      }
+      updateState(val: number) {
+        this.state = val;
+      }
     }
     const p = notifierProvider(() => new MyNotifier(), { name: 'test_notifierProvider_1598' });
     expect(p.kind).toBe('notifierProvider');
@@ -52,7 +64,9 @@ describe('Providers Factories', () => {
 
   it('asyncNotifierProvider() creates correct object', () => {
     class MyAsyncNotifier extends AsyncNotifier<number> {
-      async build() { return 0; }
+      async build() {
+        return 0;
+      }
     }
     const p = asyncNotifierProvider(() => new MyAsyncNotifier(), { name: 'test_asyncNotifierProvider_1961' });
     expect(p.kind).toBe('asyncNotifierProvider');
@@ -62,14 +76,14 @@ describe('Providers Factories', () => {
   it('naming inheritance for child accessors', () => {
     const p1 = stateProvider(() => 1, { name: 'counter' });
     expect(p1.notifier.name).toBe('counter.notifier');
-    
+
     const p2 = promiseProvider(async () => 1, { name: 'fetch' });
     expect(p2.promise.name).toBe('fetch.promise');
 
-    const p3 = notifierProvider(() => ({} as any), { name: 'notif' });
+    const p3 = notifierProvider(() => ({}) as any, { name: 'notif' });
     expect(p3.notifier.name).toBe('notif.notifier');
 
-    const p4 = asyncNotifierProvider(() => ({} as any), { name: 'base' });
+    const p4 = asyncNotifierProvider(() => ({}) as any, { name: 'base' });
     expect(p4.notifier.name).toBe('base.notifier');
     expect(p4.promise.name).toBe('base.promise');
   });

@@ -3,6 +3,7 @@ import { resolve } from 'path';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
+  base: './',
   root: resolve(import.meta.dirname, 'example'),
   plugins: [react()],
   resolve: {

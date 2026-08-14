@@ -21,10 +21,7 @@ describe('useRiverMutation', () => {
   };
 
   it('should start with idle state (asyncData undefined)', () => {
-    const { result } = renderHook(
-      () => useRiverMutation(async () => {}),
-      { wrapper },
-    );
+    const { result } = renderHook(() => useRiverMutation(async () => {}), { wrapper });
 
     expect(result.current.state.status).toBe('data');
     expect(result.current.state.data).toBeUndefined();
@@ -113,8 +110,10 @@ describe('useRiverMutation', () => {
     const first = deferred<string>();
     const second = deferred<string>();
     const { result } = renderHook(
-      () => useRiverMutation(async (_ref, value: 'first' | 'second') =>
-        value === 'first' ? first.promise : second.promise),
+      () =>
+        useRiverMutation(async (_ref, value: 'first' | 'second') =>
+          value === 'first' ? first.promise : second.promise,
+        ),
       { wrapper },
     );
 
@@ -141,10 +140,7 @@ describe('useRiverMutation', () => {
 
   it('should not let an in-flight mutation overwrite reset state', async () => {
     const pending = deferred<number>();
-    const { result } = renderHook(
-      () => useRiverMutation(async () => pending.promise),
-      { wrapper },
-    );
+    const { result } = renderHook(() => useRiverMutation(async () => pending.promise), { wrapper });
 
     let mutationPromise!: Promise<number>;
     act(() => {
@@ -166,11 +162,7 @@ describe('useRiverMutation', () => {
     const onSettled = vi.fn();
 
     const { result } = renderHook(
-      () =>
-        useRiverMutation(
-          async (_ref, n: number) => n * 2,
-          { onMutate, onSuccess, onSettled },
-        ),
+      () => useRiverMutation(async (_ref, n: number) => n * 2, { onMutate, onSuccess, onSettled }),
       { wrapper },
     );
 
@@ -193,11 +185,14 @@ describe('useRiverMutation', () => {
     const onError = vi.fn();
     const onSettled = vi.fn();
     const { result } = renderHook(
-      () => useRiverMutation(async () => 42, {
-        onSuccess: () => { throw callbackError; },
-        onError,
-        onSettled,
-      }),
+      () =>
+        useRiverMutation(async () => 42, {
+          onSuccess: () => {
+            throw callbackError;
+          },
+          onError,
+          onSettled,
+        }),
       { wrapper },
     );
 
@@ -220,7 +215,9 @@ describe('useRiverMutation', () => {
     const { result } = renderHook(
       () =>
         useRiverMutation(
-          async () => { throw error; },
+          async () => {
+            throw error;
+          },
           { onMutate, onError, onSettled },
         ),
       { wrapper },
@@ -245,12 +242,14 @@ describe('useRiverMutation', () => {
       () => {
         const list = useRiverWatch(listProvider);
         const mutation = useRiverMutation<void, string, { previous: string[] }>(
-          async () => { throw error; },
+          async () => {
+            throw error;
+          },
           {
             onMutate: (itemToRemove, ref) => {
               const previous = ref.read(listProvider);
               // Optimistic: remove item immediately
-              ref.set(listProvider, prev => prev.filter(i => i !== itemToRemove));
+              ref.set(listProvider, (prev) => prev.filter((i) => i !== itemToRemove));
               return { previous };
             },
             onError: (_err, _vars, context, ref) => {
@@ -276,17 +275,14 @@ describe('useRiverMutation', () => {
   });
 
   it('should abort mutation when onMutate throws', async () => {
-    const onMutate = vi.fn(() => { throw new Error('onMutate error'); });
+    const onMutate = vi.fn(() => {
+      throw new Error('onMutate error');
+    });
     const onSuccess = vi.fn();
 
-    const { result } = renderHook(
-      () =>
-        useRiverMutation(
-          async (_ref, n: number) => n * 2,
-          { onMutate, onSuccess },
-        ),
-      { wrapper },
-    );
+    const { result } = renderHook(() => useRiverMutation(async (_ref, n: number) => n * 2, { onMutate, onSuccess }), {
+      wrapper,
+    });
 
     // Mutation should abort when onMutate throws
     await act(async () => {

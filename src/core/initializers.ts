@@ -7,8 +7,8 @@
 import { asyncData, asyncError, asyncLoading } from './async_value';
 
 import type { AsyncValue } from './async_value';
-import type { Notifier, AsyncNotifier } from './notifier';
 import type { ProviderState, ContainerCallbacks } from './container_types';
+import type { Notifier, AsyncNotifier } from './notifier';
 import type {
   PromiseProvider,
   NotifierAccessor,
@@ -103,13 +103,14 @@ export function initPromiseProvider(options: {
 
   // Guard: ensure the factory returned a thenable, not a plain value
   if (!promise || typeof (promise as any).then !== 'function') {
-    cb.notifyObservers('error', provider, new Error(
-      `promiseProvider "${provider.name ?? provider.id}" factory must return a Promise, ` +
-        `got ${typeof promise}.`,
-    ));
-    cb.updateValue(provider.id, asyncError(
-      new Error(`Expected a Promise from factory, got ${typeof promise}`),
-    ));
+    cb.notifyObservers(
+      'error',
+      provider,
+      new Error(
+        `promiseProvider "${provider.name ?? provider.id}" factory must return a Promise, ` + `got ${typeof promise}.`,
+      ),
+    );
+    cb.updateValue(provider.id, asyncError(new Error(`Expected a Promise from factory, got ${typeof promise}`)));
     return;
   }
 
@@ -473,9 +474,7 @@ export function initNotifierAccessor(options: {
   }
   const parentState = cb.getState(parentId);
   if (!parentState) {
-    throw new Error(
-      `Parent provider not found for notifier accessor: ${accessor.name ?? accessor.id}`,
-    );
+    throw new Error(`Parent provider not found for notifier accessor: ${accessor.name ?? accessor.id}`);
   }
   state.value = parentState.notifierInstance;
 

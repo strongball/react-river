@@ -111,7 +111,9 @@ describe('React Hooks', () => {
   });
 
   it('useRiverWatch should handle cache optimization branches', () => {
-    const objProvider = stateProvider(() => ({ meta: { updated: false }, data: 1 }), { name: 'test_stateProvider_3285' });
+    const objProvider = stateProvider(() => ({ meta: { updated: false }, data: 1 }), {
+      name: 'test_stateProvider_3285',
+    });
     const wrapper = ({ children }: { children: React.ReactNode }) => <RiverScope>{children}</RiverScope>;
 
     const { result } = renderHook(
@@ -134,7 +136,7 @@ describe('React Hooks', () => {
 
   it('RiverScope - behavior of global vs local providers across nested scopes', () => {
     // Global provider: should inherit/share state via root container
-    const globalP = stateProvider(() => 1, { name: 'test_stateProvider_4153',  global: true });
+    const globalP = stateProvider(() => 1, { name: 'test_stateProvider_4153', global: true });
     // Local provider: should be isolated in each scope by default
     const localP = stateProvider(() => 2, { name: 'test_stateProvider_4281' });
 
@@ -219,18 +221,15 @@ describe('React Hooks', () => {
       { name: 'test_stateProvider_selector_external_1' },
     );
 
-    const wrapper = ({ children }: { children: React.ReactNode }) => (
-      <RiverScope>{children}</RiverScope>
-    );
+    const wrapper = ({ children }: { children: React.ReactNode }) => <RiverScope>{children}</RiverScope>;
 
     const { result } = renderHook(
       () => {
         const [filter, setFilter] = useState<'active' | 'inactive' | 'all'>('all');
 
         // Selector closes over the external `filter` React state
-        const filtered = useRiverWatch(
-          itemsProvider,
-          (items) => items.filter((i) => filter === 'all' || i.status === filter),
+        const filtered = useRiverWatch(itemsProvider, (items) =>
+          items.filter((i) => filter === 'all' || i.status === filter),
         );
 
         return { filtered, setFilter };
@@ -270,9 +269,7 @@ describe('React Hooks', () => {
       name: 'test_stateProvider_selector_external_2',
     });
 
-    const wrapper = ({ children }: { children: React.ReactNode }) => (
-      <RiverScope>{children}</RiverScope>
-    );
+    const wrapper = ({ children }: { children: React.ReactNode }) => <RiverScope>{children}</RiverScope>;
 
     const { result } = renderHook(
       () => {
@@ -280,10 +277,7 @@ describe('React Hooks', () => {
 
         // selector closes over `multiplier`; if cache isn't invalidated
         // when `multiplier` changes, this will return stale results.
-        const computed = useRiverWatch(
-          multiplierProvider,
-          (value) => value * multiplier,
-        );
+        const computed = useRiverWatch(multiplierProvider, (value) => value * multiplier);
 
         return { computed, setMultiplier };
       },
@@ -326,10 +320,13 @@ describe('React Hooks', () => {
 
   it('useRiverWatch should support enabled: false and not subscribe or read initially', () => {
     let buildCount = 0;
-    const lazyProvider = stateProvider(() => {
-      buildCount++;
-      return 'lazy';
-    }, { name: 'test_stateProvider_lazy' });
+    const lazyProvider = stateProvider(
+      () => {
+        buildCount++;
+        return 'lazy';
+      },
+      { name: 'test_stateProvider_lazy' },
+    );
 
     const wrapper = ({ children }: { children: React.ReactNode }) => <RiverScope>{children}</RiverScope>;
 
@@ -418,16 +415,13 @@ describe('useRiverWatch selector stability', () => {
       { name: 'test_selector_stability_stable' },
     );
 
-    const wrapper = ({ children }: { children: React.ReactNode }) => (
-      <RiverScope>{children}</RiverScope>
-    );
+    const wrapper = ({ children }: { children: React.ReactNode }) => <RiverScope>{children}</RiverScope>;
 
     const { result } = renderHook(
       () => {
         // ✅ Stable reference — only recreated when deps change (none here)
         const selector = useCallback(
-          (items: Array<{ id: number; status: string }>) =>
-            items.filter((i) => i.status === 'active'),
+          (items: Array<{ id: number; status: string }>) => items.filter((i) => i.status === 'active'),
           [],
         );
         return useRiverWatch(itemsProvider, selector);
@@ -453,9 +447,7 @@ describe('useRiverWatch selector stability', () => {
       { name: 'test_selector_stability_primitive' },
     );
 
-    const wrapper = ({ children }: { children: React.ReactNode }) => (
-      <RiverScope>{children}</RiverScope>
-    );
+    const wrapper = ({ children }: { children: React.ReactNode }) => <RiverScope>{children}</RiverScope>;
 
     const { result } = renderHook(
       // ✅ Returns a number — same value → Object.is passes → no tearing loop
