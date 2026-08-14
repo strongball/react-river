@@ -1,7 +1,7 @@
 # 🌊 React River
 
-[![npm version](https://img.shields.io/npm/v/@zerologix/react-river.svg)](https://www.npmjs.com/package/@zerologix/react-river)
-[![license](https://img.shields.io/npm/l/@zerologix/react-river.svg)](https://github.com/zerologix/react-river/blob/main/LICENSE)
+[![npm version](https://img.shields.io/npm/v/@stball/react-river.svg)](https://www.npmjs.com/package/@stball/react-river)
+[![license](https://img.shields.io/npm/l/@stball/react-river.svg)](https://github.com/stball/react-river/blob/main/LICENSE)
 
 **React River** is a lightweight, high-performance state management library for React, heavily inspired by the philosophy of **Riverpod** from the Flutter ecosystem. It combines the simplicity of hooks with the power of a centralized dependency injection system.
 
@@ -23,9 +23,9 @@
 ## 📦 Installation
 
 ```bash
-npm install @zerologix/react-river
+npm install @stball/react-river
 # or
-yarn add @zerologix/react-river
+yarn add @stball/react-river
 ```
 
 ---
@@ -37,7 +37,7 @@ yarn add @zerologix/react-river
 Place `RiverScope` at the root of your application (or any subtree) to provide the state container.
 
 ```tsx
-import { RiverScope } from "@zerologix/react-river";
+import { RiverScope } from "@stball/react-river";
 
 function App() {
   return (
@@ -53,7 +53,7 @@ function App() {
 Providers are "definitions" of state. They don't hold state themselves; the `RiverScope` container does.
 
 ```ts
-import { stateProvider, provider } from "@zerologix/react-river";
+import { stateProvider, provider } from "@stball/react-river";
 
 // 1. Simple mutable state
 export const counterProvider = stateProvider(() => 0);
@@ -70,7 +70,7 @@ export const doubledProvider = provider((ref) => {
 Use hooks to interact with your providers.
 
 ```tsx
-import { useRiverWatch, useRiverRef } from "@zerologix/react-river";
+import { useRiverWatch, useRiverRef } from "@stball/react-river";
 import { counterProvider, doubledProvider } from "./providers";
 
 function Counter() {
@@ -111,13 +111,16 @@ function Counter() {
 `streamProvider` consumes synchronous and asynchronous iterables. Each yielded value becomes the provider's current data:
 
 ```ts
-import { streamProvider } from '@zerologix/react-river';
+import { streamProvider } from "@stball/react-river";
 
-const numbersProvider = streamProvider(async function* () {
-  yield 1;
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-  yield 2;
-}, { name: 'numbers' });
+const numbersProvider = streamProvider(
+  async function* () {
+    yield 1;
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    yield 2;
+  },
+  { name: "numbers" },
+);
 ```
 
 The provider stops the iterator when it is disposed or refreshed. A synchronous generator is consumed during initialization, so its final yielded value is the value available after `read()` returns.
@@ -160,7 +163,10 @@ function DeleteUserButton({ userId }: { userId: string }) {
 
   return (
     <>
-      <button disabled={state.isLoading} onClick={() => void mutate(userId).catch(showErrorToast)}>
+      <button
+        disabled={state.isLoading}
+        onClick={() => void mutate(userId).catch(showErrorToast)}
+      >
         Delete user
       </button>
       <button onClick={reset}>Reset mutation state</button>
@@ -174,10 +180,13 @@ function DeleteUserButton({ userId }: { userId: string }) {
 Families allow you to parameterize your providers (e.g., fetching a user by ID).
 
 ```ts
-const userByIdProvider = promiseProviderFamily((ref, id: string) => fetchUser(id), { name: 'userById' });
+const userByIdProvider = promiseProviderFamily(
+  (ref, id: string) => fetchUser(id),
+  { name: "userById" },
+);
 
 // Usage:
-const user = useRiverWatch(userByIdProvider('123'));
+const user = useRiverWatch(userByIdProvider("123"));
 ```
 
 Family arguments use deterministic keys. They may contain JSON values, `undefined`, or valid `Date` instances, including inside arrays and plain objects. Object key order does not affect identity, while `undefined`, `null`, a `Date`, and the same ISO timestamp as a string remain distinct.
@@ -200,7 +209,7 @@ ref.invalidateFamily(userByIdProvider);
 React River uses `AsyncValue` to handle asynchronous states gracefully. Use the `when` utility for exhaustive pattern matching.
 
 ```ts
-import { promiseProvider, useRiverWatch, when } from '@zerologix/react-river';
+import { promiseProvider, useRiverWatch, when } from '@stball/react-river';
 
 const todoProvider = promiseProvider(async (ref) => {
   const response = await fetch('https://jsonplaceholder.typicode.com/todos/1');
@@ -229,7 +238,7 @@ function TodoItem() {
 For complex state logic or encapsulated business rules, use `Notifier` or `AsyncNotifier`.
 
 ```ts
-import { Notifier, notifierProvider } from '@zerologix/react-river';
+import { Notifier, notifierProvider } from '@stball/react-river';
 
 class CounterNotifier extends Notifier<number> {
   build() {
@@ -257,10 +266,7 @@ return <button onClick={() => notifier.increment()}>{count}</button>;
 Enhance your development experience with the built-in DevTools! It provides a floating panel to inspect provider values, track events, and visualize dependency graphs.
 
 ```tsx
-import {
-  RiverDevTools,
-  RiverScope,
-} from "@zerologix/react-river";
+import { RiverDevTools, RiverScope } from "@stball/react-river";
 
 function App() {
   return (
@@ -276,7 +282,11 @@ function App() {
 For console logging or custom lifecycle monitoring, pass `RiverObserver` objects to either `RiverScope` or `RiverContainer`:
 
 ```tsx
-import { loggerObserver, RiverScope, type RiverObserver } from '@zerologix/react-river';
+import {
+  loggerObserver,
+  RiverScope,
+  type RiverObserver,
+} from "@stball/react-river";
 
 const auditObserver: RiverObserver = {
   onProviderError(provider, error) {
@@ -284,7 +294,7 @@ const auditObserver: RiverObserver = {
   },
 };
 
-const stateLogger = loggerObserver('App state');
+const stateLogger = loggerObserver("App state");
 
 function App() {
   return (
@@ -327,7 +337,7 @@ Set default disposal behavior for a scope or a standalone container with `cacheP
 ```
 
 ```ts
-import { RiverContainer } from '@zerologix/react-river';
+import { RiverContainer } from "@stball/react-river";
 
 const container = new RiverContainer({
   cachePolicy: { autoDispose: false },
@@ -352,7 +362,7 @@ A `name` is **required** for any provider to participate in SSR. This name is us
 ```ts
 export const userProvider = promiseProvider(
   async () => fetchUser(),
-  { name: 'user' }, // ← required for SSR
+  { name: "user" }, // ← required for SSR
 );
 ```
 
@@ -374,7 +384,7 @@ const initialRiverState = container.dehydrate();
 
 ```tsx
 // pages/_app.tsx (Next.js) or your root layout
-import { RiverScope } from '@zerologix/react-river';
+import { RiverScope } from "@stball/react-river";
 
 function App({ pageProps }) {
   return (
@@ -389,11 +399,11 @@ function App({ pageProps }) {
 
 When a provider is first read on the client and there is a matching key in `initialState`:
 
-| Provider type | Client initial state | Background factory |
-| :--- | :--- | :--- |
-| `stateProvider` / `provider` | Uses hydrated value directly | Runs (to rebuild `ref.watch` deps) |
-| `notifierProvider` | Uses hydrated value, Notifier instance created | Runs `build()` (to rebuild deps) |
-| `promiseProvider` / `observableProvider` / `streamProvider` / `asyncNotifierProvider` | `asyncData(hydratedValue)` — **no loading flash** | Runs — Stale-while-revalidate |
+| Provider type                                                                         | Client initial state                              | Background factory                 |
+| :------------------------------------------------------------------------------------ | :------------------------------------------------ | :--------------------------------- |
+| `stateProvider` / `provider`                                                          | Uses hydrated value directly                      | Runs (to rebuild `ref.watch` deps) |
+| `notifierProvider`                                                                    | Uses hydrated value, Notifier instance created    | Runs `build()` (to rebuild deps)   |
+| `promiseProvider` / `observableProvider` / `streamProvider` / `asyncNotifierProvider` | `asyncData(hydratedValue)` — **no loading flash** | Runs — Stale-while-revalidate      |
 
 > **Stale-while-revalidate**: For async providers, the UI renders immediately with the hydrated data (no loading spinner), while the factory re-fetches silently in the background. When fresh data arrives, the UI updates automatically.
 
@@ -401,18 +411,18 @@ When a provider is first read on the client and there is a matching key in `init
 
 ### SSR Options
 
-| Option | Description |
-| :--- | :--- |
-| `name` | **Required** for SSR. Used as the key in the dehydrated state object. |
+| Option       | Description                                                                                        |
+| :----------- | :------------------------------------------------------------------------------------------------- |
+| `name`       | **Required** for SSR. Used as the key in the dehydrated state object.                              |
 | `ssr: false` | Opt-out of SSR for this provider (e.g., sensitive tokens). Named providers participate by default. |
-| `toJSON` | Custom serialization: transform the value before it is written to the dehydrated payload. |
-| `fromJSON` | Custom deserialization: transform the raw JSON back into your model class on the client. |
+| `toJSON`     | Custom serialization: transform the value before it is written to the dehydrated payload.          |
+| `fromJSON`   | Custom deserialization: transform the raw JSON back into your model class on the client.           |
 
 ```ts
-export const userProvider = stateProvider(() => new User(0, 'Guest'), {
-  name: 'user',
-  toJSON: (user) => ({ id: user.id, name: user.name }),    // server: Class → plain object
-  fromJSON: (json) => new User(json.id, json.name),        // client: plain object → Class
+export const userProvider = stateProvider(() => new User(0, "Guest"), {
+  name: "user",
+  toJSON: (user) => ({ id: user.id, name: user.name }), // server: Class → plain object
+  fromJSON: (json) => new User(json.id, json.name), // client: plain object → Class
 });
 ```
 

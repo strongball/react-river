@@ -1,4 +1,4 @@
-import { Notifier, notifierProvider } from '@zerologix/react-river';
+import { Notifier, notifierProvider } from '@stball/react-river';
 
 class TimerNotifier extends Notifier<number> {
   private timer: any;

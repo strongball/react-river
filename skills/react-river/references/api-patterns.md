@@ -5,13 +5,12 @@ Confirm exact signatures in the installed declaration file before editing a cons
 ## Providers and hooks
 
 ```ts
-import { provider, stateProvider } from '@zerologix/react-river';
+import { provider, stateProvider } from "@stball/react-river";
 
-export const countProvider = stateProvider(() => 0, { name: 'count' });
-export const doubledProvider = provider(
-  (ref) => ref.watch(countProvider) * 2,
-  { name: 'doubled' },
-);
+export const countProvider = stateProvider(() => 0, { name: "count" });
+export const doubledProvider = provider((ref) => ref.watch(countProvider) * 2, {
+  name: "doubled",
+});
 ```
 
 ```tsx
@@ -37,7 +36,7 @@ return when(useRiverWatch(userProvider), {
 ```ts
 const userByIdProvider = promiseProviderFamily(
   (_ref, id: string) => fetchUser(id),
-  { name: 'userById' },
+  { name: "userById" },
 );
 const user = useRiverWatch(userByIdProvider(userId));
 ```
@@ -48,13 +47,16 @@ Family keys are deterministic and object-key-order independent. Valid `Date` and
 
 ```ts
 class CounterNotifier extends Notifier<number> {
-  build() { return 0; }
-  increment() { this.state += 1; }
+  build() {
+    return 0;
+  }
+  increment() {
+    this.state += 1;
+  }
 }
-const counterProvider = notifierProvider(
-  () => new CounterNotifier(),
-  { name: 'counter' },
-);
+const counterProvider = notifierProvider(() => new CounterNotifier(), {
+  name: "counter",
+});
 ```
 
 Use `useRiverMutation` for imperative async work. It returns `{ state, mutate, reset }`; `mutate` returns a promise and rethrows errors. `onMutate` context is forwarded to success, error, and settled callbacks.

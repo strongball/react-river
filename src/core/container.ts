@@ -360,7 +360,7 @@ export class RiverContainer {
     const registered = this.providerMap.get(provider.id);
     if (registered && registered.kind !== provider.kind) {
       throw new Error(
-        `Duplicate provider name "${provider.name}". Provider names must be globally unique.`,
+        `Duplicate provider name "${provider.name}". Provider names must be glostbally unique.`,
       );
     }
     // Register provider for reverse lookup (DevTools, dependency graph)

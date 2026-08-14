@@ -1,4 +1,4 @@
-import { streamProvider } from '@zerologix/react-river';
+import { streamProvider } from '@stball/react-river';
 
 import { sleep } from './utils';
 

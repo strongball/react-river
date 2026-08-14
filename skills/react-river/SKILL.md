@@ -1,6 +1,6 @@
 ---
 name: react-river
-description: Implement, migrate, review, debug, and test React state management using @zerologix/react-river. Use when a project imports React River or asks for RiverScope, providers, families, AsyncValue, notifiers, mutations, overrides, cache policy, observers, DevTools, SSR hydration, or React River tests.
+description: Implement, migrate, review, debug, and test React state management using @stball/react-river. Use when a project imports React River or asks for RiverScope, providers, families, AsyncValue, notifiers, mutations, overrides, cache policy, observers, DevTools, SSR hydration, or React River tests.
 ---
 
 # React River

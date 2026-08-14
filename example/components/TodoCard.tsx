@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { useRiverWatch, useRiverRef, useRiverMutation } from '@zerologix/react-river';
+import { useRiverWatch, useRiverRef, useRiverMutation } from '@stball/react-river';
 
 import { todosProvider } from '../providers';
 

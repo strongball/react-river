@@ -8,7 +8,7 @@ Create a file for your product state. Ensure you provide a `name` to the provide
 
 ```tsx
 // providers/product.ts
-import { promiseProvider } from '@zerologix/react-river';
+import { promiseProvider } from "@stball/react-river";
 
 export interface Product {
   id: string;
@@ -22,16 +22,19 @@ const fetchProduct = async (id: string): Promise<Product> => {
   // In a real app, this would be an API call
   return {
     id,
-    name: 'Logix Pro Mouse',
+    name: "Logix Pro Mouse",
     price: 59.99,
-    description: 'High-performance wireless gaming mouse.'
+    description: "High-performance wireless gaming mouse.",
   };
 };
 
-export const productProvider = promiseProvider(async (ref) => {
-  // In a real app, you might read an ID from another provider or context
-  return fetchProduct('prod_123');
-}, { name: 'productData' }); // Name is required for SSR hydration
+export const productProvider = promiseProvider(
+  async (ref) => {
+    // In a real app, you might read an ID from another provider or context
+    return fetchProduct("prod_123");
+  },
+  { name: "productData" },
+); // Name is required for SSR hydration
 ```
 
 ## 2. Setup `_app.tsx`
@@ -40,8 +43,8 @@ Inject the dehydrated state into the `RiverScope`.
 
 ```tsx
 // pages/_app.tsx
-import type { AppProps } from 'next/app';
-import { RiverScope } from '@zerologix/react-river';
+import type { AppProps } from "next/app";
+import { RiverScope } from "@stball/react-river";
 
 function MyApp({ Component, pageProps }: AppProps) {
   return (
@@ -61,9 +64,9 @@ Fetch data on the server and dehydrate the container.
 
 ```tsx
 // pages/product/[id].tsx
-import { GetServerSideProps } from 'next';
-import { RiverContainer, useRiverWatch, when } from '@zerologix/react-river';
-import { productProvider } from '../../providers/product';
+import { GetServerSideProps } from "next";
+import { RiverContainer, useRiverWatch, when } from "@stball/react-river";
+import { productProvider } from "../../providers/product";
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const container = new RiverContainer();
@@ -117,12 +120,14 @@ export class User {
     this.id = id;
     this.name = name;
   }
-  get greeting() { return `Hello, ${this.name}!`; }
+  get greeting() {
+    return `Hello, ${this.name}!`;
+  }
 }
 
 // providers/user.ts
-export const userProvider = stateProvider(() => new User(0, 'Guest'), {
-  name: 'user',
+export const userProvider = stateProvider(() => new User(0, "Guest"), {
+  name: "user",
   // Transform Class instance to plain object for SSR transfer
   toJSON: (user) => ({ id: user.id, name: user.name }),
   // Reconstruct Class instance on the client after hydration
@@ -132,12 +137,12 @@ export const userProvider = stateProvider(() => new User(0, 'Guest'), {
 
 ### SSR Options Summary
 
-| Option | Description |
-| :--- | :--- |
-| `name` | **Required** for SSR. Used as the key in the state object. |
-| `ssr` | Set to `false` to exclude a provider from SSR (e.g., sensitive tokens). Defaults to `true` for named providers. |
-| `toJSON` | Custom serialization logic. Validates that returned value is serializable. |
-| `fromJSON` | Custom hydration logic. Runs on the client when recovering state. |
+| Option     | Description                                                                                                     |
+| :--------- | :-------------------------------------------------------------------------------------------------------------- |
+| `name`     | **Required** for SSR. Used as the key in the state object.                                                      |
+| `ssr`      | Set to `false` to exclude a provider from SSR (e.g., sensitive tokens). Defaults to `true` for named providers. |
+| `toJSON`   | Custom serialization logic. Validates that returned value is serializable.                                      |
+| `fromJSON` | Custom hydration logic. Runs on the client when recovering state.                                               |
 
 ## How it works
 

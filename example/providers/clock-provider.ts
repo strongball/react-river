@@ -1,4 +1,4 @@
-import { observableProvider } from '@zerologix/react-river';
+import { observableProvider } from '@stball/react-river';
 
 import { sleep } from './utils';
 

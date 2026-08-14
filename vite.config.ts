@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@zerologix/react-river': resolve(import.meta.dirname, 'src/index.ts'),
+      '@stball/react-river': resolve(import.meta.dirname, 'src/index.ts'),
     },
   },
   server: {

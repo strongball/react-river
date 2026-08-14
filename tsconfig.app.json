@@ -25,7 +25,7 @@
     "noUncheckedSideEffectImports": true,
     "baseUrl": ".",
     "paths": {
-      "@zerologix/react-river": ["./src/index.ts"]
+      "@stball/react-river": ["./src/index.ts"]
     }
   },
   "include": ["src", "example"]

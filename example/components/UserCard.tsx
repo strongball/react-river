@@ -1,4 +1,4 @@
-import { useRiverWatch, useRiverRef, when } from '@zerologix/react-river';
+import { useRiverWatch, useRiverRef, when } from '@stball/react-river';
 
 import { userProvider } from '../providers';
 

@@ -1,4 +1,4 @@
-import { RiverDevTools, RiverScope } from '@zerologix/react-river';
+import { RiverDevTools, RiverScope } from '@stball/react-river';
 
 import './App.css';
 import {

@@ -17,20 +17,20 @@ Create an isolated `RiverContainer` for each HTTP request to avoid cross-request
 ```typescript
 // server.ts (or where createRequestHandler is defined)
 import { createRequestHandler } from "@react-router/node";
-import { RiverContainer } from "@zerologix/react-river";
+import { RiverContainer } from "@stball/react-river";
 
 export const handler = createRequestHandler({
   build,
   getLoadContext(req) {
     // Create an isolated container for this request
     return {
-      riverContainer: new RiverContainer()
+      riverContainer: new RiverContainer(),
     };
-  }
+  },
 });
 ```
 
-*(Note: You will need to extend `AppLoadContext` in your project's types to make TypeScript aware of `riverContainer`)*
+_(Note: You will need to extend `AppLoadContext` in your project's types to make TypeScript aware of `riverContainer`)_
 
 ### 1.2. Prefetch Data in Route Loader
 
@@ -42,15 +42,15 @@ import { userProfileProvider } from "~/providers/user";
 
 export async function loader({ context }) {
   const container = context.riverContainer;
-  
+
   // Trigger and wait for the async provider to fetch data
   await container.read(userProfileProvider.future);
-  
+
   // You can also manually set synchronous state providers
   // container.set(themeProvider, 'dark');
 
   // We don't need to return the data here since it's already in the container
-  return null; 
+  return null;
 }
 ```
 
@@ -61,15 +61,15 @@ In the `loader` of your `root.tsx`, dehydrate the container containing all the f
 ```tsx
 // src/root.tsx
 import { useLoaderData, Outlet, Scripts } from "react-router";
-import { RiverScope } from "@zerologix/react-river";
+import { RiverScope } from "@stball/react-river";
 
 // The root loader runs after/alongside child loaders
 export async function loader({ context }) {
   const container = context.riverContainer;
-  
+
   // Dehydrate the container into a serializable JSON state
   return {
-    riverInitialState: container.dehydrate()
+    riverInitialState: container.dehydrate(),
   };
 }
 
@@ -78,15 +78,13 @@ export default function App() {
 
   return (
     <html lang="en">
-      <head>
-        {/* Meta, Links */}
-      </head>
+      <head>{/* Meta, Links */}</head>
       <body>
         {/* The frontend will hydrate this state, preventing duplicate API calls */}
         <RiverScope initialState={riverInitialState}>
           <Outlet />
         </RiverScope>
-        
+
         <Scripts />
       </body>
     </html>
@@ -103,19 +101,19 @@ If you cannot modify the Server Context or prefer each route to independently ma
 ```tsx
 // src/pages/training/index.tsx
 import { useLoaderData } from "react-router";
-import { RiverContainer, RiverScope, useRiverWatch } from "@zerologix/react-river";
+import { RiverContainer, RiverScope, useRiverWatch } from "@stball/react-river";
 import { trainingListProvider } from "~/providers/training";
 
 // 1. Loader: Create a local Container -> Fetch Data -> Dehydrate
 export async function loader() {
   const container = new RiverContainer();
-  
+
   // Wait for data to be ready
   await container.read(trainingListProvider.future);
-  
+
   // Return the dehydrated local state
-  return { 
-    initialState: container.dehydrate() 
+  return {
+    initialState: container.dehydrate(),
   };
 }
 
@@ -133,7 +131,7 @@ export default function TrainingPage() {
 // 3. Child Component: Consumes state immediately without loading phase
 function TrainingContent() {
   const data = useRiverWatch(trainingListProvider);
-  
+
   return (
     <div>
       <h1>Training List</h1>

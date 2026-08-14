@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { useRiverWatch, when } from '@zerologix/react-river';
+import { useRiverWatch, when } from '@stball/react-river';
 
 import { postProvider } from '../providers';
 

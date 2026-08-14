@@ -44,7 +44,7 @@ check:
 publish:
   stage: release
   before_script:
-    - echo "@zerologix:registry=https://gitlab.com/api/v4/projects/35990217/packages/npm/" > .npmrc
+    - echo "@stball:registry=https://gitlab.com/api/v4/projects/35990217/packages/npm/" > .npmrc
     - echo "//gitlab.com/api/v4/projects/35990217/packages/npm/:_authToken=$NPM_TOKEN" >> .npmrc
     - git config --global user.email "${GITLAB_USER_EMAIL}"
     - git config --global user.name "${GITLAB_USER_NAME}"

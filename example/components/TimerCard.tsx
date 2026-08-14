@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { useRiverWatch } from '@zerologix/react-river';
+import { useRiverWatch } from '@stball/react-river';
 
 import { timerProvider } from '../providers';
 

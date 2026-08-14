@@ -1,4 +1,4 @@
-import { useRiverWatch, useRiverRef, useRiverListen } from '@zerologix/react-river';
+import { useRiverWatch, useRiverRef, useRiverListen } from '@stball/react-river';
 
 import { counterProvider, doubledProvider } from '../providers';
 
