@@ -1,3 +1,56 @@
+# 1.0.0 (2026-08-14)
+
+
+### Bug Fixes
+
+* abort mutation on onMutate error, improve container cleanup and promise validation, and update library build formats. ([987e03a](https://github.com/strongball/react-river/commit/987e03a9c956698944c369c8d43d57e35036c6bf))
+* enable overrides for notifierProvider and asyncNotifierProvider in RiverContainer ([e42da96](https://github.com/strongball/react-river/commit/e42da9649a329debe918d1ade98ae4e7a1503614))
+* ensure notifierAccessor updates when parent notifier provider is invalidated ([7319665](https://github.com/strongball/react-river/commit/7319665c8e55183dfbfed4abbdb81e0a71521499))
+* harden provider state lifecycle ([a7be01b](https://github.com/strongball/react-river/commit/a7be01b30c4c5fca04a6a2405be57d98cdeacd1a))
+* promiseAccessor catch parentState ([f03252e](https://github.com/strongball/react-river/commit/f03252e4c0ab448369c3dde80e5e2e55ecf578c5))
+* remove .npmrc ([810662f](https://github.com/strongball/react-river/commit/810662f6acd875a5a52a0de94213acef135aa5ea))
+* retry npm publish ([ca1ab3e](https://github.com/strongball/react-river/commit/ca1ab3e3ff730d84193fbd3f0a81f66ce07de260))
+* token ([d100fcb](https://github.com/strongball/react-river/commit/d100fcb2f15e183e4df726306791156b2ed29a98))
+* update useRiverWatch selector cache to include selector reference for stale state resolution ([1d77913](https://github.com/strongball/react-river/commit/1d77913ef3eaebfc92e680b7b97d409327cd7dbc))
+
+
+### Features
+
+* add configurable cache policy to RiverContainer with scope-based default overrides ([4e5eacd](https://github.com/strongball/react-river/commit/4e5eacd25dbb7ff65bf33e15bad23813fb8ac219))
+* add console.error logging for provider exceptions and suppress logs in test environment ([188133c](https://github.com/strongball/react-river/commit/188133c167ddd467199ca8f2f4057a36d8685134))
+* add event expansion details, event search, and provider sorting to devtools ([c6c7b5c](https://github.com/strongball/react-river/commit/c6c7b5ce9aba7429b30e77249e083d4297027bd0))
+* add family snapshot grouping, graph panning/zooming, and argument display to devtools ([4a936d6](https://github.com/strongball/react-river/commit/4a936d67c26deb7b7c74a693eda4bc5630dbe47e))
+* add optional custom equality check to stateProvider for change tracking optimization ([db0aee2](https://github.com/strongball/react-river/commit/db0aee2e82e3cdcf8065d1c74d64b67f5a78d78e))
+* add PromiseAccessor to expose provider state as a promise and integrate into core providers ([36efd0e](https://github.com/strongball/react-river/commit/36efd0e2b472e34014d904ce46d5a99420f00630))
+* add RiverScope hydration and observer updates, configure test thresholds, and document core features and patterns. ([a322557](https://github.com/strongball/react-river/commit/a322557795065c2aa4f26373ac37dfc1ae13f2f5))
+* add selector support to watch() for granular dependency tracking and update devtools sorting UI ([19e6d24](https://github.com/strongball/react-river/commit/19e6d24be17a553df95b946f2551a62c43508a4a))
+* add StreamProvider for consuming synchronous and asynchronous iterables ([669f77c](https://github.com/strongball/react-river/commit/669f77c9b2e5229c382d1eaebc7335e148abe6bf))
+* add support for Date objects in family arguments and provide detailed error paths for validation failures ([71c4cb2](https://github.com/strongball/react-river/commit/71c4cb2b6f872f8764e8853b000dfe6ee99e6884))
+* add support for invalidating entire provider families via container and ref API ([7314b48](https://github.com/strongball/react-river/commit/7314b482313eb6fbef79474bca52f69c7f2ff44a))
+* add support for optional selector and conditional enabled state to useRiverWatch hook ([1b0c451](https://github.com/strongball/react-river/commit/1b0c4514c2db3e9b2b36b02986b336ee9e207079))
+* add unit test ([eda4a5e](https://github.com/strongball/react-river/commit/eda4a5e8897b57fe24b6f6e5c1acb0fa919669e6))
+* **DevTool:** hide UI on prod ([0b96156](https://github.com/strongball/react-river/commit/0b96156f41f5516d8bc8e5e962a0e7906a6303bb))
+* enable key-order independent caching for object arguments in providerFamily ([5ff1734](https://github.com/strongball/react-river/commit/5ff1734d46d2c00692a0bf7973f5e3f7bd4b0de2))
+* enable support for undefined values in providerFamily arguments ([7cd9b5d](https://github.com/strongball/react-river/commit/7cd9b5d362f13ae14a1652d253e293e67e8c43a3))
+* enhance DevTools UI with rapid event grouping, improved layout styling, and integrated copy functionality for provider details. ([a49f7da](https://github.com/strongball/react-river/commit/a49f7dabcacde4e721d1b88e04bed0ca1c3d4693))
+* ensure provider factories execute during hydration to correctly establish dependency graphs ([e9f7d90](https://github.com/strongball/react-river/commit/e9f7d90f8dbbd9243abd7d2f671487863fd3ad57))
+* implement cacheTime support for delayed auto-disposal of providers ([f4c70a0](https://github.com/strongball/react-river/commit/f4c70a0d92a8565eded837e175691b37e1fe1075))
+* implement comprehensive example application showcasing react-river provider patterns and components ([21689c4](https://github.com/strongball/react-river/commit/21689c42bf99771584a58d9b402a93e506908def))
+* implement global provider support and add ScopedCounterCard example for testing provider isolation ([02bb078](https://github.com/strongball/react-river/commit/02bb078bad1961f4826da03f35076681999fc706))
+* implement interactive devtools panel for monitoring provider states and dependency graphs ([dfc332b](https://github.com/strongball/react-river/commit/dfc332b9367f1c5f0dc124f7cccefc5b4ff76d68))
+* initialize maxEvents from pinned devtools and update default limit to 100 ([1da9560](https://github.com/strongball/react-river/commit/1da9560fae744ae3364be77ea42a733b29b9ce64))
+* integrate Vitest with React Testing Library and configure CI coverage reporting ([3127975](https://github.com/strongball/react-river/commit/31279754dba936902f687097356dad2c00ecef6d))
+* maintain previous data in loading state during provider refreshes ([a4bda0f](https://github.com/strongball/react-river/commit/a4bda0fd2e91b25e8f2d17b7228d2d13d090ef67))
+* **SSR:** support ssr ([a6356c3](https://github.com/strongball/react-river/commit/a6356c3f1631e6cf69edd3768c0554b0c0e9334b))
+* update observable subscribe signature to support both function and object callbacks ([ad5e88f](https://github.com/strongball/react-river/commit/ad5e88f739c6c9b10dc1875055b46efae6896043))
+* **useRiverMutation:** add useRiverMutation hook for imperative async operations with local state tracking ([46461c6](https://github.com/strongball/react-river/commit/46461c618b838a31a400e2e00c01bd1d14dc13a1))
+
+
+### Performance Improvements
+
+* **Devtools:** memery usage ([74d9d13](https://github.com/strongball/react-river/commit/74d9d135e82cc6186675b3823a157e95e7022211))
+* suppress redundant serialization warnings for individual providers using a memoization set ([f7f81b3](https://github.com/strongball/react-river/commit/f7f81b37d6e741fa397a3e9e937c573967fdb2f1))
+
 ## [1.0.47](https://gitlab.com/stball/logixintelligent/logixtrader/react-river/compare/v1.0.46...v1.0.47) (2026-08-13)
 
 ### Features
